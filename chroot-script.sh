@@ -30,6 +30,9 @@ ExecStart=
 ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin user --noclear %I 38400 linux
 EOF
 
+systemctl enable systemd-networkd
+systemctl enable systemd-resolved
+
 useradd -m user -p 123456
 usermod -aG wheel user
 
