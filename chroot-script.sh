@@ -14,11 +14,13 @@ printf "123456\n123456\n" | passwd root
 
 ls -la /
 
-pacman -S grub efibootmgr os-prober
-
+pacman --needed -Sy grub efibootmgr os-prober
+grub-install --target=x86_64-efi --bootloader-id=GRUB --efi-directory=/boot/efi 
 grub-mkconfig -o /boot/grub/grub.cfg
+mkdir /boot/efi/EFI/BOOT
+cp /boot/efi/EFI/GRUB/grubx64.efi /boot/efi/EFI/BOOT/BOOTX64.EFI
 
-grub-install --target=i386-efi --efi-directory=/boot/ --bootloader-id=GRUB
+
 
 mkdir -p /etc/systemd/system/getty@tty1.service.d
 cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf << EOF
