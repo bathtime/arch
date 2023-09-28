@@ -16,7 +16,7 @@ ls -la /
 
 pacman -S grub efibootmgr os-prober
 
-grub-mkconfig > /boot/grub/grub.cfg
+grub-mkconfig -o /boot/grub/grub.cfg
 grub-install --target=i386-efi --efi-directory=/boot/ --bootloader-id=GRUB
 
 
