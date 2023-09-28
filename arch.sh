@@ -174,7 +174,7 @@ modprobe varefivars
 
 arch-chroot $mnt /./chroot-script.sh
 
-
+exit
 
 
 cd /
