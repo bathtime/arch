@@ -4,6 +4,17 @@ disks=/dev/sdb
 mnt=/mnt
 
 
+
+
+
+
+##### Give user option to install or just chroot   ######
+
+
+
+
+
+
 sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk $disk
 d     # Delete partition
 
