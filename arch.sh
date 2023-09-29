@@ -1,19 +1,67 @@
 #!/bin/sh
 
-disks=/dev/sdb
-mnt=/mnt
+
+
+choose_disk () {
+
+
+echo -e "\nDrives found:\n"
+
+disks=$(fdisk -l | awk -F' |:' '/Disk \/dev\// { print $2 }')
+
+for i in $disks; do
+        size=$(fdisk -l | grep $i | awk -F' |:' '/Disk \/dev\// { print $4 }')
+        printf "%s\t\t%sG\n" $i $size
+done
+
+disks+=$(echo -e "\nquit")
+
+echo -e "\nEnter number of drive to install to:\n"
+
+select choice in $disks
+do
+   case $choice in
+        quit) echo -e "\nQuitting!"; exit; ;;
+        '')   echo -e "\nInvalid option!\n"; ;;
+        *)    disk=$choice; echo; break; ;;
+    esac
+done
+
+echo -e "\nSetup config:\n\ndisk: $disk\nuser: $user\n"
+
+}
 
 
 
+delete_partitions () {
+
+umount -n -R /mnt
+sgdisk --zap-all $disk
+
+sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk $disk
+d
+
+d
+
+d
+
+d
+
+d
+
+p
+w
+EOF
+
+}
 
 
 
-##### Give user option to install or just chroot   ######
+create_partitions () {
 
+umount -n -R /mnt
 
-
-
-
+sgdisk --zap-all $disk
 
 sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk $disk
 d     # Delete partition
@@ -42,14 +90,60 @@ n     # Add a new partition
 t     # Type of partition
       # Accept default
 linux # Type of partition
-p     # Printout partitions
+p     # Print partitions 
 w     # Write the changes
 EOF
 
 
+mkfs.fat -F 32 -n SYS $disk'1'
+mkfs.btrfs -f -L ROOT $disk'2'
+
+mkdir -p $mnt
+mount $disk'2' $mnt
+
+cd $mnt
+
+btrfs subvolume create @
+btrfs subvolume create @varlog
+btrfs subvolume create @vartmp
+btrfs subvolume create @varcache
+btrfs subvolume create @snapshots
+
 
 cd /
-umount $mnt
+umount -R $mnt
+
+
+mount -o compress=zstd,noatime,subvol=@ $disk'2' $mnt
+
+mkdir -p $mnt/{boot,var/{log,cache,tmp},tmp,.snapshots}
+
+mount -o compress=zstd,noatime,subvol=@varlog $disk'2' $mnt/var/log
+mount -o compress=zstd,noatime,subvol=@varcache $disk'2' $mnt/var/cache
+mount -o compress=zstd,noatime,subvol=@vartmp $disk'2' $mnt/var/tmp
+mount -o compress=zstd,noatime,subvol=@snapshots $disk'2' $mnt/.snapshots
+
+# Make dirs nocow
+chattr +C $mnt/var/log $mnt/var/cache $mnt/var/tmp
+
+# mount efi partition
+mount --mkdir $disk'1' $mnt/boot
+
+}
+
+
+
+install_pacstrap () {
+
+pacstrap -K $mnt base linux linux-firmware btrfs-progs vi
+
+}
+
+
+
+mount_mount () {
+
+umount -R $mnt
 
 mount -o compress=zstd,noatime,subvol=@ $disk'2' $mnt
 
@@ -67,10 +161,82 @@ chattr +C $mnt/var/log $mnt/var/cache $mnt/var/tmp
 # mount efi partition
 mount --mkdir $disk'1' $mnt/boot
 
-echo 'en_US.UTF-8 UTF-8' > $mnt/etc/locale.gen  
-echo 'en_US ISO-8859-1' >> $mnt/etc/locale.gen
+}
 
-pacstrap -K $mnt base linux linux-firmware btrfs-progs vim
+
+unmount_mount () {
+
+   umount -n -R /mnt
+
+}
+
+
+
+do_chroot () {
+
+   arch_chroot $mnt
+
+}
+
+
+
+chroot_install () {
+ 
+   cp chroot-script.sh $mnt/ 
+   arch-chroot $mnt ./chroot-script.sh $disk
+
+} 
+
+
+
+print_partitions () {
+
+lsblk
+blkid
+sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk $disk
+p
+q
+EOF
+
+}
+
+
+
+mnt=/mnt
+user=user
+
+
+choices=(
+"Choose disk"
+"Partition disk"
+"Install pacstrap"
+"Chroot"
+"Chroot install system"
+"Mount $mnt"
+"Unmount $mnt"
+"Print partitions"
+"Delete partitions"
+"Quit"
+)
+
+select choice in "${choices[@]}" 
+do
+
+   case $choice in
+        "Choose disk") choose_disk ;;
+        "Partition disk") create_partitions ;;
+        "Install pacstrap") install_pacstrap ;;
+        "Chroot") do_chroot ;;
+        "Chroot install system") chroot_install ;;
+        "Mount $mnt") mount_mount  ;;
+        "Unmount $mnt") unmount_mount  ;;
+        "Print partitions") print_partitions ;;
+        "Delete partitions") delete_partitions ;;
+        "Quit") echo -e "\nQuitting!"; exit; ;;
+        '')   echo -e "\nInvalid option!\n"; ;;
+    esac
+done
+
 
 
 
