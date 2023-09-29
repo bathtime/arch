@@ -59,6 +59,9 @@ sed -i '/zram0/d' /etc/fstab
 # Changing compression
 sed -i 's/zstd:3/zstd:1/' /etc/fstab
 
+# btrfs-assistant will otherwise complaine
+sed -i 's/subvolid=.*,//' /etc/fstab
+
 # genfstab will generate a swap drive. we're using a swap file instead
 sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' /etc/fstab
 
