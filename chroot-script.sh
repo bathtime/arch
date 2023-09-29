@@ -1,25 +1,56 @@
-export PS1="(chroot) $PS1"
+#!/bin/sh
 
-ln -sf /usr/share/zoneinfo/Canada/Eastern /etc/localtime
+
+
+
+disk=/dev/sdb
+user=user
+
+echo -e "\nEntering chroot!\n"
+
 
 hwclock --systohc
-
+ln -sf /usr/share/zoneinfo/Canada/Eastern /etc/localtime
 locale-gen
 
 echo 'LANG=en_US.UTF-8' > /etc/locale.conf
 echo 'archiso' > /etc/hostname
 echo 'KEYMAP=us' > /etc/vconsole.conf
 
-printf "123456\n123456\n" | passwd root
 
-ls -la /
+pacman --needed -Sy grub efibootmgr os-prober arch-install-scripts
 
-pacman --needed -Sy grub efibootmgr os-prober
-grub-install --target=x86_64-efi --bootloader-id=GRUB --efi-directory=/boot/efi 
+grub-install --target=i386-pc $disk --recheck
+grub-install --target=x86_64-efi --bootloader-id=GRUB --efi-directory=/boot/ --removable
+
+
+cat > /etc/default/grub << EOF
+GRUB_TIMEOUT=0
+GRUB_DISTRIBUTOR=""
+GRUB_DEFAULT=saved
+GRUB_DISABLE_SUBMENU=true
+GRUB_TERMINAL_OUTPUT="console"
+GRUB_CMDLINE_LINUX="quiet nmi_watchdog=0 loglevel=3 systemd.show_status=auto rd.udev.log_level=3"
+GRUB_DISABLE_RECOVERY="true"
+#GRUB_ENABLE_BLSCFG=true
+GRUB_HIDDEN_TIMEOUT=2
+GRUB_RECORDFAIL_TIMEOUT=1
+GRUB_TIMEOUT=0
+ 
+# Update grub with:
+# grub-mkconfig -o /boot/grub/grub.cfg
+
+EOF
+
+UUID_ROOT=$(blkid | grep $disk"2" | grep -o -P "(?<=UUID=\").*(?=\" UUID_SUB)")
+grubby --update-kernel=ALL --args="resume=UUID=$UUID_ROOT"
+
+sed -i '/zram0/d' /etc/fstab
+sed -i 's/zstd:3/zstd:1/' /etc/fstab
+[[ "$(cat /etc/fstab | grep /home/$user/.config)" ]] && echo "tmpfs    /home/$user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" > $mnt/etc/fstab
+cat /etc/fstab
+
 grub-mkconfig -o /boot/grub/grub.cfg
-mkdir /boot/efi/EFI/BOOT
-cp /boot/efi/EFI/GRUB/grubx64.efi /boot/efi/EFI/BOOT/BOOTX64.EFI
-
 
 
 mkdir -p /etc/systemd/system/getty@tty1.service.d
@@ -27,37 +58,30 @@ cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf << EOF
 [Service]
 Type=simple
 ExecStart=
-ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin user --noclear %I 38400 linux
+ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin $user --noclear %I 38400 linux
 EOF
 
-systemctl enable systemd-networkd
-systemctl enable systemd-resolved
+pacman -Sy iw iwd networkmanager sudo tar
+#pacman -Sy dhcpcd
 
-useradd -m user -p 123456
-usermod -aG wheel user
+systemctl enable iwd.service NetworkManager.service 
+
+
+# Default root password is: 123456
+printf "123456\n123456\n" | passwd root
+
+useradd -m $user -p 123456
+usermod -aG wheel $user
 
 su user
 
 echo '
+
 if [[ ! ${DISPLAY} && ${XDG_VTNR} == 1 ]]; then
-   #startplasma-wayland
-   echo 'Autologin.'
-fi' >> ~/.profile
-
-
-echo -e '\nEntering personal bash. Type 'exit' to exit chroot\n'
-bash
-echo -e '\nExiting chroot.\n'
-
-#Shouldn't be required as was run with pacstrap
-#mkinitcpio -P
+   iwctl --passphrase 13FDC4A93E3C station wlan0 connect BELL364
+   sudo pacman -Sy plasma-mobile dolphin kate btrfs-assistant ark pip lz4 mksh htop tar
+fi' > /home/$user/.profile
 
 
 
-
-
-
-
-
-
-
+echo "Exiting chroot!"
