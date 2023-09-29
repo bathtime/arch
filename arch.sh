@@ -163,7 +163,7 @@ chattr +C $mnt/var/log $mnt/var/cache $mnt/var/tmp
 mount --mkdir $disk'1' $mnt/boot
 
 
-pacstrap -K $mnt base linux linux-firmware iwd vi
+pacstrap -K $mnt base linux linux-firmware btrfs-progs iwd vi
 
 genfstab -U $mnt >> $mnt/etc/fstab
 
