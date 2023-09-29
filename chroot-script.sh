@@ -1,13 +1,14 @@
 #!/bin/sh
 
 
-
-
-disk=/dev/sdb
+disk=$1
 user=user
+
 
 echo -e "\nEntering chroot!\n"
 
+echo 'en_US.UTF-8 UTF-8' > /etc/locale.gen  
+echo 'en_US ISO-8859-1' >> /etc/locale.gen
 
 hwclock --systohc
 ln -sf /usr/share/zoneinfo/Canada/Eastern /etc/localtime
@@ -42,12 +43,12 @@ GRUB_TIMEOUT=0
 
 EOF
 
-UUID_ROOT=$(blkid | grep $disk"2" | grep -o -P "(?<=UUID=\").*(?=\" UUID_SUB)")
-grubby --update-kernel=ALL --args="resume=UUID=$UUID_ROOT"
+#UUID_ROOT=$(blkid | grep $disk"2" | grep -o -P "(?<=UUID=\").*(?=\" UUID_SUB)")
+#grubby --update-kernel=ALL --args="resume=UUID=$UUID_ROOT"
 
-sed -i '/zram0/d' /etc/fstab
-sed -i 's/zstd:3/zstd:1/' /etc/fstab
-[[ "$(cat /etc/fstab | grep /home/$user/.config)" ]] && echo "tmpfs    /home/$user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" > $mnt/etc/fstab
+#sed -i '/zram0/d' /etc/fstab
+#sed -i 's/zstd:3/zstd:1/' /etc/fstab
+#[[ "$(cat /etc/fstab | grep /home/$user/.config)" ]] && echo "tmpfs    /home/$user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" > $mnt/etc/fstab
 cat /etc/fstab
 
 grub-mkconfig -o /boot/grub/grub.cfg
@@ -62,9 +63,25 @@ ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin $user --n
 EOF
 
 pacman -Sy iw iwd networkmanager sudo tar
-#pacman -Sy dhcpcd
+pacman -Sy dhcpcd
+
+mkdir /etc/iwd
+touch /etc/iwd/main.conf
+cat > /etc/iwd/main.conf << EOF
+
+[General]
+EnableNetworkConfiguration=true
+EOF
+
+echo "Enabling iwd service..."
+systemctl enable iwd.service
 
 systemctl enable iwd.service NetworkManager.service 
+
+mkdir -p /etc/sudoers.d
+echo "$user ALL=(ALL)  NOPASSWD: /usr/bin/btrfs-assistant" > /etc/sudoers.d/nopasswd
+echo '%wheel      ALL=(ALL:ALL) ALL' > /etc/sudoers.d/wheel
+
 
 
 # Default root password is: 123456
@@ -81,7 +98,11 @@ if [[ ! ${DISPLAY} && ${XDG_VTNR} == 1 ]]; then
    iwctl --passphrase 13FDC4A93E3C station wlan0 connect BELL364
    sudo pacman -Sy plasma-mobile dolphin kate btrfs-assistant ark pip lz4 mksh htop tar
 fi' > /home/$user/.profile
+chmod +x /home/$user/.profile
+
+
+echo -e "\nExiting chroot!\n"
 
 
 
-echo "Exiting chroot!"
+
