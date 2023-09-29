@@ -192,9 +192,9 @@ unmount_mount () {
 
 do_chroot () {
 
-   echo -e "\nEntering chroot. Type 'exit' to leave.\n"
+   echo -e "\nEntering chroot. Type 'exit' to leave."
    #arch-chroot $mnt
-   arch-chroot /mnt bash -c 'export PS1="(chroot) # "; sh'
+   arch-chroot /mnt bash -c 'export PS1="\n(chroot) # "; sh'
    echo -e "\nExiting chroot...\n"
 
 }
