@@ -47,7 +47,7 @@ EOF
 
 
 UUID_ROOT=$(blkid | grep $disk"2" | grep -o -P "(?<=UUID=\").*(?=\" UUID_SUB)")
-offset=$(btrfs inspect-internal map-swapfile -r /@swap/swapfile)
+offset=$(btrfs inspect-internal map-swapfile -r /swap/swapfile)
 
 sed -i "s/GRUB_CMDLINE_LINUX=.*/GRUB_CMDLINE_LINUX=\"quiet nmi_watchdog=0 loglevel=3 systemd.show_status=auto rd.udev.log_level=3 resume=UUID=$UUID_ROOT resume_offset=$offset\"/g" /etc/default/grub
 
