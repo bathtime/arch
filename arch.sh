@@ -202,7 +202,7 @@ do_chroot () {
 
 chroot_install () {
  
-   cp chroot-script.sh $mnt/bin 
+   cp chroot-script.sh $mnt/bin/ 
    arch-chroot $mnt /bin/chroot-script.sh $disk
 
 } 
