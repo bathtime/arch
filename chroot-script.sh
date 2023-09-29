@@ -7,6 +7,9 @@ user=user
 
 echo -e "\nEntering chroot!\n"
 
+source /etc/profile
+#. /etc/profile
+
 echo 'en_US.UTF-8 UTF-8' > /etc/locale.gen  
 echo 'en_US ISO-8859-1' >> /etc/locale.gen
 
@@ -40,15 +43,28 @@ GRUB_TIMEOUT=0
  
 # Update grub with:
 # grub-mkconfig -o /boot/grub/grub.cfg
-
 EOF
 
-#UUID_ROOT=$(blkid | grep $disk"2" | grep -o -P "(?<=UUID=\").*(?=\" UUID_SUB)")
-#grubby --update-kernel=ALL --args="resume=UUID=$UUID_ROOT"
 
-#sed -i '/zram0/d' /etc/fstab
-#sed -i 's/zstd:3/zstd:1/' /etc/fstab
-#[[ "$(cat /etc/fstab | grep /home/$user/.config)" ]] && echo "tmpfs    /home/$user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" > $mnt/etc/fstab
+UUID_ROOT=$(blkid | grep $disk"2" | grep -o -P "(?<=UUID=\").*(?=\" UUID_SUB)")
+offset=$(btrfs inspect-internal map-swapfile -r /@swap/swapfile)
+
+sed -i "s/GRUB_CMDLINE_LINUX=.*/GRUB_CMDLINE_LINUX=\"quiet nmi_watchdog=0 loglevel=3 systemd.show_status=auto rd.udev.log_level=3 resume=UUID=$UUID_ROOT resume_offset=$offset\"/g" /etc/default/grub
+
+[[ ! "$(cat /etc/fstab | grep /swap/swapfile)" ]] && echo "/swap/swapfile none swap defaults 0 0" >> /etc/fstab
+
+# Don't need
+sed -i '/zram0/d' /etc/fstab
+
+# Changing compression
+sed -i 's/zstd:3/zstd:1/' /etc/fstab
+
+# genfstab will generate a swap drive. we're using a swap file instead
+sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' /etc/fstab
+
+# Put ~/.cache in tmpfs
+[[ ! "$(cat /etc/fstab | grep /home/$user/.config)" ]] && echo "tmpfs    /home/$user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> /etc/fstab
+
 cat /etc/fstab
 
 grub-mkconfig -o /boot/grub/grub.cfg
