@@ -16,7 +16,7 @@ done
 
 disks+=$(echo -e "\nquit")
 
-echo -e "\nEnter number of drive to install to:\n"
+echo -e "\nWhich drive?\n"
 
 select choice in $disks
 do
@@ -27,7 +27,7 @@ do
     esac
 done
 
-echo -e "\nSetup config:\n\ndisk: $disk\nuser: $user\n"
+echo -e "\nSetup config:\n\ndisk: $disk, mounted on $mnt\nuser: $user\n"
 
 }
 
@@ -35,7 +35,7 @@ echo -e "\nSetup config:\n\ndisk: $disk\nuser: $user\n"
 
 delete_partitions () {
 
-umount -n -R /mnt
+umount -n -R $mnt
 sgdisk --zap-all $disk
 
 sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk $disk
@@ -104,11 +104,11 @@ mount $disk'2' $mnt
 cd $mnt
 
 btrfs subvolume create @
+btrfs subvolume create @varcache
 btrfs subvolume create @varlog
 btrfs subvolume create @vartmp
-btrfs subvolume create @varcache
 btrfs subvolume create @snapshots
-
+btrfs subvolume create @swap
 
 cd /
 umount -R $mnt
@@ -116,18 +116,34 @@ umount -R $mnt
 
 mount -o compress=zstd,noatime,subvol=@ $disk'2' $mnt
 
-mkdir -p $mnt/{boot,var/{log,cache,tmp},tmp,.snapshots}
+mkdir -p $mnt/{boot,etc,swap,tmp,var/{cache,log,tmp},.snapshots}
 
 mount -o compress=zstd,noatime,subvol=@varlog $disk'2' $mnt/var/log
 mount -o compress=zstd,noatime,subvol=@varcache $disk'2' $mnt/var/cache
 mount -o compress=zstd,noatime,subvol=@vartmp $disk'2' $mnt/var/tmp
 mount -o compress=zstd,noatime,subvol=@snapshots $disk'2' $mnt/.snapshots
+mount -o compress=zstd,noatime,subvol=@swap $disk'2' $mnt/swap
 
 # Make dirs nocow
-chattr +C $mnt/var/log $mnt/var/cache $mnt/var/tmp
+chattr +C $mnt/var/log $mnt/var/cache $mnt/var/tmp $mnt/swap
 
 # mount efi partition
 mount --mkdir $disk'1' $mnt/boot
+
+
+###  Make swap file  ###
+
+btrfs filesystem mkswapfile --size 8G /mnt/swap/swapfile
+
+
+root_UUID=$(blkid | grep $disk | grep -o -P '(?<=UUID=\").*(?=\" UUID_SUB)')
+offset=$(btrfs inspect-internal map-swapfile -r /mnt/swap/swapfile)
+
+
+# Can't be done in chroot for some reason
+genfstab -U $mnt > mnt/etc/fstab
+
+systemctl daemon-reload
 
 }
 
@@ -135,6 +151,8 @@ mount --mkdir $disk'1' $mnt/boot
 
 install_pacstrap () {
 
+#. /etc/profile
+source /etc/profile
 pacstrap -K $mnt base linux linux-firmware btrfs-progs vi
 
 }
@@ -174,7 +192,9 @@ unmount_mount () {
 
 do_chroot () {
 
-   arch_chroot $mnt
+   echo -e "\nEntering chroot. Type 'exit' to leave.\n"
+   arch-chroot $mnt
+   echo -e "\nExiting chroot...\n"
 
 }
 
@@ -182,8 +202,8 @@ do_chroot () {
 
 chroot_install () {
  
-   cp chroot-script.sh $mnt/ 
-   arch-chroot $mnt ./chroot-script.sh $disk
+   cp chroot-script.sh $mnt/bin 
+   arch-chroot $mnt /bin/chroot-script.sh $disk
 
 } 
 
@@ -205,6 +225,7 @@ EOF
 mnt=/mnt
 user=user
 
+choose_disk
 
 choices=(
 "Choose disk"
