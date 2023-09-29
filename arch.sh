@@ -193,7 +193,8 @@ unmount_mount () {
 do_chroot () {
 
    echo -e "\nEntering chroot. Type 'exit' to leave.\n"
-   arch-chroot $mnt
+   #arch-chroot $mnt
+   arch-chroot /mnt bash -c 'export PS1="(chroot) # "; sh'
    echo -e "\nExiting chroot...\n"
 
 }
@@ -203,8 +204,8 @@ do_chroot () {
 chroot_install () {
  
    cp chroot-script.sh $mnt/bin/ 
-   arch-chroot $mnt /bin/chroot-script.sh $disk
-
+   #arch-chroot $mnt /bin/chroot-script.sh $disk
+   arch-chroot /mnt bash -c "export PS1='(chroot) # '; /bin/chroot-script.sh $disk"
 } 
 
 
