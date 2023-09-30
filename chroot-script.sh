@@ -22,6 +22,9 @@ echo 'archiso' > /etc/hostname
 echo 'KEYMAP=us' > /etc/vconsole.conf
 
 
+
+###  Grub and partitions  ###
+
 pacman --needed -Sy grub efibootmgr os-prober arch-install-scripts
 
 grub-install --target=i386-pc $disk --recheck
@@ -46,8 +49,9 @@ GRUB_TIMEOUT=0
 EOF
 
 
-UUID_ROOT=$(blkid | grep $disk"2" | grep -o -P "(?<=UUID=\").*(?=\" UUID_SUB)")
-offset=$(btrfs inspect-internal map-swapfile -r /swap/swapfile)
+
+UUID_ROOT=$(blkid -s UUID -o value $disk'2')
+offset=$(btrfs inspect-internal map-swapfile -r /mnt/swap/swapfile)
 
 sed -i "s/GRUB_CMDLINE_LINUX=.*/GRUB_CMDLINE_LINUX=\"quiet nmi_watchdog=0 loglevel=3 systemd.show_status=auto rd.udev.log_level=3 resume=UUID=$UUID_ROOT resume_offset=$offset\"/g" /etc/default/grub
 
@@ -58,9 +62,6 @@ sed -i '/zram0/d' /etc/fstab
 
 # Changing compression
 sed -i 's/zstd:3/zstd:1/' /etc/fstab
-
-# btrfs-assistant will otherwise complaine
-sed -i 's/subvolid=.*,//' /etc/fstab
 
 # genfstab will generate a swap drive. we're using a swap file instead
 sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' /etc/fstab
