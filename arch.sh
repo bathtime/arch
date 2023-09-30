@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 
 
@@ -214,6 +214,36 @@ EOF
 
 
 
+connect_wireless () {
+
+iwctl --passphrase 13FDC4A93E3C station wlan0 connect BELL364
+
+}
+
+
+
+post_setup () {
+
+
+echo TODO
+
+}
+
+
+copy_configs () {
+
+cp {/,/home/user/}{arch.sh,chroot-script.sh} /mnt/
+
+}
+
+download_scripts () {
+
+#curl -s https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > arch.sh
+curl -s https://raw.githubusercontent.com/bathtime/arch/main/chroot.sh > chroot.sh
+curl -s https://raw.githubusercontent.com/bathtime/arch/main/post-setup.sh > post-setup.sh
+
+}
+
 mnt=/mnt
 user=user
 
@@ -229,8 +259,14 @@ choices=(
 "Unmount $mnt"
 "Print partitions"
 "Delete partitions"
+"Copy configs"
+"Connect wireless"
+"Download scripts"
+"Post setup"
 "Quit"
 )
+
+
 
 select choice in "${choices[@]}" 
 do
@@ -245,6 +281,10 @@ do
         "Unmount $mnt") unmount_mount  ;;
         "Print partitions") print_partitions ;;
         "Delete partitions") delete_partitions ;;
+        "Copy configs") copy_config ;;
+        "Connect wireless") connect_wireless ;;
+        "Download scripts") download_scripts ;;
+        "Post setup") post_setup ;;
         "Quit") echo -e "\nQuitting!"; exit; ;;
         '')   echo -e "\nInvalid option!\n"; ;;
     esac
