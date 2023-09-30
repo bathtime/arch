@@ -7,6 +7,12 @@ unmount_disk () {
 if [[ "$(mount | grep $mnt)" ]]; then
 
    echo "Unmounting $mnt..."
+
+   # Shouldn't be in directory we're unmounting   
+   [[ "$(pwd | grep $mnt)" ]] && cd ..
+
+   sync
+
    umount -n -R $mnt
 
    if [[ "$?" -eq 0 ]]; then
@@ -55,22 +61,14 @@ delete_partitions () {
 
 unmount_disk
 
+# Not sure which one is the best to use
 sgdisk --zap-all $disk
+sfdisk --delete $disk
+wipefs -a $disk 
 
-sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk $disk
-d
-
-d
-
-d
-
-d
-
-d
-
-p
-w
-EOF
+# Not sure if this is required but can't hurt
+echo "Wiping first 100mb of disk. Please be patient..."
+dd if=/dev/zero of=$disk bs=1M count=100
 
 }
 
@@ -78,47 +76,56 @@ EOF
 
 create_partitions () {
 
-unmount_disk
 
-sgdisk --zap-all $disk
+delete_partitions
 
-sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk $disk
-d     # Delete partition
+#parted -s $disk mklabel msdos
+#parted -s $disk mkpart primary 1MiB 1025MiB
+#parted -s $disk align-check optimal 1
 
-d     # Delete partition
-
-d     # Delete partition
-
-d     # Delete partition
-
-d     # Delete partition
-
-d     # Delete partition
-
-n     # Add a new partition
-p     # Partition number (Accept default: 1)
-      # First sector (Accept default: varies)
-      #
-+1G   # Last sector (Accept default: varies)
-t     # Type of filesystem
-uefi  # Type of partition (EFI system partition)
-n     # Add a new partition
-      # Partition number (Accept default: 4)
-      # Accept first sector
-      # Accept last sector (Default: remaining space)
-t     # Type of partition
-      # Accept default
-linux # Type of partition
-p     # Print partitions 
-w     # Write the changes
-EOF
+#parted -s $disk mklabel gptklabel gpt
+#parted -s $disk set 1 boot on
+#parted -s $disk mkpart primary fat32 1MiB 1000MiB
+#mkfs.fat -F 32 -n SYS $disk'1'
+#mkfs.btrfs -f -L ROOT $disk'2'
 
 
-mkfs.fat -F 32 -n SYS $disk'1'
+
+echo "Wiping first 100mb of disk. Please be patient..."
+dd if=/dev/zero of=/dev/sdb bs=1M count=100
+
+parted -s $disk mklabel gpt
+parted -s --align=optimal $disk mkpart ESP fat32 1MiB 1Gib 
+parted -s $disk set 1 esp on
+parted -s $disk set 1 bios_grub on
+parted -s --align=optimal $disk mkpart btrfs 1Gib 100%
+ 
+mkfs.vfat -n EFI $disk'1' 
 mkfs.btrfs -f -L ROOT $disk'2'
 
-mkdir -p $mnt
-mount $disk'2' $mnt
+parted -s $disk print
+
+
+mount_mount
+
+
+###  Make swap file  ###
+
+btrfs filesystem mkswapfile --size 8G $mnt/swap/swapfile
+
+# Must be run here as cannot create UUIDs in chroot
+genfstab -U $mnt > $mnt/etc/fstab
+
+systemctl daemon-reload
+
+}
+
+
+
+mount_mount () {
+
+echo -e "\nMounting $mnt..."
+mount --mkdir $disk'2' $mnt
 
 cd $mnt
 
@@ -129,34 +136,25 @@ btrfs subvolume create @vartmp
 btrfs subvolume create @snapshots
 btrfs subvolume create @swap
 
-cd /
+cd .. 
 unmount_disk
 
 mount -o compress=zstd,noatime,subvol=@ $disk'2' $mnt
 
-mkdir -p $mnt/{boot,etc,swap,tmp,var/{cache,log,tmp},.snapshots}
+# Not sure if this is required
+mkdir -p $mnt/{etc,tmp}
 
-mount -o compress=zstd,noatime,subvol=@varlog $disk'2' $mnt/var/log
-mount -o compress=zstd,noatime,subvol=@varcache $disk'2' $mnt/var/cache
-mount -o compress=zstd,noatime,subvol=@vartmp $disk'2' $mnt/var/tmp
-mount -o compress=zstd,noatime,subvol=@snapshots $disk'2' $mnt/.snapshots
-mount -o compress=zstd,noatime,subvol=@swap $disk'2' $mnt/swap
+mount --mkdir -o compress=zstd,noatime,subvol=@varlog $disk'2' $mnt/var/log
+mount --mkdir -o compress=zstd,noatime,subvol=@varcache $disk'2' $mnt/var/cache
+mount --mkdir -o compress=zstd,noatime,subvol=@vartmp $disk'2' $mnt/var/tmp
+mount --mkdir -o compress=zstd,noatime,subvol=@snapshots $disk'2' $mnt/.snapshots
+mount --mkdir -o compress=zstd,noatime,subvol=@swap $disk'2' $mnt/swap
 
 # Make dirs nocow
-chattr +C $mnt/var/log $mnt/var/cache $mnt/var/tmp $mnt/swap
+chattr +C $mnt/{swap,var/{log,cache,tmp}}
 
 # mount efi partition
 mount --mkdir $disk'1' $mnt/boot
-
-
-###  Make swap file  ###
-
-btrfs filesystem mkswapfile --size 8G /mnt/swap/swapfile
-
-# Can't be done in chroot for some reason
-genfstab -U $mnt > mnt/etc/fstab
-
-systemctl daemon-reload
 
 }
 
@@ -172,27 +170,10 @@ pacstrap -K $mnt base linux linux-firmware btrfs-progs vi
 
 
 
-mount_mount () {
+copy_scripts () {
 
-unmount_disk
-
-echo -e "\nMounting $mnt...\n"
-
-mount -o compress=zstd,noatime,subvol=@ $disk'2' $mnt
-
-mkdir -p $mnt/{boot,var/{log,cache,tmp},tmp,.snapshots}
-
-mount -o compress=zstd,noatime,subvol=@varlog $disk'2' $mnt/var/log
-mount -o compress=zstd,noatime,subvol=@varcache $disk'2' $mnt/var/cache
-mount -o compress=zstd,noatime,subvol=@vartmp $disk'2' $mnt/var/tmp
-mount -o compress=zstd,noatime,subvol=@snapshots $disk'2' $mnt/.snapshots
-
-# Make dirs nocow
-chattr +C $mnt/var/log $mnt/var/cache $mnt/var/tmp
-
-
-# mount efi partition
-mount --mkdir $disk'1' $mnt/boot
+echo -e "\nCopying scripts to $mnt\n"
+cp {arch.sh,chroot.sh,post-setup.sh} $mnt
 
 }
 
@@ -211,7 +192,7 @@ do_chroot () {
 
 
 chroot_install () {
-   arch-chroot $mnt /bin/chroot.sh $disk
+   arch-chroot $mnt /chroot.sh $disk
 } 
 
 
@@ -239,6 +220,7 @@ if [[ "$?" -eq 0 ]]; then
 else
    echo "Connection unsuccessful."
 fi
+
 }
 
 
@@ -246,14 +228,6 @@ fi
 post_setup () {
 
 echo TODO
-
-}
-
-
-copy_scripts () {
-
-echo -e "\nCopying scripts to $mnt\n"
-cp {arch.sh,chroot.sh,post-setup.sh} $mnt
 
 }
 
