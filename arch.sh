@@ -7,14 +7,8 @@ choose_disk () {
 
 echo -e "\nDrives found:\n"
 
-disks=$(fdisk -l | awk -F' |:' '/Disk \/dev\// { print $2 }')
-
-for i in $disks; do
-   size="$(fdisk -l | grep $i | awk -F' |:' '/Disk \/dev\// { print $4 }')"
-   model="$(hdparm -i $i 2>/dev/null | awk -F'[=|,]' '/Model/ { print $2 }')"
-
-   printf "%s\t%sG\t\t%s\n" $i $size "$model"
-done
+lsblk --output=PATH,SIZE,MODEL,TRAN -d
+disks="$(lsblk --output=PATH -d -n)"
 
 disks+=$(echo -e "\nquit")
 
