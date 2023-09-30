@@ -135,11 +135,6 @@ mount --mkdir $disk'1' $mnt/boot
 
 btrfs filesystem mkswapfile --size 8G /mnt/swap/swapfile
 
-
-root_UUID=$(blkid | grep $disk | grep -o -P '(?<=UUID=\").*(?=\" UUID_SUB)')
-offset=$(btrfs inspect-internal map-swapfile -r /mnt/swap/swapfile)
-
-
 # Can't be done in chroot for some reason
 genfstab -U $mnt > mnt/etc/fstab
 
