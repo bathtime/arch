@@ -224,7 +224,6 @@ iwctl --passphrase 13FDC4A93E3C station wlan0 connect BELL364
 
 post_setup () {
 
-
 echo TODO
 
 }
@@ -232,15 +231,19 @@ echo TODO
 
 copy_configs () {
 
-cp {/,/home/user/}{arch.sh,chroot-script.sh} /mnt/
+cp {/,/home/user/}{arch.sh,chroot-script.sh,post-setup.sh} {/mnt,/mnt/bin,/mnt/home/user}
 
 }
+
+
 
 download_scripts () {
 
 #curl -s https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > arch.sh
 curl -s https://raw.githubusercontent.com/bathtime/arch/main/chroot.sh > chroot.sh
 curl -s https://raw.githubusercontent.com/bathtime/arch/main/post-setup.sh > post-setup.sh
+
+chmod +x {arch.sh,chroot.sh,post-setup.sh}
 
 }
 
@@ -281,7 +284,7 @@ do
         "Unmount $mnt") unmount_mount  ;;
         "Print partitions") print_partitions ;;
         "Delete partitions") delete_partitions ;;
-        "Copy configs") copy_config ;;
+        "Copy configs") copy_configs ;;
         "Connect wireless") connect_wireless ;;
         "Download scripts") download_scripts ;;
         "Post setup") post_setup ;;
