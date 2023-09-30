@@ -216,8 +216,14 @@ EOF
 
 connect_wireless () {
 
+echo -e "\nAttempting to connect to wireless...\n"
 iwctl --passphrase 13FDC4A93E3C station wlan0 connect BELL364
 
+if [[ "$?" -eq 0 ]]; then
+   echo "Connection successful!"
+else
+   echo "Connection unsuccessful."
+fi
 }
 
 
@@ -229,9 +235,10 @@ echo TODO
 }
 
 
-copy_configs () {
+copy_scripts () {
 
-cp {/,/home/user/}{arch.sh,chroot-script.sh,post-setup.sh} {/mnt,/mnt/bin,/mnt/home/user}
+echo -e "\nCopying scripts to $mnt\n"
+cp {arch.sh,chroot.sh,post-setup.sh} $mnt
 
 }
 
@@ -239,16 +246,46 @@ cp {/,/home/user/}{arch.sh,chroot-script.sh,post-setup.sh} {/mnt,/mnt/bin,/mnt/h
 
 download_scripts () {
 
+echo -e "\nDowloading scripts from Github..."
 #curl -s https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > arch.sh
 curl -s https://raw.githubusercontent.com/bathtime/arch/main/chroot.sh > chroot.sh
 curl -s https://raw.githubusercontent.com/bathtime/arch/main/post-setup.sh > post-setup.sh
 
-chmod +x {arch.sh,chroot.sh,post-setup.sh}
+if [[ "$?" -eq 0 ]]; then
+   echo "Download successful!"
+   chmod +x {arch.sh,chroot.sh,post-setup.sh}
+else
+   echo "Download unsuccessful."
+fi
 
 }
 
+
+
+download_apps () {
+
+pacman -S arch-install-scripts 
+
+}
+
+
+
 mnt=/mnt
 user=user
+
+while [[ "${1}" != "" ]]; do
+	case "${1}" in
+    	-c|--copy)      copy_scripts     ; exit ;;
+    	-d|--download)  download_scripts ; exit ;;
+        -a|--apps)	download_apps    ; exit ;;
+        -p|--post)      post_setup       ; exit ;;
+        -w|--wireless)  connect_wireless ; exit ;;
+    esac
+    
+    shift 1
+done
+
+
 
 choose_disk
 
@@ -257,39 +294,39 @@ choices=(
 "Partition disk"
 "Install pacstrap"
 "Chroot"
-"Chroot install system"
+"Chroot install"
 "Mount $mnt"
 "Unmount $mnt"
 "Print partitions"
 "Delete partitions"
-"Copy configs"
+"Copy scripts"
 "Connect wireless"
 "Download scripts"
+"Download apps"
 "Post setup"
 "Quit"
 )
 
 
-
 select choice in "${choices[@]}" 
 do
-
    case $choice in
-        "Choose disk") choose_disk ;;
-        "Partition disk") create_partitions ;;
-        "Install pacstrap") install_pacstrap ;;
-        "Chroot") do_chroot ;;
-        "Chroot install system") chroot_install ;;
-        "Mount $mnt") mount_mount  ;;
-        "Unmount $mnt") unmount_mount  ;;
-        "Print partitions") print_partitions ;;
-        "Delete partitions") delete_partitions ;;
-        "Copy configs") copy_configs ;;
-        "Connect wireless") connect_wireless ;;
-        "Download scripts") download_scripts ;;
-        "Post setup") post_setup ;;
-        "Quit") echo -e "\nQuitting!"; exit; ;;
-        '')   echo -e "\nInvalid option!\n"; ;;
+        "Choose disk")		choose_disk ;;
+        "Partition disk")	create_partitions ;;
+        "Install pacstrap")	install_pacstrap ;;
+        "Chroot")		do_chroot ;;
+        "Chroot install")	chroot_install ;;
+        "Mount $mnt")		mount_mount  ;;
+        "Unmount $mnt")		unmount_mount  ;;
+        "Print partitions")	print_partitions ;;
+        "Delete partitions")	delete_partitions ;;
+        "Copy scripts")		copy_scripts ;;
+        "Connect wireless")	connect_wireless ;;
+        "Download scripts")	download_scripts ;;
+        "Download apps")	download_apps    ;;
+        "Post setup")		post_setup ;;
+        "Quit")			echo -e "\nQuitting!"; exit; ;;
+        '')			echo -e "\nInvalid option!\n"; ;;
     esac
 done
 
