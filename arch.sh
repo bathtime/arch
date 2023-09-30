@@ -15,6 +15,13 @@ if [[ "$(mount | grep $mnt)" ]]; then
 
    umount -n -R $mnt
 
+   if [[ "$(pwd | grep $mnt)" ]]; then
+      echo "Couldn't unmount. Trying alternative method. Please be patient..." 
+      sync
+      sleep 2
+      umount -R -l $mnt
+   fi 
+
    if [[ "$?" -eq 0 ]]; then
       echo "Unmount successful."
    else
@@ -97,10 +104,11 @@ dd if=/dev/zero of=/dev/sdb bs=1M count=100
 parted -s $disk mklabel gpt
 parted -s --align=optimal $disk mkpart ESP fat32 1MiB 1Gib 
 parted -s $disk set 1 esp on
-parted -s $disk set 1 bios_grub on
+#parted -s $disk set 1 bios_grub on
 parted -s --align=optimal $disk mkpart btrfs 1Gib 100%
  
-mkfs.vfat -n EFI $disk'1' 
+mkfs.fat -F 32 -n SYS $disk'1'
+#mkfs.vfat -n EFI $disk'1' 
 mkfs.btrfs -f -L ROOT $disk'2'
 
 parted -s $disk print
@@ -162,8 +170,13 @@ mount --mkdir $disk'1' $mnt/boot
 
 install_pacstrap () {
 
+#warning: directory permissions differ on /mnt/var/tmp/
+#filesystem: 755  package: 1777
+
+bsdtar: Failed to set default locale
+
 #. /etc/profile
-source /etc/profile
+#source /etc/profile
 pacstrap -K $mnt base linux linux-firmware btrfs-progs vi
 
 }
@@ -283,13 +296,13 @@ choices=(
 "Choose disk"
 "Partition disk"
 "Install pacstrap"
-"Chroot"
+"Copy scripts"
 "Chroot install"
+"Chroot"
 "Mount $mnt"
 "Unmount $mnt"
 "Print partitions"
 "Delete partitions"
-"Copy scripts"
 "Connect wireless"
 "Download scripts"
 "Download apps"
