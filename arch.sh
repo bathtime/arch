@@ -2,6 +2,28 @@
 
 
 
+unmount_disk () {
+
+if [[ "$(mount | grep $mnt)" ]]; then
+
+   echo "Unmounting $mnt..."
+   umount -n -R $mnt
+
+   if [[ "$?" -eq 0 ]]; then
+      echo "Unmount successful."
+   else
+      echo "ERROR ($?): could not unmount!"
+      exit
+   fi 
+
+else
+   echo "Disk already unmounted!"
+fi
+
+}
+
+
+
 choose_disk () {
 
 
@@ -31,7 +53,8 @@ echo -e "\nSetup config:\n\ndisk: $disk, mounted on $mnt\nuser: $user\n"
 
 delete_partitions () {
 
-umount -n -R $mnt
+unmount_disk
+
 sgdisk --zap-all $disk
 
 sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk $disk
@@ -55,7 +78,7 @@ EOF
 
 create_partitions () {
 
-umount -n -R /mnt
+unmount_disk
 
 sgdisk --zap-all $disk
 
@@ -107,8 +130,7 @@ btrfs subvolume create @snapshots
 btrfs subvolume create @swap
 
 cd /
-umount -R $mnt
-
+unmount_disk
 
 mount -o compress=zstd,noatime,subvol=@ $disk'2' $mnt
 
@@ -152,7 +174,9 @@ pacstrap -K $mnt base linux linux-firmware btrfs-progs vi
 
 mount_mount () {
 
-umount -R $mnt
+unmount_disk
+
+echo -e "\nMounting $mnt...\n"
 
 mount -o compress=zstd,noatime,subvol=@ $disk'2' $mnt
 
@@ -173,19 +197,13 @@ mount --mkdir $disk'1' $mnt/boot
 }
 
 
-unmount_mount () {
-
-   umount -n -R /mnt
-
-}
-
-
 
 do_chroot () {
 
-   echo -e "\nEntering chroot. Type 'exit' to leave."
-   #arch-chroot $mnt
-   arch-chroot /mnt bash -c 'export PS1="\n(chroot) # "; sh'
+   echo -e "\nEntering chroot. Type 'exit' to leave.\n"
+
+   arch-chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
+
    echo -e "\nExiting chroot...\n"
 
 }
@@ -193,10 +211,7 @@ do_chroot () {
 
 
 chroot_install () {
- 
-   cp chroot-script.sh $mnt/bin/ 
-   #arch-chroot $mnt /bin/chroot-script.sh $disk
-   arch-chroot /mnt bash -c "export PS1='(chroot) # '; /bin/chroot-script.sh $disk"
+   arch-chroot $mnt /bin/chroot.sh $disk
 } 
 
 
@@ -247,13 +262,14 @@ cp {arch.sh,chroot.sh,post-setup.sh} $mnt
 download_scripts () {
 
 echo -e "\nDowloading scripts from Github..."
+
 #curl -s https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > arch.sh
 curl -s https://raw.githubusercontent.com/bathtime/arch/main/chroot.sh > chroot.sh
 curl -s https://raw.githubusercontent.com/bathtime/arch/main/post-setup.sh > post-setup.sh
 
 if [[ "$?" -eq 0 ]]; then
    echo "Download successful!"
-   chmod +x {arch.sh,chroot.sh,post-setup.sh}
+   chmod +x arch.sh chroot.sh post-setup.sh
 else
    echo "Download unsuccessful."
 fi
@@ -317,7 +333,7 @@ do
         "Chroot")		do_chroot ;;
         "Chroot install")	chroot_install ;;
         "Mount $mnt")		mount_mount  ;;
-        "Unmount $mnt")		unmount_mount  ;;
+        "Unmount $mnt")		unmount_disk  ;;
         "Print partitions")	print_partitions ;;
         "Delete partitions")	delete_partitions ;;
         "Copy scripts")		copy_scripts ;;
