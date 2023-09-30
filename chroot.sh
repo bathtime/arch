@@ -8,30 +8,41 @@ user=user
 echo -e "\nEntering chroot!\n"
 
 source /etc/profile
-#. /etc/profile
 
-echo 'en_US.UTF-8 UTF-8' > /etc/locale.gen  
-echo 'en_US ISO-8859-1' >> /etc/locale.gen
+echo -e 'en_US.UTF-8 UTF-8\nen_US ISO-8859-1' > /etc/locale.gen  
 
 hwclock --systohc
 ln -sf /usr/share/zoneinfo/Canada/Eastern /etc/localtime
-locale-gen
 
 echo 'LANG=en_US.UTF-8' > /etc/locale.conf
-echo 'archiso' > /etc/hostname
+echo 'arch' > /etc/hostname
 echo 'KEYMAP=us' > /etc/vconsole.conf
-
+echo 'FONT=ter-132b' > /etc/vconsole.conf   # Set to biggest tty font (requires terminus-font package installed)
+locale-gen
 
 
 ###  Grub and partitions  ###
 
-pacman --needed -Sy grub efibootmgr os-prober arch-install-scripts
+pacman --needed -Sy grub efibootmgr os-prober arch-install-scripts sudo tar terminus-font
+
 
 grub-install --target=i386-pc $disk --recheck
+
+#Installing for i386-pc platform.
+#grub-install: warning: this GPT partition label contains no BIOS Boot Partition; embedding won't be possible.
+#grub-install: warning: Embedding is not possible.  GRUB can only be installed in this setup by using blocklists.  However, blocklists are UNRELIABLE and their use is discouraged..
+#grub-install: error: will not proceed with blocklists.
+
+
+
 grub-install --target=x86_64-efi --bootloader-id=GRUB --efi-directory=/boot/ --removable
+# grub-install: error: unknown filesystem.  # When only grub-bois flag set
+#Installing for x86_64-efi platform. 
+#Installation finished. No error reported. 
 
 
 cat > /etc/default/grub << EOF
+
 GRUB_TIMEOUT=0
 GRUB_DISTRIBUTOR=""
 GRUB_DEFAULT=saved
@@ -46,6 +57,7 @@ GRUB_TIMEOUT=0
  
 # Update grub with:
 # grub-mkconfig -o /boot/grub/grub.cfg
+
 EOF
 
 
@@ -55,7 +67,6 @@ offset=$(btrfs inspect-internal map-swapfile -r /mnt/swap/swapfile)
 
 sed -i "s/GRUB_CMDLINE_LINUX=.*/GRUB_CMDLINE_LINUX=\"quiet nmi_watchdog=0 loglevel=3 systemd.show_status=auto rd.udev.log_level=3 resume=UUID=$UUID_ROOT resume_offset=$offset\"/g" /etc/default/grub
 
-[[ ! "$(cat /etc/fstab | grep /swap/swapfile)" ]] && echo "/swap/swapfile none swap defaults 0 0" >> /etc/fstab
 
 # Don't need
 sed -i '/zram0/d' /etc/fstab
@@ -65,6 +76,8 @@ sed -i 's/zstd:3/zstd:1/' /etc/fstab
 
 # genfstab will generate a swap drive. we're using a swap file instead
 sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' /etc/fstab
+
+[[ ! "$(cat /etc/fstab | grep '/swap/swapfile')" ]] && echo "/swap/swapfile none swap defaults 0 0" >> /etc/fstab
 
 # Put ~/.cache in tmpfs
 [[ ! "$(cat /etc/fstab | grep /home/$user/.config)" ]] && echo "tmpfs    /home/$user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> /etc/fstab
@@ -82,8 +95,8 @@ ExecStart=
 ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin $user --noclear %I 38400 linux
 EOF
 
-pacman -Sy iw iwd networkmanager sudo tar
-pacman -Sy dhcpcd
+pacman -Sy iw iwd networkmanager
+#pacman -Sy dhcpcd
 
 mkdir /etc/iwd
 touch /etc/iwd/main.conf
@@ -100,17 +113,18 @@ systemctl enable iwd.service NetworkManager.service
 
 mkdir -p /etc/sudoers.d
 echo "$user ALL=(ALL)  NOPASSWD: /usr/bin/btrfs-assistant" > /etc/sudoers.d/nopasswd
-echo '%wheel      ALL=(ALL:ALL) ALL' > /etc/sudoers.d/wheel
+echo '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/wheel
 
 
 
 # Default root password is: 123456
 printf "123456\n123456\n" | passwd root
 
-useradd -m $user -p 123456
+useradd -m $user -p '123456'
 usermod -aG wheel $user
 
-su user
+printf "123456\n123456\n" | passwd $user 
+
 
 echo '
 
@@ -119,6 +133,10 @@ if [[ ! ${DISPLAY} && ${XDG_VTNR} == 1 ]]; then
    sudo pacman -Sy plasma-mobile dolphin kate btrfs-assistant ark pip lz4 mksh htop tar
 fi' > /home/$user/.profile
 chmod +x /home/$user/.profile
+chown user:user /home/$user/.profile
+
+touch /home/$user/.hushlogin
+chown user:user /home/$user/.hushlogin
 
 
 echo -e "\nExiting chroot!\n"
