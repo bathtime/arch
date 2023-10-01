@@ -126,7 +126,24 @@ usermod -aG wheel $user
 printf "123456\n123456\n" | passwd $user 
 
 
-echo '
+echo '# If running bash
+if [ -n "$BASH_VERSION" ]; then
+    # include .bashrc if it exists
+    if [ -f "$HOME/.bashrc" ]; then
+        . "$HOME/.bashrc"
+    fi
+fi
+ 
+PATH="$HOME/.local/bin:$PATH"
+ 
+export EDITOR=/usr/bin/vi
+export QT_QPA_PLATFORM=wayland
+export QT_IM_MODULE=Maliit
+export MOZ_ENABLE_WAYLAND=1
+export XDG_RUNTIME_DIR=/run/$USER/1000
+export RUNLEVEL=3
+export QT_LOGGING_RULES="*=false"
+
 
 if [[ ! ${DISPLAY} && ${XDG_VTNR} == 1 ]]; then
    iwctl --passphrase 13FDC4A93E3C station wlan0 connect BELL364
