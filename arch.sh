@@ -232,10 +232,6 @@ print_partitions () {
 
 lsblk
 blkid
-sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk $disk
-p
-q
-EOF
 
 }
 
@@ -309,8 +305,9 @@ check_viable_disk
 echo -e "\nSetup config:\n\ndisk: $disk, mounted on $mnt\nuser: $user\n"
 
 loadkeys en
-timedatectl
 
+# Update system clock
+timedatectl
 
 [[ "$(cat /sys/firmware/efi/fw_platform_size)" -eq 64 ]] && echo "This computer is running in uefi mode" || echo "This computer is not running in uefi mode."
 
