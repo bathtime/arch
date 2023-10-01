@@ -87,8 +87,11 @@ rm -rf /.snapshots
 snapper create-config /
 btrfs subvolume create /.snapshots
 
-btrfs subvolume snapshot / /.snapshots/'Setupup complete'
+# Create the first snapshot as read only (-r)
+btrfs subvolume snapshot -r / /.snapshots/'Setup complete'
 btrfs subvolume list /
+
+
 
 #if [[ $(snapper list | awk "/Setup complete/") == "" ]]; then
 #   snapper -c root create --description "Setup complete"
