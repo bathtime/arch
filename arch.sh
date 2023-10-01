@@ -1,6 +1,27 @@
 #!/bin/bash
 
 
+check_viable_disk () {
+
+if [[ "$disk" == "" ]]; then
+   echo -e "\nMissing disk parameter. Exiting.\n"
+   exit
+fi
+
+if [[ ! "$(lsblk --output=PATH -d -n | grep $disk)" ]]; then
+   echo -e "\nNo such disk found ($disk). Exiting.\n"
+   exit
+fi
+
+# Exit if device is mounted on /
+if [[ $(mount | grep -G $disk".*on /") ]] && [[ $(mount | grep -v -G $disk".*on /mnt") ]]; then
+   echo -e "\nThis device is mounted on /. Will not run this script. Exiting.\n"
+   exit
+fi
+
+}
+
+
 
 unmount_disk () {
 
@@ -170,6 +191,7 @@ mount --mkdir $disk'1' $mnt/boot
 
 install_pacstrap () {
 
+
 #warning: directory permissions differ on /mnt/var/tmp/
 #filesystem: 755  package: 1777
 
@@ -194,11 +216,11 @@ cp {arch.sh,chroot.sh,post-setup.sh} $mnt
 
 do_chroot () {
 
-   echo -e "\nEntering chroot. Type 'exit' to leave.\n"
+echo -e "\nEntering chroot. Type 'exit' to leave.\n"
 
-   arch-chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
+arch-chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
 
-   echo -e "\nExiting chroot...\n"
+echo -e "\nExiting chroot...\n"
 
 }
 
@@ -276,11 +298,23 @@ pacman -S arch-install-scripts
 mnt=/mnt
 user=user
 
+
+if [[ ! "$1" = "" ]]; then
+   disk=$1
+else
+   choose_disk
+fi
+
+check_viable_disk
+
+echo -e "\nSetup config:\n\ndisk: $disk, mounted on $mnt\nuser: $user\n"
+
+
 while [[ "${1}" != "" ]]; do
-	case "${1}" in
-    	-c|--copy)      copy_scripts     ; exit ;;
-    	-d|--download)  download_scripts ; exit ;;
-        -a|--apps)	download_apps    ; exit ;;
+        case "${1}" in
+        -c|--copy)      copy_scripts     ; exit ;;
+        -d|--download)  download_scripts ; exit ;;
+        -a|--apps)      download_apps    ; exit ;;
         -p|--post)      post_setup       ; exit ;;
         -w|--wireless)  connect_wireless ; exit ;;
     esac
@@ -288,9 +322,6 @@ while [[ "${1}" != "" ]]; do
     shift 1
 done
 
-
-
-choose_disk
 
 choices=(
 "Choose disk"
