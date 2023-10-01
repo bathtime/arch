@@ -23,10 +23,10 @@ locale-gen
 
 ###  Grub and partitions  ###
 
-pacman --needed -Sy grub efibootmgr os-prober arch-install-scripts sudo tar terminus-font
+pacman --needed -Sy grub efibootmgr os-prober arch-install-scripts sudo tar terminus-font libarchive
 
 
-grub-install --target=i386-pc $disk --recheck
+#grub-install --target=i386-pc $disk --recheck
 
 #Installing for i386-pc platform.
 #grub-install: warning: this GPT partition label contains no BIOS Boot Partition; embedding won't be possible.
