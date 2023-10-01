@@ -2,7 +2,7 @@
 
 # Must be run as user to properly install pip, yay, and flatpak 
 if [[ "$(id -u)" -eq 0 ]]; then
-   echo "This script must be run as user. Exiting."
+   echo "You're running in root. This script must be run as user. Exiting."
    exit
 fi
 
