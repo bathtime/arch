@@ -1,4 +1,4 @@
-#!/bin/sh
+ #!/bin/sh
 
 
 disk=$1
@@ -132,8 +132,8 @@ if [[ ! ${DISPLAY} && ${XDG_VTNR} == 1 ]]; then
    iwctl --passphrase 13FDC4A93E3C station wlan0 connect BELL364
    sudo pacman -Sy plasma-mobile dolphin kate btrfs-assistant ark pip lz4 mksh htop tar
 fi' > /home/$user/.profile
-chmod +x /home/$user/.profile
-chown user:user /home/$user/.profile
+chmod +x /home/$user/.bash_profile
+chown user:user /home/$user/.bash_profile
 
 touch /home/$user/.hushlogin
 chown user:user /home/$user/.hushlogin
