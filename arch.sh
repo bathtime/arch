@@ -294,6 +294,9 @@ pacman -S arch-install-scripts
 mnt=/mnt
 user=user
 
+# Make font big and readable
+#pacman -S terminus-font
+setfont ter-132b
 
 if [[ ! "$1" = "" ]]; then
    disk=$1
@@ -304,6 +307,13 @@ fi
 check_viable_disk
 
 echo -e "\nSetup config:\n\ndisk: $disk, mounted on $mnt\nuser: $user\n"
+
+loadkeys en
+timedatectl
+
+
+[[ "$(cat /sys/firmware/efi/fw_platform_size)" -eq 64 ]] && echo "This computer is running in uefi mode" || echo "This computer is not running in uefi mode."
+
 
 
 while [[ "${1}" != "" ]]; do
@@ -361,15 +371,4 @@ do
 done
 
 
-exit
-
-loadkeys en
-
-pacman -S terminus-font
-setfont ter-132b
-
-# 64 = verification that computer is running in uefi mode
-cat /sys/firmware/efi/fw_platform_size
-
-timedatectl
 
