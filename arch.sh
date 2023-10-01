@@ -334,6 +334,15 @@ do
 done
 
 
+exit
 
+loadkeys en
 
+pacman -S terminus-font
+setfont ter-132b
+
+# 64 = verification that computer is running in uefi mode
+cat /sys/firmware/efi/fw_platform_size
+
+timedatectl
 
