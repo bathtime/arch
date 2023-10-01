@@ -1,10 +1,10 @@
 #!/bin/sh
 
-
+user=user
 
 # Must be run as user to properly install pip, yay, and flatpak 
-if [[ "$(id -u)" -eq 0 ]]; then
-   echo "You're running in root. This script must be run as user. Exiting."
+if [[ "$(id -u)" -ne 0 ]]; then
+   echo "This script must be run as root. Exiting."
    exit
 fi
 
@@ -19,15 +19,15 @@ if [[ ! "$(echo $interfaces | grep wlan0)" ]]; then
    systemctl disable iwd.service
 else
    echo "Wireless interface found. Attempting connection..."
-   iwctl --passphrase 13FDC4A93E3C station wlan0 connect BELL364
+   sudo -u $user iwctl --passphrase 13FDC4A93E3C station wlan0 connect BELL364
 fi
 
 if [[ ! "$(echo $interfaces | grep eth0)" ]]; then
-   sudo systemctl disable dhcpcd.service
-   sudo systemctl enable dhcpcd@eth0.service
+   systemctl disable dhcpcd.service
+   systemctl enable dhcpcd@eth0.service
 fi
 
-sudo timedatectl set-ntp yes
+timedatectl set-ntp yes
 
 
 
@@ -55,27 +55,27 @@ sed -i "s/GRUB_CMDLINE_LINUX=\"/GRUB_CMDLINE_LINUX=\"resume=UUID=$UUID_ROOT resu
 
 
 
-sudo pacman -S --needed git base-devel less
+pacman -S --needed git base-devel less
 
 
 # Install yay
-git clone https://aur.archlinux.org/yay-bin
+sudo -u $user git clone https://aur.archlinux.org/yay-bin
 cd yay-bin
-makepkg -si
+sudo -u $user makepkg -si
 
 # To be run at first use:
-yay -Y --gendb
+sudo -u $user yay -Y --gendb
 
 # To check for development package updates
-# yay -Syu --devel
+# sudo -u $user yay -Syu --devel
 
 # To make development package updates permanently enabled
-# yay -Syu
+# sudo -u $user yay -Syu
 
 
-sudo pacman -S plasma-desktop plasma-wayland-session plasma-pa pipewire-pulse kscreen snapper dolphin konsole kate ark firefox
+pacman -S plasma-desktop plasma-wayland-session plasma-pa pipewire-pulse kscreen snapper dolphin konsole kate ark firefox
 
-yay plasma-mobile btrfs-assistant bauh
+sudo -u $user yay plasma-mobile btrfs-assistant bauh
 
 
 
@@ -116,6 +116,9 @@ EOF
 
 echo "To edit snapper config, run: vi /etc/snapper/configs/root"
 
+#chattr +C /home/user/.cache
+
+su - user
 
 ###  Setup konsole profiles  ###
 
@@ -164,7 +167,7 @@ EOF
  
 ###  Epy reader  ###
 
-pip3 install epy-reader
+sudo -u $user pip3 install epy-reader
 
 cat > ~/.local/share/applications/epy.desktop << EOF
 [Desktop Entry]
@@ -219,10 +222,7 @@ rules=1
 EOF
 
 
-# Get rid of cruft
-systemctl disable avahi-daemon.service bluetooth.service firewalld ModemManager.service NetworkManager.service
 
-#chattr +C /home/user/.cache
 
 
 
