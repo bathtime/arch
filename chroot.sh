@@ -14,16 +14,12 @@ if [[ ! "$(lsblk --output=PATH -d -n | grep $disk)" ]]; then
    exit
 fi
 
-
-# Exit if device is mounted on /
-if [[ $(mount | grep -G $disk".*on /") ]] && [[ $(mount | grep -v -G $disk".*on /mnt") ]]; then
-   echo -e "\nThis device is mounted on /. Will not run this script. Exiting.\n"
+# Exit if device is not mounted (or we're probably using a disk we shouldn't be using)
+if [[ ! $(mount | grep -v -G $disk".*on /mnt") ]]; then
+   echo -e "\nMust be mounted on $mnt. Will not run this script. Exiting.\n"
    exit
 fi
 
-exit
-
-echo -e "\nEntering chroot!\n"
 
 source /etc/profile
 
@@ -39,10 +35,11 @@ echo 'FONT=ter-132b' > /etc/vconsole.conf   # Set to biggest tty font (requires 
 locale-gen
 
 
-###  Grub and partitions  ###
 
 pacman --needed -Sy grub efibootmgr os-prober arch-install-scripts sudo tar terminus-font libarchive man
 
+
+###  Grub and partitions  ###
 
 #grub-install --target=i386-pc $disk --recheck
 
@@ -87,7 +84,6 @@ sed -i 's/zstd:3/zstd:1/' /etc/fstab
 # genfstab will generate a swap drive. we're using a swap file instead
 sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' /etc/fstab
 
-
 # Put ~/.cache in tmpfs
 [[ ! "$(cat /etc/fstab | grep /home/$user/.config)" ]] && echo "tmpfs    /home/$user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> /etc/fstab
 
@@ -95,6 +91,9 @@ cat /etc/fstab
 
 grub-mkconfig -o /boot/grub/grub.cfg
 
+
+
+# Autologin to tty1
 
 mkdir -p /etc/systemd/system/getty@tty1.service.d
 cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf << EOF
@@ -104,12 +103,14 @@ ExecStart=
 ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin $user --noclear %I 38400 linux
 EOF
 
+
+
+###  Setup network  ###
+
 pacman -Sy iw iwd dhcpcd
 
-mkdir /etc/iwd
-touch /etc/iwd/main.conf
+mkdir -p /etc/iwd
 cat > /etc/iwd/main.conf << EOF
-
 [General]
 EnableNetworkConfiguration=true
 EOF
@@ -117,11 +118,13 @@ EOF
 echo "Enabling network services..."
 systemctl enable iwd.service dhcpcd.service
 
+
+
+###  Setup sudo and user  ###
+
 mkdir -p /etc/sudoers.d
 echo "$user ALL=(ALL)  NOPASSWD: /usr/bin/btrfs-assistant" > /etc/sudoers.d/nopasswd
 echo '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/wheel
-
-
 
 # Default root password is: 123456
 printf "123456\n123456\n" | passwd root
@@ -131,6 +134,11 @@ usermod -aG wheel $user
 
 printf "123456\n123456\n" | passwd $user 
 
+
+
+###  Finish setting up user  ###
+
+su - user
 
 echo '# If running bash
 if [ -n "$BASH_VERSION" ]; then
@@ -150,15 +158,12 @@ export XDG_RUNTIME_DIR=/run/$USER/1000
 export RUNLEVEL=3
 export QT_LOGGING_RULES="*=false"
 
-
 if [[ ! ${DISPLAY} && ${XDG_VTNR} == 1 ]]; then
    iwctl --passphrase 13FDC4A93E3C station wlan0 connect BELL364
 fi' > /home/$user/.bash_profile
-chmod +x /home/$user/.bash_profile
-chown user:user /home/$user/.bash_profile
+#chmod +x /home/$user/.bash_profile
 
 touch /home/$user/.hushlogin
-chown user:user /home/$user/.hushlogin
 
 
 echo -e "\nExiting chroot!\n"
