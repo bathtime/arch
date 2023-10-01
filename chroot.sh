@@ -23,7 +23,7 @@ locale-gen
 
 ###  Grub and partitions  ###
 
-pacman --needed -Sy grub efibootmgr os-prober arch-install-scripts sudo tar terminus-font libarchive
+pacman --needed -Sy grub efibootmgr os-prober arch-install-scripts sudo tar terminus-font libarchive man
 
 
 #grub-install --target=i386-pc $disk --recheck
