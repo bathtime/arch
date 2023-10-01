@@ -69,8 +69,8 @@ delete_partitions () {
 unmount_disk
 
 # Not sure which one is the best to use
-sgdisk --zap-all $disk
-sfdisk --delete $disk
+#sgdisk --zap-all $disk
+#sfdisk --delete $disk
 wipefs -a $disk 
 
 # Not sure if this is required but can't hurt
