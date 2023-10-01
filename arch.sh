@@ -14,8 +14,8 @@ if [[ ! "$(lsblk --output=PATH -d -n | grep $disk)" ]]; then
 fi
 
 # Exit if device is mounted on /
-if [[ $(mount | grep -G $disk".*on /") ]] && [[ $(mount | grep -v -G $disk".*on /mnt") ]]; then
-   echo -e "\nThis device is mounted on /. Will not run this script. Exiting.\n"
+if [[ ! $(mount | grep -E $disk".*on $mnt") ]]; then
+   echo -e "\nDevice not mounted on $mnt. Will not run this script. Exiting.\n"
    exit
 fi
 
