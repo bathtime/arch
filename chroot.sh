@@ -118,6 +118,16 @@ EOF
 echo "Enabling network services..."
 systemctl enable iwd.service dhcpcd.service
 
+# So iwd can automatically connect without any further interaction
+#mkdir -p /var/lib/iwd
+cat > /var/lib/iwd/BELL364.psk << EOF
+[Security]
+PreSharedKey=14ad650cdc57e587a5198d3be78cb4ef4dc2574a580949d3b9803774858c5abd
+Passphrase=13FDC4A93E3C
+SAE-PT-Group19=f5614183429496736ed0da01f20d14b3415e201531b6fc24987eb128c2090897dcb358dc0eac4716994f6dee52bd7cb642bc67f43106478fded1236655418a7a
+SAE-PT-Group20=eb986ca0245dcd12c86bf779e36d4434973059133f10e12326cf319db32b98fed48e248f69e015bed36813f716581e13d56a21dbbda4fe3541e355afe49446458e8d8e47777b9866f720197effd6273b6e89cbdc140e58920cf269abe6ea0bf7"
+EOF
+
 
 
 ###  Setup sudo and user  ###
