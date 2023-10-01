@@ -1,5 +1,7 @@
 #!/bin/sh
 
+
+
 # Must be run as user to properly install pip, yay, and flatpak 
 if [[ "$(id -u)" -eq 0 ]]; then
    echo "You're running in root. This script must be run as user. Exiting."
@@ -25,21 +27,33 @@ if [[ ! "$(echo $interfaces | grep eth0)" ]]; then
    sudo systemctl enable dhcpcd@eth0.service
 fi
 
-
-
-
-###  Make swap file  ###
-
-btrfs filesystem mkswapfile --size 8G $mnt/swap/swapfile
-#UUID_ROOT=$(blkid -s UUID -o value $disk'2')
-#offset=$(btrfs inspect-internal map-swapfile -r /mnt/swap/swapfile)
-#sed -i "s/GRUB_CMDLINE_LINUX=.*/GRUB_CMDLINE_LINUX=\"quiet nmi_watchdog=0 loglevel=3 systemd.show_status=auto rd.udev.log_level=3 resume=UUID=$UUID_ROOT resume_offset=$offset\"/g" /etc/default/grub
-#[[ ! "$(cat /etc/fstab | grep '/swap/swapfile')" ]] && echo "/swap/swapfile none swap defaults 0 0" >> /etc/fstab
-
-
-iwctl --passphrase 13FDC4A93E3C station wlan0 connect BELL364
-
 sudo timedatectl set-ntp yes
+
+
+
+###  Make btrfs swap file  ###
+
+# Swap file must be on a separate subvolume if running btrfs
+if [[ ! "$(btrfs subvolume list / | grep /swap)" ]]; then
+   btrfs subvolume create /swap
+   chattr +C /swap
+fi
+
+btrfs filesystem mkswapfile --size 8G /swap/swapfile
+
+disk=$(mount | grep 'on / ' | awk '{ print $1 }')
+UUID_ROOT=$(blkid -s UUID -o value $disk)
+offset=$(btrfs inspect-internal map-swapfile -r /swap/swapfile)
+
+sed -i "s/GRUB_CMDLINE_LINUX=\"/GRUB_CMDLINE_LINUX=\"resume=UUID=$UUID_ROOT resume_offset=$offset /g" /etc/default/grub
+
+[[ ! "$(cat /etc/fstab | grep '/swap/swapfile')" ]] && echo -e "\n/swap/swapfile none swap defaults 0 0" >> /etc/fstab
+
+
+
+
+
+
 
 sudo pacman -S --needed git base-devel less
 
