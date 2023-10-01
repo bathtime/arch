@@ -113,8 +113,7 @@ ExecStart=
 ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin $user --noclear %I 38400 linux
 EOF
 
-pacman -Sy iw iwd networkmanager
-#pacman -Sy dhcpcd
+pacman -Sy iw iwd dhcpcd
 
 mkdir /etc/iwd
 touch /etc/iwd/main.conf
@@ -124,10 +123,8 @@ cat > /etc/iwd/main.conf << EOF
 EnableNetworkConfiguration=true
 EOF
 
-echo "Enabling iwd service..."
-systemctl enable iwd.service
-
-systemctl enable iwd.service NetworkManager.service 
+echo "Enabling network services..."
+systemctl enable iwd.service dhcpcd.service
 
 mkdir -p /etc/sudoers.d
 echo "$user ALL=(ALL)  NOPASSWD: /usr/bin/btrfs-assistant" > /etc/sudoers.d/nopasswd
