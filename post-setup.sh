@@ -86,10 +86,13 @@ umount /.snapshots
 rm -rf /.snapshots
 snapper create-config /
 btrfs subvolume create /.snapshots
- 
-if [[ $(snapper list | awk "/Setup complete/") == "" ]]; then
-   snapper -c root create --description "Setup complete"
-fi
+
+btrfs subvolume snapshot / /.snapshots/'Setupup complete'
+btrfs subvolume list /
+
+#if [[ $(snapper list | awk "/Setup complete/") == "" ]]; then
+#   snapper -c root create --description "Setup complete"
+#fi
   
 # Automate snapper and btrfs services  ###
 systemctl enable snapper-timeline.timer
