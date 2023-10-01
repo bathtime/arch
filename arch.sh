@@ -138,10 +138,6 @@ parted -s $disk print
 mount_mount
 
 
-###  Make swap file  ###
-
-btrfs filesystem mkswapfile --size 8G $mnt/swap/swapfile
-
 # Must be run here as cannot create UUIDs in chroot
 genfstab -U $mnt > $mnt/etc/fstab
 
