@@ -200,7 +200,7 @@ install_pacstrap () {
 
 #. /etc/profile
 #source /etc/profile
-pacstrap -K $mnt base linux linux-firmware btrfs-progs vi libarchive
+pacstrap -K $mnt base linux linux-firmware fsck btrfs-progs vi libarchive
 
 }
 
