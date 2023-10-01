@@ -22,7 +22,7 @@ yay -Y --gendb
 
 
 
-sudo pacman -S plasma-desktop plasma-wayland-session plasma-pa kscreen snapper dolphin konsole kate ark firefox
+sudo pacman -S plasma-desktop plasma-wayland-session plasma-pa pipewire-pulse kscreen snapper dolphin konsole kate ark firefox
 
 yay plasma-mobile btrfs-assistant bauh
 
