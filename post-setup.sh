@@ -40,9 +40,9 @@ sudo pacman -S dolphin konsole kate ark firefox
 
 umount /.snapshots
 rm -rf /.snapshots
-btrfs subvolume create /.snapshots
 snapper create-config /
- 
+btrfs subvolume create /.snapshots
+
 if [[ $(snapper list | awk "/Setup complete/") == "" ]]; then
    snapper -c root create --description "Setup complete"
 fi
