@@ -173,11 +173,11 @@ install_pacstrap () {
 #warning: directory permissions differ on /mnt/var/tmp/
 #filesystem: 755  package: 1777
 
-bsdtar: Failed to set default locale
+#bsdtar: Failed to set default locale
 
 #. /etc/profile
 #source /etc/profile
-pacstrap -K $mnt base linux linux-firmware btrfs-progs vi
+pacstrap -K $mnt base linux linux-firmware btrfs-progs vi libarchive
 
 }
 
