@@ -107,8 +107,8 @@ parted -s $disk set 1 esp on
 #parted -s $disk set 1 bios_grub on
 parted -s --align=optimal $disk mkpart btrfs 1Gib 100%
  
-mkfs.fat -F 32 -n SYS $disk'1'
-#mkfs.vfat -n EFI $disk'1' 
+#mkfs.fat -F 32 -n SYS $disk'1'
+mkfs.vfat -n EFI $disk'1' 
 mkfs.btrfs -f -L ROOT $disk'2'
 
 parted -s $disk print
