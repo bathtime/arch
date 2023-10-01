@@ -37,7 +37,7 @@ locale-gen
 
 
 pacman --needed -Sy grub efibootmgr os-prober arch-install-scripts sudo tar terminus-font libarchive man
-
+pacman --needed -S dosfstools parted
 
 ###  Grub and partitions  ###
 
