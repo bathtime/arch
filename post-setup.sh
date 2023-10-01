@@ -21,10 +21,10 @@ yay -Y --gendb
 # yay -Syu
 
 
+
+sudo pacman -S plasma-desktop plasma-wayland-session snapper kscreen dolphin konsole kate ark firefox
+
 yay plasma-mobile btrfs-assistant bauh
-
-sudo pacman -S plasma-desktop plasma-wayland-session kscreen dolphin konsole kate ark firefox
-
 
 
 ###  Snapper  ###
