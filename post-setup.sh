@@ -27,14 +27,6 @@ sudo pacman -S plasma-desktop plasma-wayland-session plasma-pa pipewire-pulse ks
 yay plasma-mobile btrfs-assistant bauh
 
 
-###  Snapper  ###
-
-
-yay plasma-mobile btrfs-assistant bauh
-
-sudo pacman -S dolphin konsole kate ark firefox
-
-
 
 ###  Snapper  ### 
 
