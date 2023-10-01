@@ -30,7 +30,7 @@ yay plasma-mobile btrfs-assistant bauh
 ###  Snapper  ###
 
 
-yay plasma-mobile plasma-wayland-session btrfs-assistant bauh
+yay plasma-mobile btrfs-assistant bauh
 
 sudo pacman -S dolphin konsole kate ark firefox
 
