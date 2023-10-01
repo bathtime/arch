@@ -134,11 +134,11 @@ mkfs.btrfs -f -L ROOT $disk'2'
 
 parted -s $disk print
 
-cat >> /etc/modules-load.d/vfat.conf << EOF
-vfat
-nls_cp437
-nls_ascii
-EOF
+#cat >> /etc/modules-load.d/vfat.conf << EOF
+#vfat
+#nls_cp437
+#nls_ascii
+#EOF
 
 mount_mount
 
