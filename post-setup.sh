@@ -1,6 +1,32 @@
 #!/bin/sh
 
-# TODO - make warning saying to not run as root 
+# Must be run as user to properly install pip, yay, and flatpak 
+if [[ "$(id -u)" -eq 0 ]]; then
+   echo "This script must be run as user. Exiting."
+   exit
+fi
+
+
+interfaces="$(ls /sys/class/net | sed -E '/lo/d')"
+
+echo -e "\nAvailable interfaces:\n$interfaces"
+
+if [[ ! "$(echo $interfaces | grep wlan0)" ]]; then
+   echo "No wireless interfaces found. Removing wireless applications..."
+   #sudo pacman -R iw iwd
+   systemctl disable iwd.service
+else
+   echo "Wireless interface found. Attempting connection..."
+   iwctl --passphrase 13FDC4A93E3C station wlan0 connect BELL364
+fi
+
+if [[ ! "$(echo $interfaces | grep eth0)" ]]; then
+   sudo systemctl disable dhcpcd.service
+   sudo systemctl enable dhcpcd@eth0.service
+fi
+
+
+
 
 ###  Make swap file  ###
 
