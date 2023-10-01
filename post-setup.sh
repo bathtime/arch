@@ -1,5 +1,11 @@
 #!/bin/sh
 
+
+
+# TODO - make warning saying to not run as root 
+
+
+
 iwctl --passphrase 13FDC4A93E3C station wlan0 connect BELL364
 
 
