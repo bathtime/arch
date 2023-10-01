@@ -4,6 +4,24 @@
 disk=$1
 user=user
 
+if [[ "$disk" == "" ]]; then
+   echo -e "\nMissing disk parameter. Exiting.\n"
+   exit
+fi
+
+if [[ ! "$(lsblk --output=PATH -d -n | grep $disk)" ]]; then
+   echo -e "\nNo such disk found ($disk). Exiting.\n"
+   exit
+fi
+
+
+# Exit if device is mounted on /
+if [[ $(mount | grep -G $disk".*on /") ]] && [[ $(mount | grep -v -G $disk".*on /mnt") ]]; then
+   echo -e "\nThis device is mounted on /. Will not run this script. Exiting.\n"
+   exit
+fi
+
+exit
 
 echo -e "\nEntering chroot!\n"
 
