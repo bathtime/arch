@@ -2,6 +2,13 @@
 
 # TODO - make warning saying to not run as root 
 
+###  Make swap file  ###
+
+btrfs filesystem mkswapfile --size 8G $mnt/swap/swapfile
+#UUID_ROOT=$(blkid -s UUID -o value $disk'2')
+#offset=$(btrfs inspect-internal map-swapfile -r /mnt/swap/swapfile)
+#sed -i "s/GRUB_CMDLINE_LINUX=.*/GRUB_CMDLINE_LINUX=\"quiet nmi_watchdog=0 loglevel=3 systemd.show_status=auto rd.udev.log_level=3 resume=UUID=$UUID_ROOT resume_offset=$offset\"/g" /etc/default/grub
+#[[ ! "$(cat /etc/fstab | grep '/swap/swapfile')" ]] && echo "/swap/swapfile none swap defaults 0 0" >> /etc/fstab
 
 
 iwctl --passphrase 13FDC4A93E3C station wlan0 connect BELL364
