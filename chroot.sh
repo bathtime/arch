@@ -3,6 +3,7 @@
 
 disk=$1
 user=user
+mnt=/mnt
 
 [[ "$disk" == "" ]] && echo -e "\nMissing disk parameter. Exiting.\n" && exit
 [[ ! $(lsblk --output=PATH -d -n | grep $disk) ]] && echo -e "\nNo such disk found ($disk). Exiting.\n" && exit
