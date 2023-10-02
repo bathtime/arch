@@ -69,17 +69,20 @@ swapon /swap/swapfile
 
 
 
-###  Kernel compression  ###
-
+# lz4 kernel compression (for speed)
 pacman -S lz4
 cat > /etc/mkinitcpio.conf.d/lz4.conf << EOF
 COMPRESSION="lz4"
 MODULES_DECOMPRESS="yes"
 EOF
 
+
+# Add 'resume' hook to allow for hibernation
 cat > /etc/mkinitcpio.conf.d/myhooks.conf << EOF
 HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block filesystems resume fsck)
 EOF
+
+mkinitcpio -P
 
 
 pacman -S --needed git base-devel less
