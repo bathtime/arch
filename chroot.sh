@@ -35,25 +35,16 @@ echo 'FONT=ter-132b' > /etc/vconsole.conf   # Set to biggest tty font (requires 
 locale-gen
 
 
-
 pacman --needed -Sy grub efibootmgr os-prober arch-install-scripts sudo tar terminus-font libarchive man
 pacman --needed -S dosfstools parted
 
+
+
 ###  Grub and partitions  ###
 
-#grub-install --target=i386-pc $disk --recheck
+grub-install --target=i386-pc $disk --recheck
 
-#Installing for i386-pc platform.
-#grub-install: warning: this GPT partition label contains no BIOS Boot Partition; embedding won't be possible.
-#grub-install: warning: Embedding is not possible.  GRUB can only be installed in this setup by using blocklists.  However, blocklists are UNRELIABLE and their use is discouraged..
-#grub-install: error: will not proceed with blocklists.
-
-
-
-grub-install --target=x86_64-efi --bootloader-id=GRUB --efi-directory=/boot/ --removable
-# grub-install: error: unknown filesystem.  # When only grub-bois flag set
-#Installing for x86_64-efi platform. 
-#Installation finished. No error reported. 
+grub-install --target=x86_64-efi --bootloader-id=GRUB --efi-directory=/efi/ --removable
 
 
 cat > /etc/default/grub << EOF
