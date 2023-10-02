@@ -32,7 +32,7 @@ locale-gen
 
 #warning: directory permissions differ on /etc/sudoers.d/
 #filesystem: 755  package: 750
-chmod -R 1755 /etc/sudoers.d
+chmod -R 1750 /etc/sudoers.d
 
 pacman --needed -Sy grub efibootmgr os-prober sudo tar terminus-font libarchive man
 
