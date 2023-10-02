@@ -270,3 +270,50 @@ EOF
 chmod +x ~/.local/bin/flatpack-install.sh
  
 
+
+###  Enable secure boot mode  ###
+
+pacman -S intel-ucode sbctl efibootmgr
+
+cp /proc/cmdline /etc/kernel/cmdline
+chmod 1777 /etc/kernel/cmdline
+
+chattr -i /sys/firmware/efi/efivars/*
+mkdir -p /efi/EFI/Linux
+
+# NOTE: ONLY BUNDLE IN ONE MICROCODE.
+# FOR AMD, REMOVE -i /boot/intel-ucode.img
+# FOR INTEL, REMOVE -a /boot/amd-ucode.img
+
+sbctl bundle -s \
+-i /boot/intel-ucode.img \
+-k /boot/vmlinuz-linux \
+-f /boot/initramfs-linux.img \
+-c /etc/kernel/cmdline \
+/efi/EFI/Linux/ArchBundle.efi
+
+
+sbctl create-keys
+sbctl generate-bundles --sign
+sbctl enroll-keys --microsoft
+
+disk=
+[[ "$disk" == "" ]] && echo "Must enter a disk. Exiting." && exit
+
+efibootmgr --create \
+ --disk $disk \
+ --part 1 \
+ --label "My Signed Bundle" \
+ --loader /EFI/Linux/ArchBundle.efi
+
+
+# Check if it's enabled
+sbctl status
+
+
+# Whenever Pacman updates the kernel, sbctl auto-generates the bundle with the new kernel and signs it.
+# To change kernel options, just edit /etc/kernel/cmdline, update the bundle and sign it
+
+# nano /etc/kernel/cmdline
+# sbctl generate-bundles --sign
+
