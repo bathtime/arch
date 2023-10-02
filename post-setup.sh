@@ -22,9 +22,18 @@ else
    sudo -u $user iwctl --passphrase 13FDC4A93E3C station wlan0 connect BELL364
 fi
 
-if [[ ! "$(echo $interfaces | grep eth0)" ]]; then
+if [[ ! "$(echo $interfaces | grep eno1)" ]]; then
+
+   # Helps with slow booting caused by waiting for a connection
+   mkdir -p /etc/systemd/system/dhcpcd@.service.d/
+   cat > '/etc/systemd/system/dhcpcd@.service.d/no-wait.conf' << EOF
+      [Service]
+      ExecStart=
+      ExecStart=/usr/bin/dhcpcd -b -q %I
+EOF
+
    systemctl disable dhcpcd.service
-   systemctl enable dhcpcd@eth0.service
+   systemctl enable dhcpcd@eno1.service
 fi
 
 timedatectl set-ntp yes
