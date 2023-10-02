@@ -115,6 +115,14 @@ cat > /etc/iwd/main.conf << EOF
 EnableNetworkConfiguration=true
 EOF
 
+# Helps with slow booting caused by waiting for a connection
+mkdir -p /etc/systemd/system/dhcpcd@.service.d/
+cat > /etc/systemd/system/dhcpcd@.service.d/no-wait.conf << EOF
+[Service]
+ExecStart=
+ExecStart=/usr/bin/dhcpcd -b -q %I
+EOF
+
 echo "Enabling network services..."
 systemctl enable iwd.service dhcpcd.service
 
