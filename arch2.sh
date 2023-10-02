@@ -197,11 +197,17 @@ check_on_root
 #bsdtar: Failed to set default locale
 
 source /etc/profile
-pacman-key --init
 pacstrap -K $mnt base linux linux-firmware btrfs-progs vi libarchive
 
 }
 
+reset_keys () {
+
+rm -rf /etc/pacman.d/gnupg
+pacman-key --init
+pacman-key --populate
+
+}
 
 
 copy_scripts () {
@@ -347,6 +353,7 @@ choices=(
 "Download scripts"
 "Download apps"
 "Post setup"
+"Reset pacman keys"
 "Quit"
 )
 
@@ -368,7 +375,8 @@ do
         "Download scripts")	download_scripts ;;
         "Download apps")	download_apps    ;;
         "Post setup")		post_setup ;;
-        "Quit")			echo -e "\nQuitting!"; exit; ;;
+        "Reset pacman keys")    reset_keys ;;
+	"Quit")			echo -e "\nQuitting!"; exit; ;;
         '')			echo -e "\nInvalid option!\n"; ;;
     esac
 done
