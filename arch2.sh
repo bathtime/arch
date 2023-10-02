@@ -89,9 +89,6 @@ delete_partitions () {
 
 unmount_disk
 
-# Not sure which one is the best to use
-#sgdisk --zap-all $disk
-#sfdisk --delete $disk
 wipefs -a $disk 
 
 # Not sure if this is required but can't hurt
@@ -107,28 +104,6 @@ create_partitions () {
 
 delete_partitions
 
-#parted -s $disk mklabel msdos
-#parted -s $disk mkpart primary 1MiB 1025MiB
-#parted -s $disk align-check optimal 1
-
-#parted -s $disk mklabel gptklabel gpt
-#parted -s $disk set 1 boot on
-#parted -s $disk mkpart primary fat32 1MiB 1000MiB
-#mkfs.fat -F 32 -n SYS $disk'1'
-#mkfs.btrfs -f -L ROOT $disk'2'
-
-
-#parted -s $disk mklabel gpt
-#parted -s --align=optimal $disk mkpart ESP fat32 1MiB 1Gib 
-#parted -s $disk set 1 esp on
-#parted -s $disk set 1 bios_grub on
-#parted -s --align=optimal $disk mkpart btrfs 1Gib 100%
- 
-#mkfs.fat -F 32 -n SYS $disk'1'
-#mkfs.vfat -n EFI $disk'1' 
-#mkfs.btrfs -f -L ROOT $disk'2'
-
-wipefs -a $disk
 parted -s $disk mklabel gpt
 parted -s --align=optimal $disk mkpart ESP fat32 1MiB 511Mib 
 parted -s $disk set 1 esp on
@@ -194,9 +169,6 @@ chattr +C $mnt/{swap,var/{log,cache,tmp}}
 
 # mount efi partition
 mount --mkdir $disk'1' $mnt/efi
-
-# mount bois partition
-mount --mkdir $disk'2' $mnt/boot
 
 }
 
