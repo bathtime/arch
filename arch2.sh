@@ -110,9 +110,7 @@ dd if=/dev/zero of=$disk bs=1M count=100
 create_partitions () {
 
 check_on_root
-
 delete_partitions
-
 
 parted -s $disk mklabel gpt
 parted -s --align=optimal $disk mkpart ESP fat32 1MiB 511Mib 
@@ -127,11 +125,17 @@ mkfs.btrfs -f -L ROOT $disk'3'
 
 parted -s $disk print
 
-#cat >> /etc/modules-load.d/vfat.conf << EOF
-#vfat
-#nls_cp437
-#nls_ascii
-#EOF
+echo -e "\nMounting $mnt..."
+mount --mkdir $disk'3' $mnt
+
+cd $mnt
+
+btrfs subvolume create @
+btrfs subvolume create @varcache
+btrfs subvolume create @varlog
+btrfs subvolume create @vartmp
+btrfs subvolume create @snapshots
+btrfs subvolume create @swap
 
 mount_mount
 
@@ -149,34 +153,27 @@ mount_mount () {
 
 check_on_root
 
-echo -e "\nMounting $mnt..."
-mount --mkdir $disk'3' $mnt
-
-cd $mnt
-
-btrfs subvolume create @
-btrfs subvolume create @varcache
-btrfs subvolume create @varlog
-btrfs subvolume create @vartmp
-btrfs subvolume create @snapshots
-btrfs subvolume create @swap
-
-cd .. 
-umount -R /mnt
+unmount_disk
 
 mount -o compress=zstd,noatime,subvol=@ $disk'3' $mnt
 
 # Not sure if this is required
 mkdir -p $mnt/{etc,tmp}
 
-mount --mkdir -o compress=zstd,noatime,subvol=@varlog $disk'3' $mnt/var/log
-mount --mkdir -o compress=zstd,noatime,subvol=@varcache $disk'3' $mnt/var/cache
-mount --mkdir -o compress=zstd,noatime,subvol=@vartmp $disk'3' $mnt/var/tmp
-mount --mkdir -o compress=zstd,noatime,subvol=@snapshots $disk'3' $mnt/.snapshots
-mount --mkdir -o compress=zstd,noatime,subvol=@swap $disk'3' $mnt/swap
+#mount --mkdir -o compress=zstd,noatime,subvol=@varlog $disk'3' $mnt/var/log
+#mount --mkdir -o compress=zstd,noatime,subvol=@varcache $disk'3' $mnt/var/cache
+#mount --mkdir -o compress=zstd,noatime,subvol=@vartmp $disk'3' $mnt/var/tmp
+#mount --mkdir -o compress=zstd,noatime,subvol=@snapshots $disk'3' $mnt/.snapshots
+#mount --mkdir -o compress=zstd,noatime,subvol=@swap $disk'3' $mnt/swap
+
+mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@varlog $disk'3' $mnt/var/log
+mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@varcache $disk'3' $mnt/var/cache
+mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@vartmp $disk'3' $mnt/var/tmp
+mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@snapshots $disk'3' $mnt/.snapshots
+mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@swap $disk'3' $mnt/swap
 
 # Make dirs nocow
-chattr +C $mnt/{swap,var/{log,cache,tmp}}
+#chattr +C $mnt/{swap,var/{log,cache,tmp}}
 
 # Or you'll get an error when packages try to install
 chmod 1777 /mnt/var/tmp
