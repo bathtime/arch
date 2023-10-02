@@ -60,6 +60,12 @@ sed -i "s/GRUB_CMDLINE_LINUX=\"/GRUB_CMDLINE_LINUX=\"resume=UUID=$UUID_ROOT resu
 
 swapon /swap/swapfile
 
+# To hibernate
+#echo disk > /sys/power/state
+#echo freeze > /sys/power/state
+#echo mem > /sys/power/state
+#echo s2idle > /sys/power/mem_sleep
+#echo deep > /sys/power/mem_sleep
 
 
 
