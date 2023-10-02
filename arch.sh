@@ -122,15 +122,28 @@ delete_partitions
 echo "Wiping first 100mb of disk. Please be patient..."
 dd if=/dev/zero of=/dev/sdb bs=1M count=100
 
-parted -s $disk mklabel gpt
-parted -s --align=optimal $disk mkpart ESP fat32 1MiB 1Gib 
-parted -s $disk set 1 esp on
+#parted -s $disk mklabel gpt
+#parted -s --align=optimal $disk mkpart ESP fat32 1MiB 1Gib 
+#parted -s $disk set 1 esp on
 #parted -s $disk set 1 bios_grub on
-parted -s --align=optimal $disk mkpart btrfs 1Gib 100%
+#parted -s --align=optimal $disk mkpart btrfs 1Gib 100%
  
 #mkfs.fat -F 32 -n SYS $disk'1'
-mkfs.vfat -n EFI $disk'1' 
-mkfs.btrfs -f -L ROOT $disk'2'
+#mkfs.vfat -n EFI $disk'1' 
+#mkfs.btrfs -f -L ROOT $disk'2'
+
+wipefs -a $disk
+parted -s $disk mklabel gpt
+parted -s --align=optimal $disk mkpart ESP fat32 1MiB 510Mib 
+parted -s $disk set 1 esp on
+parted -s --align=optimal $disk mkpart BOOT fat32 511MiB 513Mib 
+parted -s $disk set 2 bios_grub on
+parted -s --align=optimal $disk mkpart btrfs 1Gib 100%
+parted -s $disk print
+
+mkfs.fat -F 32 -n EFI $disk'1'
+mkfs.vfat -F 32 -n BIOS $disk'2'
+mkfs.btrfs -f -L ROOT $disk'3'
 
 parted -s $disk print
 
