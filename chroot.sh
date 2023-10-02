@@ -63,7 +63,7 @@ GRUB_DISTRIBUTOR=""
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
-GRUB_CMDLINE_LINUX="quiet nmi_watchdog=0 loglevel=3 systemd.show_status=auto rd.udev.log_level=3"
+GRUB_CMDLINE_LINUX="quiet nmi_watchdog=0 nowatchdog loglevel=3 systemd.show_status=auto rd.udev.log_level=3"
 GRUB_DISABLE_RECOVERY="true"
 #GRUB_ENABLE_BLSCFG=true
 GRUB_HIDDEN_TIMEOUT=2
