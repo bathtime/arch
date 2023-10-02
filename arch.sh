@@ -134,9 +134,9 @@ dd if=/dev/zero of=/dev/sdb bs=1M count=100
 
 wipefs -a $disk
 parted -s $disk mklabel gpt
-parted -s --align=optimal $disk mkpart ESP fat32 1MiB 510Mib 
+parted -s --align=optimal $disk mkpart ESP fat32 1MiB 511Mib 
 parted -s $disk set 1 esp on
-parted -s --align=optimal $disk mkpart BOOT fat32 511MiB 513Mib 
+parted -s --align=optimal $disk mkpart BOOT fat32 512MiB 514Mib 
 parted -s $disk set 2 bios_grub on
 parted -s --align=optimal $disk mkpart btrfs 1Gib 100%
 parted -s $disk print
