@@ -120,7 +120,6 @@ parted -s $disk set 1 esp on
 parted -s --align=optimal $disk mkpart BOOT fat32 512MiB 514Mib 
 parted -s $disk set 2 bios_grub on
 parted -s --align=optimal $disk mkpart btrfs 1Gib 100%
-parted -s $disk print
 
 mkfs.fat -F 32 -n EFI $disk'1'
 mkfs.vfat -F 32 -n BIOS $disk'2'
