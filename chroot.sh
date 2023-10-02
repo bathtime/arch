@@ -109,18 +109,18 @@ EOF
 
 pacman -Sy iw iwd dhcpcd
 
-mkdir -p /etc/iwd
-cat > /etc/iwd/main.conf << EOF
-[General]
-EnableNetworkConfiguration=true
-EOF
-
 # Helps with slow booting caused by waiting for a connection
 mkdir -p /etc/systemd/system/dhcpcd@.service.d/
 cat > /etc/systemd/system/dhcpcd@.service.d/no-wait.conf << EOF
 [Service]
 ExecStart=
 ExecStart=/usr/bin/dhcpcd -b -q %I
+EOF
+
+mkdir -p /etc/iwd
+cat > /etc/iwd/main.conf << EOF
+[General]
+EnableNetworkConfiguration=true
 EOF
 
 # So iwd can automatically connect without any further interaction
