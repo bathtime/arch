@@ -13,10 +13,16 @@ if [[ ! "$(lsblk --output=PATH -d -n | grep $disk)" ]]; then
    exit
 fi
 
+}
+
+
+
+check_on_root () {
+
 # Exit if device is mounted on /
-if [[ ! $(mount | grep -E $disk".*on $mnt") ]]; then
-   echo -e "\nDevice not mounted on $mnt. Will not run this script. Exiting.\n"
-   exit
+if [[ $(mount | grep -E $disk".*on / type") ]]; then
+	echo -e "\nDevice mounted on root. Will not run. Exiting.\n"
+	exit
 fi
 
 }
@@ -87,11 +93,10 @@ echo -e "\nSetup config:\n\ndisk: $disk, mounted on $mnt\nuser: $user\n"
 
 delete_partitions () {
 
+check_on_root
+
 unmount_disk
 
-# Not sure which one is the best to use
-#sgdisk --zap-all $disk
-#sfdisk --delete $disk
 wipefs -a $disk 
 
 # Not sure if this is required but can't hurt
@@ -104,42 +109,15 @@ dd if=/dev/zero of=$disk bs=1M count=100
 
 create_partitions () {
 
-
+check_on_root
 delete_partitions
 
-#parted -s $disk mklabel msdos
-#parted -s $disk mkpart primary 1MiB 1025MiB
-#parted -s $disk align-check optimal 1
-
-#parted -s $disk mklabel gptklabel gpt
-#parted -s $disk set 1 boot on
-#parted -s $disk mkpart primary fat32 1MiB 1000MiB
-#mkfs.fat -F 32 -n SYS $disk'1'
-#mkfs.btrfs -f -L ROOT $disk'2'
-
-
-
-echo "Wiping first 100mb of disk. Please be patient..."
-dd if=/dev/zero of=/dev/sdb bs=1M count=100
-
-#parted -s $disk mklabel gpt
-#parted -s --align=optimal $disk mkpart ESP fat32 1MiB 1Gib 
-#parted -s $disk set 1 esp on
-#parted -s $disk set 1 bios_grub on
-#parted -s --align=optimal $disk mkpart btrfs 1Gib 100%
- 
-#mkfs.fat -F 32 -n SYS $disk'1'
-#mkfs.vfat -n EFI $disk'1' 
-#mkfs.btrfs -f -L ROOT $disk'2'
-
-wipefs -a $disk
 parted -s $disk mklabel gpt
 parted -s --align=optimal $disk mkpart ESP fat32 1MiB 511Mib 
 parted -s $disk set 1 esp on
 parted -s --align=optimal $disk mkpart BOOT fat32 512MiB 514Mib 
 parted -s $disk set 2 bios_grub on
 parted -s --align=optimal $disk mkpart btrfs 1Gib 100%
-parted -s $disk print
 
 mkfs.fat -F 32 -n EFI $disk'1'
 mkfs.vfat -F 32 -n BIOS $disk'2'
@@ -147,11 +125,19 @@ mkfs.btrfs -f -L ROOT $disk'3'
 
 parted -s $disk print
 
-#cat >> /etc/modules-load.d/vfat.conf << EOF
-#vfat
-#nls_cp437
-#nls_ascii
-#EOF
+echo -e "\nMounting $mnt..."
+mount --mkdir $disk'3' $mnt
+
+cd $mnt
+
+btrfs subvolume create @
+btrfs subvolume create @varcache
+btrfs subvolume create @varlog
+btrfs subvolume create @vartmp
+btrfs subvolume create @snapshots
+btrfs subvolume create @swap
+
+unmount_disk
 
 mount_mount
 
@@ -167,37 +153,38 @@ systemctl daemon-reload
 
 mount_mount () {
 
-echo -e "\nMounting $mnt..."
-mount --mkdir $disk'2' $mnt
+check_on_root
 
-cd $mnt
+if [[ $(mount | grep -E "on /mnt") ]]; then
+   echo -e "\nDisk already mounted. Must unmount first. Exiting...\n"
+   exit
+fi
 
-btrfs subvolume create @
-btrfs subvolume create @varcache
-btrfs subvolume create @varlog
-btrfs subvolume create @vartmp
-btrfs subvolume create @snapshots
-btrfs subvolume create @swap
-
-cd .. 
-unmount_disk
-
-mount -o compress=zstd,noatime,subvol=@ $disk'2' $mnt
+mount -o compress=zstd,noatime,subvol=@ $disk'3' $mnt
 
 # Not sure if this is required
 mkdir -p $mnt/{etc,tmp}
 
-mount --mkdir -o compress=zstd,noatime,subvol=@varlog $disk'2' $mnt/var/log
-mount --mkdir -o compress=zstd,noatime,subvol=@varcache $disk'2' $mnt/var/cache
-mount --mkdir -o compress=zstd,noatime,subvol=@vartmp $disk'2' $mnt/var/tmp
-mount --mkdir -o compress=zstd,noatime,subvol=@snapshots $disk'2' $mnt/.snapshots
-mount --mkdir -o compress=zstd,noatime,subvol=@swap $disk'2' $mnt/swap
+#mount --mkdir -o compress=zstd,noatime,subvol=@varlog $disk'3' $mnt/var/log
+#mount --mkdir -o compress=zstd,noatime,subvol=@varcache $disk'3' $mnt/var/cache
+#mount --mkdir -o compress=zstd,noatime,subvol=@vartmp $disk'3' $mnt/var/tmp
+#mount --mkdir -o compress=zstd,noatime,subvol=@snapshots $disk'3' $mnt/.snapshots
+#mount --mkdir -o compress=zstd,noatime,subvol=@swap $disk'3' $mnt/swap
+
+mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@varlog $disk'3' $mnt/var/log
+mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@varcache $disk'3' $mnt/var/cache
+mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@vartmp $disk'3' $mnt/var/tmp
+mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@snapshots $disk'3' $mnt/.snapshots
+mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@swap $disk'3' $mnt/swap
 
 # Make dirs nocow
-chattr +C $mnt/{swap,var/{log,cache,tmp}}
+#chattr +C $mnt/{swap,var/{log,cache,tmp}}
+
+# Or you'll get an error when packages try to install
+chmod 1777 /mnt/var/tmp
 
 # mount efi partition
-mount --mkdir $disk'1' $mnt/boot
+mount --mkdir $disk'1' $mnt/efi
 
 }
 
@@ -205,18 +192,22 @@ mount --mkdir $disk'1' $mnt/boot
 
 install_pacstrap () {
 
-
-#warning: directory permissions differ on /mnt/var/tmp/
-#filesystem: 755  package: 1777
+check_on_root
 
 #bsdtar: Failed to set default locale
 
-#. /etc/profile
-#source /etc/profile
+source /etc/profile
 pacstrap -K $mnt base linux linux-firmware btrfs-progs vi libarchive
 
 }
 
+reset_keys () {
+
+rm -rf /etc/pacman.d/gnupg
+pacman-key --init
+pacman-key --populate
+
+}
 
 
 copy_scripts () {
@@ -241,6 +232,9 @@ echo -e "\nExiting chroot...\n"
 
 
 chroot_install () {
+
+   check_on_root
+   
    arch-chroot $mnt /chroot.sh $disk
 } 
 
@@ -359,6 +353,7 @@ choices=(
 "Download scripts"
 "Download apps"
 "Post setup"
+"Reset pacman keys"
 "Quit"
 )
 
@@ -380,10 +375,8 @@ do
         "Download scripts")	download_scripts ;;
         "Download apps")	download_apps    ;;
         "Post setup")		post_setup ;;
-        "Quit")			echo -e "\nQuitting!"; exit; ;;
+        "Reset pacman keys")    reset_keys ;;
+	"Quit")			echo -e "\nQuitting!"; exit; ;;
         '')			echo -e "\nInvalid option!\n"; ;;
     esac
 done
-
-
-
