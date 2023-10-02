@@ -123,15 +123,17 @@ ExecStart=
 ExecStart=/usr/bin/dhcpcd -b -q %I
 EOF
 
-echo "Enabling network services..."
-systemctl enable iwd.service dhcpcd.service
-
 # So iwd can automatically connect without any further interaction
-#mkdir -p /var/lib/iwd
+mkdir -p /var/lib/iwd
 cat > /var/lib/iwd/BELL364.psk << EOF
 [Security]
 Passphrase=13FDC4A93E3C
 EOF
+
+echo "Enabling network services..."
+systemctl enable iwd.service dhcpcd.service
+
+
 
 
 
