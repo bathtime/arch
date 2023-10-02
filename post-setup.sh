@@ -56,9 +56,9 @@ offset=$(btrfs inspect-internal map-swapfile -r /swap/swapfile)
 
 sed -i "s/GRUB_CMDLINE_LINUX=\"/GRUB_CMDLINE_LINUX=\"resume=UUID=$UUID_ROOT resume_offset=$offset /g" /etc/default/grub
 
-[[ ! "$(cat /etc/fstab | grep '/swap/swapfile')" ]] && echo -e "\n/swap/swapfile none swap defaults 0 0" >> /etc/fstab
+[[ ! "$(cat /etc/fstab | grep '/swap/swapfile')" ]] && echo -e "\n/swap/swapfile none swap defaults 0 0\n" >> /etc/fstab
 
-
+swapon /swap/swapfile
 
 
 
