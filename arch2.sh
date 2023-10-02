@@ -13,9 +13,15 @@ if [[ ! "$(lsblk --output=PATH -d -n | grep $disk)" ]]; then
    exit
 fi
 
+}
+
+
+
+check_on_root () {
+
 # Exit if device is mounted on /
-if [[ ! $(mount | grep -E $disk".*on $mnt") ]]; then
-   echo -e "\nDevice not mounted on $mnt. Will not run this script. Exiting.\n"
+if [[ $(mount | grep -E $disk".*on / ") ]]; then
+   echo -e "\nDevice not mounted. Will not run this script. Exiting.\n"
    exit
 fi
 
@@ -87,6 +93,8 @@ echo -e "\nSetup config:\n\ndisk: $disk, mounted on $mnt\nuser: $user\n"
 
 delete_partitions () {
 
+check_on_root
+
 unmount_disk
 
 wipefs -a $disk 
@@ -101,8 +109,10 @@ dd if=/dev/zero of=$disk bs=1M count=100
 
 create_partitions () {
 
+check_on_root
 
 delete_partitions
+
 
 parted -s $disk mklabel gpt
 parted -s --align=optimal $disk mkpart ESP fat32 1MiB 511Mib 
@@ -137,6 +147,8 @@ systemctl daemon-reload
 
 
 mount_mount () {
+
+check_on_root
 
 echo -e "\nMounting $mnt..."
 mount --mkdir $disk'3' $mnt
@@ -179,6 +191,8 @@ mount --mkdir $disk'1' $mnt/efi
 
 install_pacstrap () {
 
+check_on_root
+
 #bsdtar: Failed to set default locale
 
 source /etc/profile
@@ -210,6 +224,9 @@ echo -e "\nExiting chroot...\n"
 
 
 chroot_install () {
+
+   check_on_root
+   
    arch-chroot $mnt /chroot.sh $disk
 } 
 
