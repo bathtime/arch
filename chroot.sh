@@ -5,6 +5,8 @@ disk=$1
 mnt=/mnt
 user=user
 
+
+# Check that we're using the correct disk and mounted properly
 [[ "$disk" == "" ]] && echo -e "\nMissing disk parameter. Exiting.\n" && exit
 [[ ! $(lsblk --output=PATH -d -n | grep $disk) ]] && echo -e "\nNo such disk found ($disk). Exiting.\n" && exit
 [[ $(mount | grep -v -G $disk".*on / ") ]] && echo -e "\nDevice mounted on /. Will not run this script. Exiting.\n" && exit
