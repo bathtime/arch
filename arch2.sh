@@ -137,6 +137,8 @@ btrfs subvolume create @vartmp
 btrfs subvolume create @snapshots
 btrfs subvolume create @swap
 
+unmount_disk
+
 mount_mount
 
 
@@ -153,7 +155,10 @@ mount_mount () {
 
 check_on_root
 
-unmount_disk
+if [[ $(mount | grep -E "on /mnt") ]]; then
+   echo -e "\nDisk already mounted. Must unmount first. Exiting...\n"
+   exit
+fi
 
 mount -o compress=zstd,noatime,subvol=@ $disk'3' $mnt
 
@@ -192,6 +197,7 @@ check_on_root
 #bsdtar: Failed to set default locale
 
 source /etc/profile
+pacman-key --init
 pacstrap -K $mnt base linux linux-firmware btrfs-progs vi libarchive
 
 }
