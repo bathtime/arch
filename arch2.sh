@@ -176,7 +176,7 @@ btrfs subvolume create @snapshots
 btrfs subvolume create @swap
 
 cd .. 
-unmount_disk
+umount -R /mnt
 
 mount -o compress=zstd,noatime,subvol=@ $disk'3' $mnt
 
@@ -212,7 +212,7 @@ install_pacstrap () {
 
 #. /etc/profile
 #source /etc/profile
-pacstrap -K $mnt base linux linux-firmware fsck btrfs-progs vi libarchive
+pacstrap -K $mnt base linux linux-firmware btrfs-progs vi libarchive
 
 }
 
