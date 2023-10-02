@@ -4,24 +4,13 @@
 disk=$1
 user=user
 
-if [[ "$disk" == "" ]]; then
-   echo -e "\nMissing disk parameter. Exiting.\n"
-   exit
-fi
-
-if [[ ! "$(lsblk --output=PATH -d -n | grep $disk)" ]]; then
-   echo -e "\nNo such disk found ($disk). Exiting.\n"
-   exit
-fi
-
-# Exit if device is not mounted (or we're probably using a disk we shouldn't be using)
-if [[ ! $(mount | grep -v -G $disk".*on /mnt") ]]; then
-   echo -e "\nMust be mounted on $mnt. Will not run this script. Exiting.\n"
-   exit
-fi
+[[ "$disk" == "" ]] && echo -e "\nMissing disk parameter. Exiting.\n" && exit
+[[ ! $(lsblk --output=PATH -d -n | grep $disk) ]] && echo -e "\nNo such disk found ($disk). Exiting.\n" && exit
+[[ $(mount | grep -v -G $disk".*on / ") ]] && echo -e "\nDevice mounted on /. Will not run this script. Exiting.\n" && exit
+[[ ! $(mount | grep -v -G $disk".*on $mnt") ]] && echo -e "\nMust be mounted on $mnt. Will not run this script. Exiting.\n" && exit
 
 
-source /etc/profile
+#source /etc/profile
 
 echo -e 'en_US.UTF-8 UTF-8\nen_US ISO-8859-1' > /etc/locale.gen  
 
@@ -32,11 +21,17 @@ echo 'LANG=en_US.UTF-8' > /etc/locale.conf
 echo 'arch' > /etc/hostname
 echo 'KEYMAP=us' > /etc/vconsole.conf
 echo 'FONT=ter-132b' > /etc/vconsole.conf   # Set to biggest tty font (requires terminus-font package installed)
+
 locale-gen
 
 
-pacman --needed -Sy grub efibootmgr os-prober arch-install-scripts sudo tar terminus-font libarchive man
-pacman --needed -S dosfstools parted
+
+###  Install necessary applications
+
+pacman --needed -Sy grub efibootmgr os-prober sudo tar terminus-font libarchive man
+
+# Might be useful if you wish to use this OS to install another OS (eg., mkfs.fat, parted, arch-chroot)
+pacman --needed -S dosfstools parted arch-install-scripts
 
 
 
@@ -126,8 +121,6 @@ systemctl enable iwd.service dhcpcd.service
 
 
 
-
-
 ###  Setup sudo and user  ###
 
 mkdir -p /etc/sudoers.d
@@ -167,15 +160,10 @@ export RUNLEVEL=3
 export QT_LOGGING_RULES="*=false"
 
 if [[ ! ${DISPLAY} && ${XDG_VTNR} == 1 ]]; then
-   iwctl --passphrase 13FDC4A93E3C station wlan0 connect BELL364
+   echo "Auto-logged in."
 fi' > /home/$user/.bash_profile
-#chmod +x /home/$user/.bash_profile
 
 touch /home/$user/.hushlogin
 
 
 echo -e "\nExiting chroot!\n"
-
-
-
-
