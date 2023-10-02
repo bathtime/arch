@@ -167,6 +167,9 @@ mount --mkdir -o compress=zstd,noatime,subvol=@swap $disk'3' $mnt/swap
 # Make dirs nocow
 chattr +C $mnt/{swap,var/{log,cache,tmp}}
 
+# Or you'll get an error when packages try to install
+chmod 1777 /mnt/var/tmp
+
 # mount efi partition
 mount --mkdir $disk'1' $mnt/efi
 
@@ -176,14 +179,9 @@ mount --mkdir $disk'1' $mnt/efi
 
 install_pacstrap () {
 
-
-#warning: directory permissions differ on /mnt/var/tmp/
-#filesystem: 755  package: 1777
-
 #bsdtar: Failed to set default locale
 
-#. /etc/profile
-#source /etc/profile
+source /etc/profile
 pacstrap -K $mnt base linux linux-firmware btrfs-progs vi libarchive
 
 }
