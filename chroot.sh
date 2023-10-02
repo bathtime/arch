@@ -72,7 +72,7 @@ sed -i 's/zstd:3/zstd:1/' /etc/fstab
 sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' /etc/fstab
 
 # Put ~/.cache in tmpfs
-[[ ! "$(cat /etc/fstab | grep /home/$user/.config)" ]] && echo "tmpfs    /home/$user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> /etc/fstab
+[[ ! "$(cat /etc/fstab | grep /home/$user/.config)" ]] && echo -e "\ntmpfs    /home/$user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0\n" >> /etc/fstab
 
 cat /etc/fstab
 
