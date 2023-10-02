@@ -69,6 +69,18 @@ swapon /swap/swapfile
 
 
 
+###  Kernel compression  ###
+
+pacman -S lz4
+cat > /etc/mkinitcpio.conf.d/lz4.conf << EOF
+COMPRESSION="lz4"
+MODULES_DECOMPRESS="yes"
+EOF
+
+cat > /etc/mkinitcpio.conf.d/myhooks.conf << EOF
+HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block filesystems resume fsck)
+EOF
+
 
 pacman -S --needed git base-devel less
 
