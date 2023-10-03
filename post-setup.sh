@@ -139,10 +139,10 @@ sudo -u $user yay plasma-mobile btrfs-assistant bauh
 umount /.snapshots
 rm -rf /.snapshots
 snapper create-config /
-btrfs subvolume create /.snapshots
+#btrfs subvolume create /.snapshots
 
 # Create the first snapshot as read only (-r)
-btrfs subvolume snapshot -r / /.snapshots/'Setup complete'
+btrfs subvolume snapshot / /.snapshots/'Newly installed'
 btrfs subvolume list /
 
 
