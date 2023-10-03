@@ -170,12 +170,6 @@ mount -o compress=zstd,noatime,subvol=@ $disk'4' $mnt
 # Not sure if this is required
 mkdir -p $mnt/{etc,tmp}
 
-#mount --mkdir -o compress=zstd,noatime,subvol=@varlog $disk'4' $mnt/var/log
-#mount --mkdir -o compress=zstd,noatime,subvol=@varcache $disk'4' $mnt/var/cache
-#mount --mkdir -o compress=zstd,noatime,subvol=@vartmp $disk'4' $mnt/var/tmp
-#mount --mkdir -o compress=zstd,noatime,subvol=@snapshots $disk'4' $mnt/.snapshots
-#mount --mkdir -o compress=zstd,noatime,subvol=@swap $disk'4' $mnt/swap
-
 mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@varlog $disk'4' $mnt/var/log
 mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@varcache $disk'4' $mnt/var/cache
 mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@vartmp $disk'4' $mnt/var/tmp
@@ -198,8 +192,6 @@ mount --mkdir $disk'1' $mnt/efi
 install_pacstrap () {
 
 check_on_root
-
-#bsdtar: Failed to set default locale
 
 source /etc/profile
 pacstrap -K $mnt base linux linux-firmware btrfs-progs vi libarchive
