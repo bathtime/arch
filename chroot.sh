@@ -35,7 +35,7 @@ mkdir -p -m 750 /etc/sudoers.d
 pacman --needed -Sy grub efibootmgr os-prober sudo tar terminus-font libarchive man
 
 # Might be useful if you wish to use this OS to install another OS (eg., mkfs.fat, parted, arch-chroot)
-pacman --needed -S dosfstools parted arch-install-scripts lz4
+pacman --needed -S dosfstools parted arch-install-scripts lz4 snapper
 
 
 
