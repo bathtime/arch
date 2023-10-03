@@ -1,3 +1,8 @@
+#### TODO configure for lz4 kernel and non-compressed modules ###
+vi /etc/mkinitcpio.conf
+
+
+
 #/etc/modules-load.d/zram.conf
 
 #zram
