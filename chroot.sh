@@ -35,7 +35,7 @@ mkdir -p -m 750 /etc/sudoers.d
 pacman --needed -Sy grub efibootmgr os-prober sudo tar terminus-font libarchive man
 
 # Might be useful if you wish to use this OS to install another OS (eg., mkfs.fat, parted, arch-chroot)
-pacman --needed -S dosfstools parted arch-install-scripts
+pacman --needed -S dosfstools parted arch-install-scripts lz4
 
 
 
@@ -49,9 +49,9 @@ grub-install --target=x86_64-efi --bootloader-id=GRUB --efi-directory=/efi/ --re
 
 ###  zram  ###
 
-echo zram > /etc/modules-load.d/zram.conf
+#echo zram > /etc/modules-load.d/zram.conf
 
-echo 'ACTION=="add", KERNEL=="zram0", ATTR{comp_algorithm}="zstd", ATTR{disksize}="4G", RUN="/usr/bin/mkswap -U clear /dev/%k", TAG+="systemd"' > /etc/udev/rules.d/99-zram.rules
+#echo 'ACTION=="add", KERNEL=="zram0", ATTR{comp_algorithm}="zstd", ATTR{disksize}="4G", RUN="/usr/bin/mkswap -U clear /dev/%k", TAG+="systemd"' > /etc/udev/rules.d/99-zram.rules
 
 
 
@@ -67,9 +67,9 @@ GRUB_DISTRIBUTOR=""
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
-GRUB_CMDLINE_LINUX="quiet nmi_watchdog=0 nowatchdog loglevel=3 systemd.show_status=auto rd.udev.log_level=3 resume=UUID=$SWAP_UUID"
+GRUB_CMDLINE_LINUX="quiet nmi_watchdog=0 nowatchdog loglevel=3 systemd.show_status=auto rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
+#GRUB_CMDLINE_LINUX="quiet nmi_watchdog=0 nowatchdog loglevel=3 systemd.show_status=auto rd.udev.log_level=3 resume=UUID=$SWAP_UUID"
 GRUB_DISABLE_RECOVERY="true"
-#GRUB_ENABLE_BLSCFG=true
 GRUB_HIDDEN_TIMEOUT=2
 GRUB_RECORDFAIL_TIMEOUT=1
 GRUB_TIMEOUT=0
@@ -105,7 +105,18 @@ cat /etc/fstab
 grub-mkconfig -o /boot/grub/grub.cfg
 
 
+
+###  Tweaks  ###
+
 echo 'vm.swappiness = 10' > /etc/sysctl.d/99-swappiness.conf
+
+echo 'HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block filesystems resume fsck)' > /etc/mkinitcpio.conf.d/myhooks.conf
+
+mkinitcpio -p linux
+
+# Check zswap info
+# grep -r . /sys/module/zswap/parameters/
+
 
 
 # Autologin to tty1
