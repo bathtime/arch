@@ -42,7 +42,7 @@ if [[ "$(mount | grep $mnt)" ]]; then
 
    umount -n -R $mnt
 
-   if [[ "$(pwd | grep $mnt)" ]]; then
+   if [[ "$(mount | grep 'on '$mnt)" ]]; then
       echo "Couldn't unmount. Trying alternative method. Please be patient..." 
       sync
       sleep 2
@@ -100,8 +100,8 @@ unmount_disk
 wipefs -a $disk 
 
 # Not sure if this is required but can't hurt
-echo "Wiping first 100mb of disk. Please be patient..."
-dd if=/dev/zero of=$disk bs=1M count=100
+echo "Wiping first 25mb of disk. Please be patient..."
+dd if=/dev/zero of=$disk bs=1M count=25
 
 }
 
@@ -113,20 +113,23 @@ check_on_root
 delete_partitions
 
 parted -s $disk mklabel gpt
-parted -s --align=optimal $disk mkpart ESP fat32 1MiB 511Mib 
+parted -s --align=optimal $disk mkpart ESP fat32 1Mib 1000Mib 
 parted -s $disk set 1 esp on
-parted -s --align=optimal $disk mkpart BOOT fat32 512MiB 514Mib 
+parted -s --align=optimal $disk mkpart BOOT fat32 1001Mib 1004Mib 
 parted -s $disk set 2 bios_grub on
-parted -s --align=optimal $disk mkpart btrfs 1Gib 100%
+parted -s --align=optimal $disk mkpart SWAP linux-swap 1005Mib 10Gib
+parted -s $disk set 3 swap on
+parted -s --align=optimal $disk mkpart ROOT btrfs 10Gib 100%
 
 mkfs.fat -F 32 -n EFI $disk'1'
 mkfs.vfat -F 32 -n BIOS $disk'2'
-mkfs.btrfs -f -L ROOT $disk'3'
+mkswap $disk'3'
+mkfs.btrfs -f -L ROOT $disk'4'
 
 parted -s $disk print
 
 echo -e "\nMounting $mnt..."
-mount --mkdir $disk'3' $mnt
+mount --mkdir $disk'4' $mnt
 
 cd $mnt
 
@@ -134,8 +137,8 @@ btrfs subvolume create @
 btrfs subvolume create @varcache
 btrfs subvolume create @varlog
 btrfs subvolume create @vartmp
-btrfs subvolume create @snapshots
-btrfs subvolume create @swap
+#btrfs subvolume create @snapshots
+#btrfs subvolume create @swap
 
 unmount_disk
 
@@ -160,25 +163,19 @@ if [[ $(mount | grep -E "on /mnt") ]]; then
    exit
 fi
 
-mount -o compress=zstd,noatime,subvol=@ $disk'3' $mnt
+mount -o compress=zstd,noatime,subvol=@ $disk'4' $mnt
 
 # Not sure if this is required
 mkdir -p $mnt/{etc,tmp}
 
-#mount --mkdir -o compress=zstd,noatime,subvol=@varlog $disk'3' $mnt/var/log
-#mount --mkdir -o compress=zstd,noatime,subvol=@varcache $disk'3' $mnt/var/cache
-#mount --mkdir -o compress=zstd,noatime,subvol=@vartmp $disk'3' $mnt/var/tmp
-#mount --mkdir -o compress=zstd,noatime,subvol=@snapshots $disk'3' $mnt/.snapshots
-#mount --mkdir -o compress=zstd,noatime,subvol=@swap $disk'3' $mnt/swap
-
-mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@varlog $disk'3' $mnt/var/log
-mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@varcache $disk'3' $mnt/var/cache
-mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@vartmp $disk'3' $mnt/var/tmp
-mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@snapshots $disk'3' $mnt/.snapshots
-mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@swap $disk'3' $mnt/swap
+mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@varlog $disk'4' $mnt/var/log
+mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@varcache $disk'4' $mnt/var/cache
+mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@vartmp $disk'4' $mnt/var/tmp
+#mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@snapshots $disk'4' $mnt/.snapshots
+#mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@swap $disk'4' $mnt/swap
 
 # Make dirs nocow
-#chattr +C $mnt/{swap,var/{log,cache,tmp}}
+chattr -R +C $mnt/{var/{log,cache,tmp}}
 
 # Or you'll get an error when packages try to install
 chmod 1777 /mnt/var/tmp
@@ -193,8 +190,6 @@ mount --mkdir $disk'1' $mnt/efi
 install_pacstrap () {
 
 check_on_root
-
-#bsdtar: Failed to set default locale
 
 source /etc/profile
 pacstrap -K $mnt base linux linux-firmware btrfs-progs vi libarchive
@@ -234,7 +229,7 @@ echo -e "\nExiting chroot...\n"
 chroot_install () {
 
    check_on_root
-   
+   copy_scripts   
    arch-chroot $mnt /chroot.sh $disk
 } 
 
