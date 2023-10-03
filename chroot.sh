@@ -30,12 +30,14 @@ locale-gen
 
 ###  Install necessary applications
 
-mkdir -p -m 750 /etc/sudoers.d
+#warning: directory permissions differ on /etc/sudoers.d/
+#filesystem: 755  package: 750
+chmod -R 1755 /etc/sudoers.d
 
 pacman --needed -Sy grub efibootmgr os-prober sudo tar terminus-font libarchive man
 
 # Might be useful if you wish to use this OS to install another OS (eg., mkfs.fat, parted, arch-chroot)
-pacman --needed -S dosfstools parted arch-install-scripts lz4 snapper
+pacman --needed -S dosfstools parted arch-install-scripts
 
 
 
@@ -46,20 +48,6 @@ grub-install --target=i386-pc $disk --recheck
 grub-install --target=x86_64-efi --bootloader-id=GRUB --efi-directory=/efi/ --removable
 
 
-
-###  zram  ###
-
-#echo zram > /etc/modules-load.d/zram.conf
-
-#echo 'ACTION=="add", KERNEL=="zram0", ATTR{comp_algorithm}="zstd", ATTR{disksize}="4G", RUN="/usr/bin/mkswap -U clear /dev/%k", TAG+="systemd"' > /etc/udev/rules.d/99-zram.rules
-
-
-
-
-###  grub  ###
-
-SWAP_UUID=$(blkid -s UUID -o value $disk'3')
-
 cat > /etc/default/grub << EOF
 
 GRUB_TIMEOUT=0
@@ -67,9 +55,9 @@ GRUB_DISTRIBUTOR=""
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
-GRUB_CMDLINE_LINUX="quiet nmi_watchdog=0 nowatchdog loglevel=5 systemd.show_status=auto rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
-#GRUB_CMDLINE_LINUX="quiet nmi_watchdog=0 nowatchdog loglevel=3 systemd.show_status=auto rd.udev.log_level=3 resume=UUID=$SWAP_UUID"
+GRUB_CMDLINE_LINUX="quiet nmi_watchdog=0 nowatchdog loglevel=3 systemd.show_status=auto rd.udev.log_level=3"
 GRUB_DISABLE_RECOVERY="true"
+#GRUB_ENABLE_BLSCFG=true
 GRUB_HIDDEN_TIMEOUT=2
 GRUB_RECORDFAIL_TIMEOUT=1
 GRUB_TIMEOUT=0
@@ -79,47 +67,21 @@ GRUB_TIMEOUT=0
 
 EOF
 
-
-
-###  Setup /etc/fstab  ###
-
-# genfstab will generate a swap drive. we're using a swap file instead
-sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' /etc/fstab
-
-# No zram 
-#sed -i '/zram0/d' /etc/fstab
-
-echo '/dev/zram0 none swap defaults,pri=100 0 0' >> /etc/fstab
+# Don't need
+sed -i '/zram0/d' /etc/fstab
 
 # Changing compression
 sed -i 's/zstd:3/zstd:1/' /etc/fstab
 
-
-echo "UUID=$SWAP_UUID none swap defaults 0 0" >> /etc/fstab
+# genfstab will generate a swap drive. we're using a swap file instead
+sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' /etc/fstab
 
 # Put ~/.cache in tmpfs
-echo -e "\ntmpfs    /home/$user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0\n" >> /etc/fstab
+[[ ! "$(cat /etc/fstab | grep /home/$user/.config)" ]] && echo -e "\ntmpfs    /home/$user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0\n" >> /etc/fstab
 
 cat /etc/fstab
 
-
 grub-mkconfig -o /boot/grub/grub.cfg
-
-
-
-###  Tweaks  ###
-
-echo 'vm.swappiness = 10' > /etc/sysctl.d/99-swappiness.conf
-
-echo 'HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block filesystems resume fsck)' > /etc/mkinitcpio.conf.d/myhooks.conf
-
-# Allow btrfs-check
-#echo 'BINARIES=(btrfs)' > /etc/mkinitcpio.conf.d/btrfs-check
-
-mkinitcpio -p linux
-
-# Check zswap info
-# grep -r . /sys/module/zswap/parameters/
 
 
 
@@ -183,10 +145,7 @@ printf "123456\n123456\n" | passwd $user
 
 ###  Finish setting up user  ###
 
-sudo -u $user bash << EOF
-
-var1='${DISPLAY}'
-var2='${XDG_VTNR}'
+su - user
 
 echo '# If running bash
 if [ -n "$BASH_VERSION" ]; then
@@ -206,13 +165,11 @@ export XDG_RUNTIME_DIR=/run/$USER/1000
 export RUNLEVEL=3
 export QT_LOGGING_RULES="*=false"
 
-if [[ ! $var1 && $var2 == 1 ]]; then
+if [[ ! ${DISPLAY} && ${XDG_VTNR} == 1 ]]; then
    echo "Auto-logged in."
 fi' > /home/$user/.bash_profile
 
 touch /home/$user/.hushlogin
-
-EOF
 
 
 echo -e "\nExiting chroot!\n"
