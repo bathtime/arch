@@ -1,3 +1,22 @@
+#/etc/modules-load.d/zram.conf
+
+#zram
+
+#Create the following udev rule adjusting the disksize attribute as necessary:
+
+cat > /etc/udev/rules.d/99-zram.rules << EOF
+
+ACTION=="add", KERNEL=="zram0", ATTR{comp_algorithm}="zstd", ATTR{disksize}="4G", RUN="/usr/bin/mkswap -U clear /dev/%k", TAG+="systemd"
+EOF
+
+#Add /dev/zram to your fstab with a higher than default priority:
+
+#/etc/fstab
+
+echo '/dev/zram0 none swap defaults,pri=100 0 0' >> /etc/fstab
+
+exit
+
 #!/bin/sh
 
 user=user
