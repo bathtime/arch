@@ -113,8 +113,8 @@ echo 'vm.swappiness = 10' > /etc/sysctl.d/99-swappiness.conf
 
 echo 'HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block filesystems resume fsck)' > /etc/mkinitcpio.conf.d/myhooks.conf
 
-# Do btrfs file check on boot
-echo 'BINARIES=(btrfs)' > /etc/mkinitcpio.conf.d/btrfs-check'
+# Allow btrfs-check
+#echo 'BINARIES=(btrfs)' > /etc/mkinitcpio.conf.d/btrfs-check
 
 mkinitcpio -p linux
 
