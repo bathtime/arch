@@ -110,7 +110,7 @@ grub-mkconfig -o /boot/grub/grub.cfg
 
 echo 'vm.swappiness = 10' > /etc/sysctl.d/99-swappiness.conf
 
-echo 'HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block filesystems resume fsck)' > /etc/mkinitcpio.conf.d/myhooks.conf
+echo 'HOOKS=(base udev autodetect modconf kms keyboard sd-vconsole block filesystems resume fsck)' > /etc/mkinitcpio.conf.d/myhooks.conf
 echo 'BINARIES=(setfont) > /etc/mkinitcpio.conf.d/setfont.conf
 mkinitcpio -p linux
 
