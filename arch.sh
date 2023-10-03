@@ -113,13 +113,14 @@ check_on_root
 delete_partitions
 
 parted -s $disk mklabel gpt
-parted -s --align=optimal $disk mkpart ESP fat32 1MiB 511Mib 
+parted -s --align=optimal $disk mkpart ESP fat32 1MiB 1Gib 
 parted -s $disk set 1 esp on
-parted -s --align=optimal $disk mkpart BOOT fat32 512MiB 514Mib 
+parted -s --align=optimal $disk mkpart BOOT fat32 1GiB 2Gib 
 parted -s $disk set 2 bios_grub on
-parted -s --align=optimal $disk mkpart btrfs 1Gib 100%
+parted -s --align=optimal $disk mkpart SWAP linux-swap 2Gib 10Gib
+parted -s $disk set 3 swap on
+parted -s --align=optimal $disk mkpart ROOT btrfs 1Gib 100%
 
-### TODO -- add back swap partition
 
 
 mkfs.fat -F 32 -n EFI $disk'1'
