@@ -30,9 +30,7 @@ locale-gen
 
 ###  Install necessary applications
 
-#warning: directory permissions differ on /etc/sudoers.d/
-#filesystem: 755  package: 750
-chmod -R 1750 /etc/sudoers.d
+mkdir -p -m 750 /etc/sudoers.d
 
 pacman --needed -Sy grub efibootmgr os-prober sudo tar terminus-font libarchive man
 
@@ -48,6 +46,20 @@ grub-install --target=i386-pc $disk --recheck
 grub-install --target=x86_64-efi --bootloader-id=GRUB --efi-directory=/efi/ --removable
 
 
+
+###  zram  ###
+
+echo zram > /etc/modules-load.d/zram.conf
+
+echo 'ACTION=="add", KERNEL=="zram0", ATTR{comp_algorithm}="zstd", ATTR{disksize}="4G", RUN="/usr/bin/mkswap -U clear /dev/%k", TAG+="systemd"' > /etc/udev/rules.d/99-zram.rules
+
+
+
+
+###  grub  ###
+
+SWAP_UUID=$(blkid -s UUID -o value $disk'3')
+
 cat > /etc/default/grub << EOF
 
 GRUB_TIMEOUT=0
@@ -55,7 +67,7 @@ GRUB_DISTRIBUTOR=""
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
-GRUB_CMDLINE_LINUX="quiet nmi_watchdog=0 nowatchdog loglevel=3 systemd.show_status=auto rd.udev.log_level=3"
+GRUB_CMDLINE_LINUX="quiet nmi_watchdog=0 nowatchdog loglevel=3 systemd.show_status=auto rd.udev.log_level=3 resume=UUID=$SWAP_UUID"
 GRUB_DISABLE_RECOVERY="true"
 #GRUB_ENABLE_BLSCFG=true
 GRUB_HIDDEN_TIMEOUT=2
@@ -67,8 +79,14 @@ GRUB_TIMEOUT=0
 
 EOF
 
-# Don't need
-sed -i '/zram0/d' /etc/fstab
+
+
+###  Setup /etc/fstab  ###
+
+echo '/dev/zram0 none swap defaults,pri=100 0 0' >> /etc/fstab
+
+# No zram 
+#sed -i '/zram0/d' /etc/fstab
 
 # Changing compression
 sed -i 's/zstd:3/zstd:1/' /etc/fstab
@@ -76,13 +94,18 @@ sed -i 's/zstd:3/zstd:1/' /etc/fstab
 # genfstab will generate a swap drive. we're using a swap file instead
 sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' /etc/fstab
 
+echo "UUID=$SWAP_UUID none swap defaults 0 0" >> /etc/fstab
+
 # Put ~/.cache in tmpfs
-[[ ! "$(cat /etc/fstab | grep /home/$user/.config)" ]] && echo -e "\ntmpfs    /home/$user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0\n" >> /etc/fstab
+echo -e "\ntmpfs    /home/$user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0\n" >> /etc/fstab
 
 cat /etc/fstab
 
+
 grub-mkconfig -o /boot/grub/grub.cfg
 
+
+echo 'vm.swappiness = 10' > /etc/sysctl.d/99-swappiness.conf
 
 
 # Autologin to tty1
@@ -145,7 +168,10 @@ printf "123456\n123456\n" | passwd $user
 
 ###  Finish setting up user  ###
 
-su - user
+sudo -u $user bash << EOF
+
+var1='${DISPLAY}'
+var2='${XDG_VTNR}'
 
 echo '# If running bash
 if [ -n "$BASH_VERSION" ]; then
@@ -165,11 +191,13 @@ export XDG_RUNTIME_DIR=/run/$USER/1000
 export RUNLEVEL=3
 export QT_LOGGING_RULES="*=false"
 
-if [[ ! ${DISPLAY} && ${XDG_VTNR} == 1 ]]; then
+if [[ ! $var1 && $var2 == 1 ]]; then
    echo "Auto-logged in."
 fi' > /home/$user/.bash_profile
 
 touch /home/$user/.hushlogin
+
+EOF
 
 
 echo -e "\nExiting chroot!\n"
