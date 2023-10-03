@@ -125,12 +125,13 @@ parted -s --align=optimal $disk mkpart ROOT btrfs 1Gib 100%
 
 mkfs.fat -F 32 -n EFI $disk'1'
 mkfs.vfat -F 32 -n BIOS $disk'2'
-mkfs.btrfs -f -L ROOT $disk'3'
+mkswap $disk'3'
+mkfs.btrfs -f -L ROOT $disk'4'
 
 parted -s $disk print
 
 echo -e "\nMounting $mnt..."
-mount --mkdir $disk'3' $mnt
+mount --mkdir $disk'4' $mnt
 
 cd $mnt
 
@@ -138,7 +139,7 @@ btrfs subvolume create @
 btrfs subvolume create @varcache
 btrfs subvolume create @varlog
 btrfs subvolume create @vartmp
-btrfs subvolume create @snapshots
+#btrfs subvolume create @snapshots
 btrfs subvolume create @swap
 
 unmount_disk
@@ -164,22 +165,22 @@ if [[ $(mount | grep -E "on /mnt") ]]; then
    exit
 fi
 
-mount -o compress=zstd,noatime,subvol=@ $disk'3' $mnt
+mount -o compress=zstd,noatime,subvol=@ $disk'4' $mnt
 
 # Not sure if this is required
 mkdir -p $mnt/{etc,tmp}
 
-#mount --mkdir -o compress=zstd,noatime,subvol=@varlog $disk'3' $mnt/var/log
-#mount --mkdir -o compress=zstd,noatime,subvol=@varcache $disk'3' $mnt/var/cache
-#mount --mkdir -o compress=zstd,noatime,subvol=@vartmp $disk'3' $mnt/var/tmp
-#mount --mkdir -o compress=zstd,noatime,subvol=@snapshots $disk'3' $mnt/.snapshots
-#mount --mkdir -o compress=zstd,noatime,subvol=@swap $disk'3' $mnt/swap
+#mount --mkdir -o compress=zstd,noatime,subvol=@varlog $disk'4' $mnt/var/log
+#mount --mkdir -o compress=zstd,noatime,subvol=@varcache $disk'4' $mnt/var/cache
+#mount --mkdir -o compress=zstd,noatime,subvol=@vartmp $disk'4' $mnt/var/tmp
+#mount --mkdir -o compress=zstd,noatime,subvol=@snapshots $disk'4' $mnt/.snapshots
+#mount --mkdir -o compress=zstd,noatime,subvol=@swap $disk'4' $mnt/swap
 
-mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@varlog $disk'3' $mnt/var/log
-mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@varcache $disk'3' $mnt/var/cache
-mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@vartmp $disk'3' $mnt/var/tmp
-mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@snapshots $disk'3' $mnt/.snapshots
-mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@swap $disk'3' $mnt/swap
+mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@varlog $disk'4' $mnt/var/log
+mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@varcache $disk'4' $mnt/var/cache
+mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@vartmp $disk'4' $mnt/var/tmp
+#mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@snapshots $disk'4' $mnt/.snapshots
+mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@swap $disk'4' $mnt/swap
 
 # Make dirs nocow
 #chattr +C $mnt/{swap,var/{log,cache,tmp}}
