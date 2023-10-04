@@ -67,8 +67,7 @@ GRUB_DISTRIBUTOR=""
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
-GRUB_CMDLINE_LINUX="quiet nmi_watchdog=0 nowatchdog loglevel=3 systemd.show_status=auto rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
-#GRUB_CMDLINE_LINUX="quiet nmi_watchdog=0 nowatchdog loglevel=3 systemd.show_status=auto rd.udev.log_level=3 resume=UUID=$SWAP_UUID"
+GRUB_CMDLINE_LINUX="nmi_watchdog=0 nowatchdog loglevel=4 systemd.show_status=auto rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
 GRUB_DISABLE_RECOVERY="true"
 GRUB_HIDDEN_TIMEOUT=2
 GRUB_RECORDFAIL_TIMEOUT=1
