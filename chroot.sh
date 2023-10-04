@@ -60,7 +60,7 @@ GRUB_DISTRIBUTOR=""
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
-GRUB_CMDLINE_LINUX="nmi_watchdog=0 nowatchdog loglevel=4 systemd.show_status=auto rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
+GRUB_CMDLINE_LINUX="nmi_watchdog=0 loglevel=4 rd.udev.log_level=4 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
 GRUB_DISABLE_RECOVERY="true"
 GRUB_HIDDEN_TIMEOUT=2
 GRUB_RECORDFAIL_TIMEOUT=1
@@ -91,6 +91,10 @@ echo -e "\nUUID=$SWAP_UUID none swap defaults 0 0" >> /etc/fstab
 
 # Put ~/.cache in tmpfs
 echo -e "\ntmpfs    /home/$user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0\n" >> /etc/fstab
+
+# Remove grub os-prober message
+sed -i 's/grub_warn/#grub_warn/g' /etc/grub.d/30_os-prober
+
 
 cat /etc/fstab
 
