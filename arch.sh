@@ -18,11 +18,10 @@ fi
 
 
 check_on_root () {
-
-# Exit if device is mounted on /
-if [[ $(mount | grep -E $disk".*on / type") ]]; then
-	echo -e "\nDevice mounted on root. Will not run. Exiting.\n"
-	exit
+  
+if [[ $(mount | grep -G "$disk.*on / type") ]]; then 
+   echo -e "\nDevice mounted on root. Will not run. Exiting.\n"
+   exit
 fi
 
 }
@@ -168,17 +167,17 @@ mount -o compress=zstd,noatime,subvol=@ $disk'4' $mnt
 # Not sure if this is required
 mkdir -p $mnt/{etc,tmp}
 
-mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@varlog $disk'4' $mnt/var/log
 mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@varcache $disk'4' $mnt/var/cache
+mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@varlog $disk'4' $mnt/var/log
 mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@vartmp $disk'4' $mnt/var/tmp
 #mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@snapshots $disk'4' $mnt/.snapshots
 #mount --mkdir -o compress=zstd,noatime,nodatacow,subvol=@swap $disk'4' $mnt/swap
 
 # Make dirs nocow
-chattr -R +C $mnt/{var/{log,cache,tmp}}
+chattr -R +C $mnt/var/{cache,log,tmp}
 
 # Or you'll get an error when packages try to install
-chmod 1777 /mnt/var/tmp
+chmod 1777 $mnt/var/tmp
 
 # mount efi partition
 mount --mkdir $disk'1' $mnt/efi
@@ -216,6 +215,9 @@ cp {arch.sh,chroot.sh,post-setup.sh} $mnt
 
 do_chroot () {
 
+check_on_root
+copy_scripts
+
 echo -e "\nEntering chroot. Type 'exit' to leave.\n"
 
 arch-chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
@@ -229,7 +231,8 @@ echo -e "\nExiting chroot...\n"
 chroot_install () {
 
    check_on_root
-   copy_scripts   
+   copy_scripts
+
    arch-chroot $mnt /chroot.sh $disk
 } 
 
@@ -309,14 +312,12 @@ fi
 
 check_viable_disk
 
-echo -e "\nSetup config:\n\ndisk: $disk, mounted on $mnt\nuser: $user\n"
-
 loadkeys en
 
 # Update system clock
-timedatectl
+#timedatectl
 
-[[ "$(cat /sys/firmware/efi/fw_platform_size)" -eq 64 ]] && echo "This computer is running in uefi mode" || echo "This computer is not running in uefi mode."
+#[[ "$(cat /sys/firmware/efi/fw_platform_size)" -eq 64 ]] && echo "This computer is running in uefi mode" || echo "This computer is not running in uefi mode."
 
 
 
