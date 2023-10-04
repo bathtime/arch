@@ -207,6 +207,12 @@ fi' > /home/$user/.bash_profile
 # Remeber last cursor position in vim
 echo 'source $VIMRUNTIME/vimrc_example.vim' > /home/$user/.vimrc
 
+
+echo 'alias ls="ls --color=auto"
+alias grep="grep --color=auto"
+alias vi="vim"
+PS1="$ "' > /home/user/.bashrc
+
 touch /home/$user/.hushlogin
 
 EOF
