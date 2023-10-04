@@ -174,7 +174,8 @@ usermod -aG wheel $user
 printf "123456\n123456\n" | passwd $user 
 
 
-echo 'alias ls="ls --color=auto"
+echo '[[ $- != *i* ]] && return
+alias ls="ls --color=auto"
 alias grep="grep --color=auto"
 alias vi="vim"
 PS1="# "' > /root/.bashrc
@@ -213,7 +214,9 @@ fi' > /home/$user/.bash_profile
 echo 'source $VIMRUNTIME/vimrc_example.vim' > /home/$user/.vimrc
 
 
-echo 'alias ls="ls --color=auto"
+
+echo '[[ $- != *i* ]] && return
+alias ls="ls --color=auto"
 alias grep="grep --color=auto"
 alias vi="vim"
 PS1="$ "' > /home/user/.bashrc
