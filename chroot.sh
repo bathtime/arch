@@ -22,7 +22,7 @@ ln -sf /usr/share/zoneinfo/Canada/Eastern /etc/localtime
 echo 'LANG=en_US.UTF-8' > /etc/locale.conf
 echo 'arch' > /etc/hostname
 echo 'KEYMAP=us' > /etc/vconsole.conf
-echo 'FONT=ter-132b' > /etc/vconsole.conf   # Set to biggest tty font (requires terminus-font package installed)
+echo 'FONT=ter-132b' >> /etc/vconsole.conf   # Set to biggest tty font (requires terminus-font package installed)
 
 locale-gen
 
@@ -51,7 +51,6 @@ grub-install --target=x86_64-efi --bootloader-id=GRUB --efi-directory=/efi/ --re
 
 #echo zram > /etc/modules-load.d/zram.conf
 #echo 'ACTION=="add", KERNEL=="zram0", ATTR{comp_algorithm}="zstd", ATTR{disksize}="4G", RUN="/usr/bin/mkswap -U clear /dev/%k", TAG+="systemd"' > /etc/udev/rules.d/99-zram.rules
-
 
 
 
