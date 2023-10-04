@@ -192,7 +192,7 @@ install_pacstrap () {
 check_on_root
 
 source /etc/profile
-pacstrap -K $mnt base linux linux-firmware btrfs-progs vi libarchive
+pacstrap -K $mnt base linux linux-firmware btrfs-progs vim libarchive
 
 }
 
