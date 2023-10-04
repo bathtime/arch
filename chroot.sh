@@ -168,7 +168,7 @@ echo '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/wheel
 # Default root password is: 123456
 printf "123456\n123456\n" | passwd root
 
-useradd -m $user -p '123456'
+useradd -m $user
 usermod -aG wheel $user
 
 printf "123456\n123456\n" | passwd $user 
