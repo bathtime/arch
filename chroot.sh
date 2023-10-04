@@ -21,8 +21,8 @@ ln -sf /usr/share/zoneinfo/Canada/Eastern /etc/localtime
 
 echo 'LANG=en_US.UTF-8' > /etc/locale.conf
 echo 'arch' > /etc/hostname
-echo 'KEYMAP=us' > /etc/vconsole.conf
-echo 'FONT=ter-132b' >> /etc/vconsole.conf   # Set to biggest tty font (requires terminus-font package installed)
+echo 'KEYMAP=us
+FONT=ter-132b' > /etc/vconsole.conf   # Set to biggest tty font (requires terminus-font package installed)
 
 locale-gen
 
