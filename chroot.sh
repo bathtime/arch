@@ -82,7 +82,7 @@ EOF
 
 ###  Setup /etc/fstab  ###
 
-echo '/dev/zram0 none swap defaults,pri=100 0 0' >> /etc/fstab
+#echo '/dev/zram0 none swap defaults,pri=100 0 0' >> /etc/fstab
 
 # No zram 
 #sed -i '/zram0/d' /etc/fstab
@@ -110,7 +110,9 @@ grub-mkconfig -o /boot/grub/grub.cfg
 echo 'vm.swappiness = 10' > /etc/sysctl.d/99-swappiness.conf
 
 echo 'HOOKS=(base udev autodetect modconf kms keyboard sd-vconsole block filesystems resume fsck)' > /etc/mkinitcpio.conf.d/myhooks.conf
-echo 'BINARIES=(setfont) > /etc/mkinitcpio.conf.d/setfont.conf
+echo 'BINARIES=(setfont)' > /etc/mkinitcpio.conf.d/setfont.conf
+echo 'MODULES=(lz4)' > /etc/mkinitcpio.conf.d/lz4.conf
+
 mkinitcpio -p linux
 
 # Check zswap info
