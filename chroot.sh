@@ -177,6 +177,8 @@ printf "123456\n123456\n" | passwd root
 useradd -m $user -G wheel
 printf "123456\n123456\n" | passwd $user 
 
+# Disable login by root
+#passwd --lock root
 
 echo '[[ $- != *i* ]] && return
 alias ls="ls --color=auto"
