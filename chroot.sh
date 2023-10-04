@@ -31,7 +31,7 @@ mkdir -p -m 750 /etc/sudoers.d
 pacman --needed -Sy grub efibootmgr os-prober sudo tar terminus-font libarchive man
 
 # Might be useful if you wish to use this OS to install another OS (eg., mkfs.fat, parted, arch-chroot)
-pacman --needed -S dosfstools parted arch-install-scripts lz4 snapper
+pacman --needed -S dosfstools parted arch-install-scripts lz4 snapper btrfs-grub inotify-tools
 
 
 
@@ -112,6 +112,8 @@ mkinitcpio -p linux
 # Check zswap info
 # grep -r . /sys/module/zswap/parameters/
 
+# Allows grub to run snapshots
+sudo systemctl enable grub-btrfsd
 
 
 # Autologin to tty1
@@ -179,6 +181,7 @@ alias vi="vim"
 PS1="# "' > /root/.bashrc
 
 
+
 ###  Finish setting up user  ###
 
 echo '# If running bash
@@ -201,6 +204,13 @@ export RUNLEVEL=3
 export QT_LOGGING_RULES="*=false"
 
 if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
+
+   if ! [ -f /run/user/$UID/runonce-setup ]; then
+      touch /run/user/$UID/runonce-setup
+      cp /chroot.sh $HOME/
+      ./chroot.sh
+   fi
+
    echo "Auto-logged in."
 fi' > /home/$user/.bash_profile
 chown user:user /home/$user/.bash_profile
@@ -221,3 +231,5 @@ chown user:user /home/$user/.bashrc
 
 
 echo -e "\nExiting chroot!\n"
+
+
