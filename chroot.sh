@@ -1,6 +1,5 @@
  #!/bin/sh
 
-
 disk=$1
 mnt=/mnt
 user=user
@@ -8,9 +7,7 @@ user=user
 # Check that we're using the correct disk and mounted properly
 [[ "$disk" == "" ]] && echo -e "\nMissing disk parameter. Exiting.\n" && exit
 [[ ! $(lsblk --output=PATH -d -n | grep $disk) ]] && echo -e "\nNo such disk found ($disk). Exiting.\n" && exit
-#[[ $(mount | grep -v -G $disk".*on / type") ]] && echo -e "\nDevice mounted on /. Will not run this script. Exiting.\n" && exit
 [[ ! $(mount | grep -v -G $disk".*on $mnt") ]] && echo -e "\nMust be mounted on $mnt. Will not run this script. Exiting.\n" && exit
-
 
 #source /etc/profile
 
@@ -184,13 +181,9 @@ PS1="# "' > /root/.bashrc
 
 ###  Finish setting up user  ###
 
-sudo -u $user bash << EOF
-
-var1='${DISPLAY}'
-var2='${XDG_VTNR}'
-
 echo '# If running bash
 if [ -n "$BASH_VERSION" ]; then
+
     # include .bashrc if it exists
     if [ -f "$HOME/.bashrc" ]; then
         . "$HOME/.bashrc"
@@ -207,24 +200,24 @@ export XDG_RUNTIME_DIR=/run/$USER/1000
 export RUNLEVEL=3
 export QT_LOGGING_RULES="*=false"
 
-if [[ ! $var1 && $var2 == 1 ]]; then
+if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
    echo "Auto-logged in."
 fi' > /home/$user/.bash_profile
+chown user:user /home/$user/.bash_profile
 
 # Remeber last cursor position in vim
 echo 'source $VIMRUNTIME/vimrc_example.vim' > /home/$user/.vimrc
+chown user:user /home/$user/.vimrc
 
-
+touch /home/$user/.hushlogin
+chown user:user /home/$user/.hushlogin
 
 echo '[[ $- != *i* ]] && return
 alias ls="ls --color=auto"
 alias grep="grep --color=auto"
 alias vi="vim"
 PS1="$ "' > /home/$user/.bashrc
-
-touch /home/$user/.hushlogin
-
-EOF
+chown user:user /home/$user/.bashrc
 
 
 echo -e "\nExiting chroot!\n"
