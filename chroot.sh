@@ -174,6 +174,11 @@ usermod -aG wheel $user
 printf "123456\n123456\n" | passwd $user 
 
 
+echo 'alias ls="ls --color=auto"
+alias grep="grep --color=auto"
+alias vi="vim"
+PS1="# "' > /root/.bashrc
+
 
 ###  Finish setting up user  ###
 
