@@ -50,7 +50,6 @@ grub-install --target=x86_64-efi --bootloader-id=GRUB --efi-directory=/efi/ --re
 ###  zram  ###
 
 #echo zram > /etc/modules-load.d/zram.conf
-
 #echo 'ACTION=="add", KERNEL=="zram0", ATTR{comp_algorithm}="zstd", ATTR{disksize}="4G", RUN="/usr/bin/mkswap -U clear /dev/%k", TAG+="systemd"' > /etc/udev/rules.d/99-zram.rules
 
 
@@ -93,7 +92,7 @@ sed -i 's/zstd:3/zstd:1/' /etc/fstab
 # genfstab will generate a swap drive. we're using a swap file instead
 sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' /etc/fstab
 
-echo "UUID=$SWAP_UUID none swap defaults 0 0" >> /etc/fstab
+echo -e "\nUUID=$SWAP_UUID none swap defaults 0 0" >> /etc/fstab
 
 # Put ~/.cache in tmpfs
 echo -e "\ntmpfs    /home/$user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0\n" >> /etc/fstab
