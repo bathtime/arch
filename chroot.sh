@@ -162,7 +162,7 @@ systemctl enable iwd.service dhcpcd.service
 ###  Setup sudo and user  ###
 
 mkdir -p /etc/sudoers.d
-echo "$user ALL=(ALL)  NOPASSWD: /usr/bin/btrfs-assistant" > /etc/sudoers.d/nopasswd
+echo "$user ALL=(ALL)  NOPASSWD: /usr/bin/btrfs-assistant-launcher" > /etc/sudoers.d/nopasswd
 echo '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/wheel
 
 # Default root password is: 123456
@@ -171,7 +171,7 @@ printf "123456\n123456\n" | passwd root
 #useradd -m $user
 #usermod -aG wheel $user
 
-useradd -m user -G wheel
+useradd -m $user -G wheel
 printf "123456\n123456\n" | passwd $user 
 
 
@@ -220,7 +220,7 @@ echo '[[ $- != *i* ]] && return
 alias ls="ls --color=auto"
 alias grep="grep --color=auto"
 alias vi="vim"
-PS1="$ "' > /home/user/.bashrc
+PS1="$ "' > /home/$user/.bashrc
 
 touch /home/$user/.hushlogin
 
