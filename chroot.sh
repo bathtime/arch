@@ -28,8 +28,7 @@ locale-gen
 
 
 
-###  Install necessary applications
-
+###  Install necessary applications with proper permissions
 mkdir -p -m 750 /etc/sudoers.d
 
 pacman --needed -Sy grub efibootmgr os-prober sudo tar terminus-font libarchive man
@@ -42,7 +41,6 @@ pacman --needed -S dosfstools parted arch-install-scripts lz4 snapper
 ###  Grub and partitions  ###
 
 grub-install --target=i386-pc $disk --recheck
-
 grub-install --target=x86_64-efi --bootloader-id=GRUB --efi-directory=/efi/ --removable
 
 
@@ -80,7 +78,6 @@ EOF
 
 ###  Setup /etc/fstab  ###
 
-#echo '/dev/zram0 none swap defaults,pri=100 0 0' >> /etc/fstab
 
 # No zram 
 #sed -i '/zram0/d' /etc/fstab
@@ -90,6 +87,8 @@ sed -i 's/zstd:3/zstd:1/' /etc/fstab
 
 # genfstab will generate a swap drive. we're using a swap file instead
 sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' /etc/fstab
+
+#echo '/dev/zram0 none swap defaults,pri=100 0 0' >> /etc/fstab
 
 echo -e "\nUUID=$SWAP_UUID none swap defaults 0 0" >> /etc/fstab
 
@@ -204,6 +203,9 @@ export QT_LOGGING_RULES="*=false"
 if [[ ! $var1 && $var2 == 1 ]]; then
    echo "Auto-logged in."
 fi' > /home/$user/.bash_profile
+
+# Remeber last cursor position in vim
+echo 'source $VIMRUNTIME/vimrc_example.vim' > /home/$user/.vimrc
 
 touch /home/$user/.hushlogin
 
