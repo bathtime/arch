@@ -28,9 +28,9 @@ locale-gen
 ###  Install necessary applications with proper permissions
 mkdir -p -m 750 /etc/sudoers.d
 
-pacman -Sy efibootmgr os-prober sudo tar terminus-font libarchive man
+pacman -Sy  sudo tar terminus-font libarchive man
 
-pacman --needed -S grub btrfs-gub
+#pacman --needed -S grub btrfs-gub os-prober efibootmgr
 pacman --needed -S refind
 
 # Might be useful if you wish to use this OS to install another OS (eg., mkfs.fat, parted, arch-chroot)
