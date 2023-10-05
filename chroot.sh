@@ -55,6 +55,9 @@ echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw rootflags=subvol
 
 sed -i 's/timeout 20/timeout 4/g; s/#hideui singleuser/hideui singleuser/g; s/#enable_touch/enable_touch/g; s/#also_scan_dirs boot,\@\/boot/also_scan_dirs boot,\@\/boot/g' /efi/EFI/refind/refind.conf
 
+# Required so that 'refind-btrfs' program (aur) doesn't complain
+mv /efi/EFI/BOOT/refind.conf /efi/EFI/BOOT/refind.conf.bak
+
 
 
 ###  zram  ###
