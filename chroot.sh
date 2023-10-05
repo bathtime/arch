@@ -31,11 +31,10 @@ mkdir -p -m 750 /etc/sudoers.d
 pacman -Sy  sudo tar terminus-font libarchive man
 
 #pacman --needed -S grub btrfs-gub os-prober efibootmgr
-pacman --needed -S refind
+pacman --needed -S refind intel-ucode efibootmgr 
 
 # Might be useful if you wish to use this OS to install another OS (eg., mkfs.fat, parted, arch-chroot)
-pacman --needed -S dosfstools parted arch-install-scripts lz4 snapper
-#pacman -S inotify-tools
+pacman --needed -S dosfstools parted arch-install-scripts lz4 snapper git base-devel less
 
 
 
@@ -47,8 +46,14 @@ pacman --needed -S dosfstools parted arch-install-scripts lz4 snapper
 
 ###  rEFInd  ###
 
-refind-install --alldrivers
+refind-install --usedefault $disk'1' --alldrivers
 
+SWAP_UUID=$(blkid -s UUID -o value $disk'3')
+ROOT_UUID=$(blkid -s UUID -o value $disk'4')
+
+echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw rootflags=subvol=@ \boot\initramfs-linux.img nmi_watchdog=0 loglevel=3 systemd.show_status=auto rd.udev.log_level=3 resume=UUID=$SWAP_UUID\"" > /boot/refind_linux.conf
+
+sed -i 's/timeout 20/timeout 4/g; s/#hideui singleuser/hideui singleuser/g; s/#enable_touch/enable_touch/g; s/#also_scan_dirs boot,\@\/boot/also_scan_dirs boot,\@\/boot/g' /efi/EFI/refind/refind.conf
 
 
 
@@ -246,6 +251,15 @@ alias vi="vim"
 PS1="$ "' > /home/$user/.bashrc
 chown user:user /home/$user/.bashrc
 
+echo 'cd /home/user/
+git clone https://aur.archlinux.org/yay-bin
+cd yay-bin
+makepkg -si
+
+# To be run at first use:
+yay -Y --gendb' > /home/$user/install-yay.sh
+chown user:user /home/$user/install-yay.sh
+chmod +x /home/$user/install-yay.sh
 
 echo -e "\nExiting chroot!\n"
 
