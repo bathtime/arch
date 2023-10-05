@@ -28,17 +28,27 @@ locale-gen
 ###  Install necessary applications with proper permissions
 mkdir -p -m 750 /etc/sudoers.d
 
-pacman --needed -Sy grub efibootmgr os-prober sudo tar terminus-font libarchive man
+pacman -Sy efibootmgr os-prober sudo tar terminus-font libarchive man
+
+pacman --needed -S grub btrfs-gub
+pacman --needed -S refind
 
 # Might be useful if you wish to use this OS to install another OS (eg., mkfs.fat, parted, arch-chroot)
-pacman --needed -S dosfstools parted arch-install-scripts lz4 snapper btrfs-grub inotify-tools
+pacman --needed -S dosfstools parted arch-install-scripts lz4 snapper
+#pacman -S inotify-tools
 
 
 
 ###  Grub and partitions  ###
 
-grub-install --target=i386-pc $disk --recheck
-grub-install --target=x86_64-efi --bootloader-id=GRUB --efi-directory=/efi/ --removable
+#grub-install --target=i386-pc $disk --recheck
+#grub-install --target=x86_64-efi --bootloader-id=GRUB --efi-directory=/efi/ --removable
+
+
+###  rEFInd  ###
+
+refind-install --alldrivers
+
 
 
 
@@ -51,25 +61,27 @@ grub-install --target=x86_64-efi --bootloader-id=GRUB --efi-directory=/efi/ --re
 
 ###  grub  ###
 
-SWAP_UUID=$(blkid -s UUID -o value $disk'3')
+#SWAP_UUID=$(blkid -s UUID -o value $disk'3')
 
-cat > /etc/default/grub << EOF
+#cat > /etc/default/grub << EOF
 
-GRUB_TIMEOUT=0
-GRUB_DISTRIBUTOR=""
-GRUB_DEFAULT=saved
-GRUB_DISABLE_SUBMENU=true
-GRUB_TERMINAL_OUTPUT="console"
-GRUB_CMDLINE_LINUX="nmi_watchdog=0 loglevel=4 rd.udev.log_level=4 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
-GRUB_DISABLE_RECOVERY="true"
-GRUB_HIDDEN_TIMEOUT=2
-GRUB_RECORDFAIL_TIMEOUT=1
-GRUB_TIMEOUT=0
+#GRUB_TIMEOUT=0
+#GRUB_DISTRIBUTOR=""
+#GRUB_DEFAULT=saved
+#GRUB_DISABLE_SUBMENU=true
+#GRUB_TERMINAL_OUTPUT="console"
+#GRUB_CMDLINE_LINUX="nmi_watchdog=0 loglevel=4 rd.udev.log_level=4 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
+#GRUB_DISABLE_RECOVERY="true"
+#GRUB_HIDDEN_TIMEOUT=2
+#GRUB_RECORDFAIL_TIMEOUT=1
+#GRUB_TIMEOUT=0
  
 # Update grub with:
 # grub-mkconfig -o /boot/grub/grub.cfg
 
-EOF
+#EOF
+
+#grub-mkconfig -o /boot/grub/grub.cfg
 
 
 
@@ -99,7 +111,6 @@ sed -i 's/grub_warn/#grub_warn/g' /etc/grub.d/30_os-prober
 cat /etc/fstab
 
 
-grub-mkconfig -o /boot/grub/grub.cfg
 
 
 
@@ -117,7 +128,7 @@ mkinitcpio -p linux
 # grep -r . /sys/module/zswap/parameters/
 
 # Allows grub to run snapshots
-sudo systemctl enable grub-btrfsd
+#sudo systemctl enable grub-btrfsd
 
 
 # Autologin to tty1
