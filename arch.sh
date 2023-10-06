@@ -220,7 +220,7 @@ SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 
 arch-chroot $mnt /bin/bash -e << EOF
 
-grub-install --target=i386-pc $disk --recheck
+#grub-install --target=i386-pc $disk --recheck
 grub-install --target=x86_64-efi --efi-directory=/efi/ --bootloader-id=GRUB --removable
 
 cat > /etc/default/grub << EOF2
