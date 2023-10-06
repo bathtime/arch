@@ -114,14 +114,20 @@ delete_partitions
 parted -s $disk mklabel gpt
 parted -s --align=optimal $disk mkpart ESP fat32 1Mib 1000Mib 
 parted -s $disk set 1 esp on
+
+#parted -s --align=optimal $disk mkpart BOOT ext4 1001Mib 2000Mib
 parted -s --align=optimal $disk mkpart BOOT fat32 1001Mib 1004Mib 
 parted -s $disk set 2 bios_grub on
+
 parted -s --align=optimal $disk mkpart SWAP linux-swap 1005Mib 10Gib
 parted -s $disk set 3 swap on
 parted -s --align=optimal $disk mkpart ROOT btrfs 10Gib 100%
 
 mkfs.fat -F 32 -n EFI $disk'1'
+
 mkfs.vfat -F 32 -n BIOS $disk'2'
+#mkfs.ext4 $disk'2'
+
 mkswap $disk'3'
 mkfs.btrfs -f -L ROOT $disk'4'
 
@@ -157,10 +163,7 @@ mount_mount () {
 
 check_on_root
 
-if [[ $(mount | grep -E "on /mnt") ]]; then
-   echo -e "\nDisk already mounted. Must unmount first. Exiting...\n"
-   exit
-fi
+if [[ ! $(mount | grep -E "on /mnt") ]]; then
 
 mount -o compress=zstd,noatime,subvol=@ $disk'4' $mnt
 
@@ -179,8 +182,14 @@ chattr -R +C $mnt/var/{cache,log,tmp}
 # Or you'll get an error when packages try to install
 chmod 1777 $mnt/var/tmp
 
+# moutn boot partition
+#mount --mkdir $disk'2' $mnt/boot
+
+
 # mount efi partition
 mount --mkdir $disk'1' $mnt/efi
+
+fi
 
 }
 
@@ -217,6 +226,7 @@ do_chroot () {
 
 check_on_root
 copy_scripts
+mount_mount
 
 echo -e "\nEntering chroot. Type 'exit' to leave.\n"
 
