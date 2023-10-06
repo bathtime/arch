@@ -148,15 +148,10 @@ for subvol in '' "${subvols[@]}"; do
     btrfs su cr /mnt/@"$subvol"
 done
 
-unmount_disk
-mount_mount
-
 mkdir -p $mnt/{etc,tmp}
 
-# Must be run here as cannot create UUIDs in chroot
-genfstab -U $mnt > $mnt/etc/fstab
-
-systemctl daemon-reload
+unmount_disk
+mount_mount
 
 }
 
@@ -265,6 +260,11 @@ EOF
 
 setup_fstab () {
 
+genfstab -U $mnt > $mnt/etc/fstab
+
+
+###  Tweak the resulting /etc/fstab generated  ###
+
 SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 
 # No zram 
@@ -282,6 +282,8 @@ sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
 
 # Put ~/.cache in tmpfs
 [ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/')" ] && echo -e "tmpfs    /home/$user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> $mnt/etc/fstab
+
+systemctl daemon-reload
 
 cat $mnt/etc/fstab
 
@@ -381,7 +383,6 @@ systemctl enable iwd.service dhcpcd.service
 EOF
 
 
-
 ###  Finish setting up user  ###
 
 echo '# If running bash
@@ -416,8 +417,8 @@ fi' > $mnt/home/$user/.bash_profile
 chown user:user $mnt/home/$user/.bash_profile
 
 # Remeber last cursor position in vim
-echo 'source $VIMRUNTIME/vimrc_example.vim' > /home/$user/.vimrc
-chown user:user /home/$user/.vimrc
+echo 'source $VIMRUNTIME/vimrc_example.vim' > $mnt/home/$user/.vimrc
+chown user:user $mnt/home/$user/.vimrc
 
 touch $mnt/home/$user/.hushlogin
 chown user:user $mnt/home/$user/.hushlogin
@@ -429,7 +430,16 @@ alias vi="vim"
 PS1="$ "' > $mnt/home/$user/.bashrc
 chown user:user $mnt/home/$user/.bashrc
 
+# Remember last cursor position in vim
+cat > $mnt/home/$user/.vimrc << EOF
+au BufReadPost *
+     if line("'\"") > 0 && line("'\"") <= line("$") && &filetype != "gitcommit" | execute("normal \`\"") | endif
+EOF
+chown user:user $mnt/home/$user/.vimrc
+
 }
+
+
 
 setup_snapper () {
 
@@ -495,19 +505,14 @@ EOF
 
 install_tweaks () {
 
-arch-chroot $mnt /bin/bash -e << EOF
+pacstrap -K $mnt terminus-font
 
-pacman -Sy terminus-font
+echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
+echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
+echo 'BINARIES=(setfont)' > $mnt/etc/mkinitcpio.conf.d/setfont.conf
+echo 'MODULES=(lz4)' > $mnt/etc/mkinitcpio.conf.d/lz4.conf
 
-echo 'FONT=ter-132b' >> /etc/vconsole.conf
-echo 'vm.swappiness = 10' > /etc/sysctl.d/99-swappiness.conf
-echo 'BINARIES=(setfont)' > /etc/mkinitcpio.conf.d/setfont.conf
-echo 'MODULES=(lz4)' > /etc/mkinitcpio.conf.d/lz4.conf
-
-mkinitcpio -p linux
-
-EOF
-
+arch-chroot $mnt mkinitcpio -p linux
 
 }
 
