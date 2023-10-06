@@ -385,6 +385,8 @@ EOF
 
 ###  Finish setting up user  ###
 
+sudo -u $user mkdir -p .local/bin
+
 echo '# If running bash
 if [ -n "$BASH_VERSION" ]; then
 
@@ -443,13 +445,22 @@ chown user:user $mnt/home/$user/.vimrc
 
 setup_snapper () {
 
+
+# Snapshot script
+echo '#!/bin/bash
+
+snapper --no-dbus create --read-write
+snapper --no-dbus list
+
+# Needs to be updated for grub-btrfs list
+grub-mkconfig -o /boot/grub/grub.cfg' > $mnt/usr/local/bin/snapshot.sh
+chmod +x $mnt/usr/local/bin/snapshot.sh
+
+
 arch-chroot $mnt /bin/bash -e << EOF
 
 snapper --no-dbus -c root create-config /
 snapper --no-dbus list-configs
-
-snapper --no-dbus create --read-write
-snapper --no-dbus list
 
 # Automate snapper and btrfs services  ###
 systemctl enable snapper-timeline.timer
@@ -475,9 +486,10 @@ echo "To edit snapper config, run: vi /etc/snapper/configs/root"
 
 systemctl enable grub-btrfsd
 
-grub-mkconfig -o /boot/grub/grub.cfg
+snapshot.sh
 
 EOF
+
 
 }
 
@@ -539,7 +551,7 @@ cp arch.sh $mnt
 do_chroot () {
 
 check_on_root
-copy_scripts
+copy_script
 mount_mount
 
 echo -e "\nEntering chroot. Type 'exit' to leave.\n"
@@ -555,7 +567,7 @@ echo -e "\nExiting chroot...\n"
 chroot_install () {
 
    check_on_root
-   copy_scripts
+   copy_script
 
    arch-chroot $mnt /chroot.sh $disk
 } 
@@ -650,7 +662,7 @@ loadkeys en
 
 while [[ "${1}" != "" ]]; do
         case "${1}" in
-        -c|--copy)      copy_scripts     ; exit ;;
+        -c|--copy)      copy_script     ; exit ;;
         -d|--download)  download_scripts ; exit ;;
         -a|--apps)      download_apps    ; exit ;;
         -p|--post)      post_setup       ; exit ;;
@@ -718,7 +730,7 @@ do
         "Unmount $mnt")		unmount_disk  ;;
         "Print partitions")	print_partitions ;;
         "Delete partitions")	delete_partitions ;;
-        "Copy script")		copy_scripts ;;
+        "Copy script")		copy_script ;;
         "Connect wireless")	connect_wireless ;;
         "Download scripts")	download_scripts ;;
         "Download apps")	download_apps    ;;
