@@ -101,7 +101,6 @@ unmount_disk
 echo -e "\nWiping disk...\n"
 
 wipefs -af $disk 
-
 sgdisk -Zo $disk
 
 # Not sure if this is required but can't hurt
@@ -129,18 +128,35 @@ parted -s --align=optimal $disk mkpart SWAP linux-swap 1005Mib 10Gib
 parted -s $disk set $swapPart swap on
 parted -s --align=optimal $disk mkpart ROOT btrfs 10Gib 100%
 
-mkfs.fat -F 32 -n EFI $disk$efiPart
 
-#mkfs.vfat -F 32 -n BIOS $disk$boisPart
-#mkfs.ext4 $disk'2'
+if [ "$encrypt" -eq 1 ]; then
 
+   ESP=/dev/disk/by-partlabel/ESP
+   ROOT=/dev/disk/by-partlabel/CRYPTROOT
+   BTRFS="/dev/mapper/cryptroot"
+
+   partprobe $disk
+
+   echo -n "$password" | cryptsetup luksFormat "$ROOT" -d -
+   echo -n "$password" | cryptsetup open "$ROOT" cryptroot -d - 
+
+else
+
+   ESP=$disk$efiPart
+   ROOT=$disk$rootPart
+   BTRFS=$ROOT
+
+fi
+
+
+mkfs.fat -F 32 -n EFI $ESP
 mkswap $disk$swapPart
-mkfs.btrfs -f -L ROOT $disk$rootPart
+mkfs.btrfs -f -L ROOT $BTRFS
 
 parted -s $disk print
 
 echo -e "\nMounting $mnt..."
-mount --mkdir $disk$rootPart $mnt
+mount --mkdir $BTRFS $mnt
 
 cd $mnt
 
@@ -169,12 +185,12 @@ mkdir -p $mnt/{etc,tmp}
 
 echo -e "\nMounting...\n"
 for subvol in '' "${subvols[@]}"; do
-    mount --mkdir -o "$mountopts",subvol=@"$subvol" "$disk$rootPart" $mnt/"${subvol//_//}"
-    echo "mount -o $mountopts,subvol=@$subvol $disk$rootPart /mnt/${subvol//_//}"
+    mount --mkdir -o "$mountopts",subvol=@"$subvol" $BTRFS $mnt/"${subvol//_//}"
+    echo "mount -o $mountopts,subvol=@$subvol $BTRFS /mnt/${subvol//_//}"
 done
 
 # mount efi partition
-mount --mkdir $disk$efiPart $mnt/efi
+mount --mkdir $ESP $mnt/efi
 
 # Make dirs nocow
 chattr -R +C $mnt/var/{cache,log,tmp}
@@ -185,11 +201,7 @@ chattr -R +C $mnt/var/{cache,log,tmp}
 chmod 1777 $mnt/var/tmp
 
 # mount efi partition
-mount --mkdir $disk$efiPart $mnt/efi
-
-# mount boot partition
-#mount --mkdir $disk$biosPart $mnt/boot
-
+mount --mkdir $ESP $mnt/efi
 
 fi
 
@@ -206,17 +218,22 @@ pacstrap -K $mnt base linux linux-firmware btrfs-progs vim vi libarchive intel-u
 
 }
 
+
+
 install_EFISTUB () {
 
 echo
 
 }
 
+
+
 install_GRUB () {
 
 pacstrap -K $mnt grub grub-btrfs os-prober efibootmgr inotify-tools lz4
 
 SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
+
 
 arch-chroot $mnt /bin/bash -e << EOF
 
@@ -230,7 +247,7 @@ GRUB_DISTRIBUTOR=""
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
-GRUB_CMDLINE_LINUX="nmi_watchdog=0 loglevel=4 rd.udev.log_level=4 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
+GRUB_CMDLINE_LINUX="nmi_watchdog=0 loglevel=4 rd.udev.log_level=4 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold $extra_cmd"
 GRUB_DISABLE_RECOVERY="true"
 GRUB_HIDDEN_TIMEOUT=2
 GRUB_RECORDFAIL_TIMEOUT=1
@@ -240,6 +257,14 @@ GRUB_TIMEOUT=0
 # grub-mkconfig -o /boot/grub/grub.cfg
 
 EOF2
+
+
+if [ "$encrypt" -eq 1 ]; then
+
+   ENCRYPT_UUID=$(blkid -s UUID -o value $ROOT)
+   sed -i "\,^GRUB_CMDLINE_LINUX=\"\",s,\",&rd.luks.name=$ENCRYPT_UUID=cryptroot root=$BTRFS," $mnt/etc/default/grub
+
+fi
 
 
 # Allows grub to run snapshots
@@ -287,6 +312,9 @@ systemctl daemon-reload
 
 cat $mnt/etc/fstab
 
+# At this point you could log into your system 
+#arch-chroot $mnt printf "123455\n123456\n" | passwd root
+
 }
 
 
@@ -314,7 +342,20 @@ pacman --noconfirm -Sy sudo tar man
 pacman --noconfirm -Sy dosfstools parted arch-install-scripts snapper git base-devel less
 
 mkdir -p /etc/mkinitcpio.conf.d
-echo 'HOOKS=(base udev autodetect modconf kms keyboard sd-vconsole block filesystems resume fsck)' > /etc/mkinitcpio.conf.d/myhooks.conf
+
+
+if [ "$encrypt" -eq 1 ]; then
+
+   echo 'HOOKS=(systemd autodetect keyboard sd-vconsole modconf block sd-encrypt resume filesystems)' > /etc/mkinitcpio.conf.d/myhooks.conf
+
+   #echo 'HOOKS=(base udev autodetect modconf kms keyboard sd-vconsole block sd-encrypt filesystems resume fsck)' > /etc/mkinitcpio.conf.d/myhooks.conf
+
+else
+
+   echo 'HOOKS=(base udev autodetect modconf kms keyboard sd-vconsole block filesystems resume fsck)' > /etc/mkinitcpio.conf.d/myhooks.conf
+
+fi
+
 
 mkinitcpio -p linux
 
@@ -407,20 +448,9 @@ export RUNLEVEL=3
 export QT_LOGGING_RULES="*=false"
 
 if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
-
-   if ! [ -f /run/user/$UID/runonce-setup ]; then
-      touch /run/user/$UID/runonce-setup
-      cp /arch.sh $HOME/
-      #./arch.sh --first-run
-   fi
-
-   echo "Auto-logged in."
+      echo "Auto-logged in."
 fi' > $mnt/home/$user/.bash_profile
 chown user:user $mnt/home/$user/.bash_profile
-
-# Remeber last cursor position in vim
-echo 'source $VIMRUNTIME/vimrc_example.vim' > $mnt/home/$user/.vimrc
-chown user:user $mnt/home/$user/.vimrc
 
 touch $mnt/home/$user/.hushlogin
 chown user:user $mnt/home/$user/.hushlogin
@@ -638,6 +668,9 @@ swapPart=2
 rootPart=3
 subvols=(var_cache var_log var_tmp)
 user=user
+encrypt=0
+password=1234567890
+
 
 # Make font big and readable
 #pacman -S terminus-font
