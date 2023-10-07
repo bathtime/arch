@@ -792,6 +792,7 @@ choices=(
 "Install aur"
 "Install tweaks"
 "Setup snapper"
+"Overlay support"
 "Copy script"
 "Chroot install"
 "Chroot"
@@ -833,6 +834,7 @@ do
         "Install aur")		install_aur ;;
         "Install tweaks")	install_tweaks ;;
 	"Setup snapper")	setup_snapper ;;
+        "Overlay support")	overlay_support ;;
         "Chroot")		do_chroot ;;
         "Chroot install")	chroot_install ;;
         "Mount $mnt")		mount_mount  ;;
