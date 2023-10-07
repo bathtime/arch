@@ -600,6 +600,8 @@ EOF
 
 systemctl enable reflector.timer
 
+#sudo -u $user yay mkinitcpio-overlayfs
+
 arch-chroot $mnt mkinitcpio -p linux
 
 }
@@ -680,7 +682,7 @@ post_setup () {
 
    cd /home/$user
    sudo -u $user yay btrfs-assistant
-
+   
 }
 
 
