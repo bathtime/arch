@@ -195,13 +195,14 @@ fi
 
 mountopts="noatime,compress-force=zstd:1,discard=async"
 
-mkdir -p $mnt/{etc,tmp}
 
 echo -e "\nMounting...\n"
 for subvol in '' "${subvols[@]}"; do
     mount --mkdir -o "$mountopts",subvol=@"$subvol" $BTRFS $mnt/"${subvol//_//}"
     echo "mount -o $mountopts,subvol=@$subvol $BTRFS /mnt/${subvol//_//}"
 done
+
+mkdir -p $mnt/{etc,tmp}
 
 # mount efi partition
 mount --mkdir $ESP $mnt/efi
