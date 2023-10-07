@@ -622,6 +622,7 @@ fallback_options="-S autodetect"' > $mnt/etc/mkinitcpio.d/linux.preset
 
 sed -i 's/HOOKS=.*/HOOKS=\(systemd autodetect modconf keyboard sd-vconsole block filesystems resume\)/' $mnt/etc/mkinitcpio.conf
 
+mkinitcpio -p linux
 
 exit
 
