@@ -684,7 +684,7 @@ post_setup () {
 
 
 
-download_scripts () {
+download_script () {
 
 echo -e "\nDowloading scripts from Github..."
 
@@ -692,7 +692,7 @@ curl -s https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > arch.sh
 
 if [[ "$?" -eq 0 ]]; then
    echo "Download successful!"
-   chmod +x arch.sh chroot.sh post-setup.sh
+   chmod +x arch.sh
 else
    echo "Download unsuccessful."
 fi
@@ -773,7 +773,7 @@ choices=(
 "Print partitions"
 "Delete partitions"
 "Connect wireless"
-"Download scripts"
+"Download script"
 "Download apps"
 "Post setup"
 "Reset pacman keys"
@@ -814,7 +814,7 @@ do
         "Delete partitions")	delete_partitions ;;
         "Copy script")		copy_script ;;
         "Connect wireless")	connect_wireless ;;
-        "Download scripts")	download_scripts ;;
+        "Download script")	download_script ;;
         "Download apps")	download_apps    ;;
         "Post setup")		post_setup ;;
         "Reset pacman keys")    reset_keys ;;
