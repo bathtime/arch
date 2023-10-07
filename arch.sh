@@ -609,9 +609,21 @@ arch-chroot $mnt mkinitcpio -p linux
 
 overlay_support () {
 
-arch-chroot $mnt sudo -u $user yay mkinitcpio-overlayfs
+arch-chroot $mnt sudo -u $user yay -S mkinitcpio-overlayfs
+
+echo 'ALL_config="/etc/mkinitcpio.conf"
+ALL_kver="/boot/vmlinuz-linux"
+ALL_microcode=(/boot/*-ucode.img)
+
+PRESETS=("default")
+
+default_image="/boot/initramfs-linux.img"
+fallback_options="-S autodetect"' > $mnt/etc/mkinitcpio.d/linux.preset
+
+sed -i 's/HOOKS=.*/HOOKS=\(systemd autodetect modconf keyboard sd-vconsole block filesystems resume\)/' $mnt/etc/mkinitcpio.conf
 
 
+exit
 
 echo 'ALL_config="/etc/mkinitcpio-overlay.conf"
 ALL_kver="/boot/vmlinuz-linux"
@@ -623,7 +635,7 @@ fallback_image="/boot/initramfs-linux-fallback.img"
 fallback_options="-S autodetect"' > $mnt/etc/mkinitcpio.d/linux-fallback.preset
 
 cp $mnt/etc/mkinitcpio.conf $mnt/etc/mkinitcpio-overlay.conf
-sed -i 's/HOOKS=.*/HOOKS=\(systemd autodetect modconf keyboard sd-vconsole block filesystems overlayfs resume\)/' $mnt/etc/mkinitcpio-overlay.conf
+sed -i 's/HOOKS=.*/HOOKS=\(base udev autodetect modconf keyboard sd-vconsole block filesystems overlayfs resume\)/' $mnt/etc/mkinitcpio-overlay.conf
 
 arch-chroot $mnt mkinitcpio --config /etc/mkinitcpio-overlay.conf -p linux-fallback
 arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
