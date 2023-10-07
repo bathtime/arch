@@ -448,20 +448,9 @@ export RUNLEVEL=3
 export QT_LOGGING_RULES="*=false"
 
 if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
-
-   if ! [ -f /run/user/$UID/runonce-setup ]; then
-      touch /run/user/$UID/runonce-setup
-      cp /arch.sh $HOME/
-      #./arch.sh --first-run
-   fi
-
-   echo "Auto-logged in."
+      echo "Auto-logged in."
 fi' > $mnt/home/$user/.bash_profile
 chown user:user $mnt/home/$user/.bash_profile
-
-# Remeber last cursor position in vim
-echo 'source $VIMRUNTIME/vimrc_example.vim' > $mnt/home/$user/.vimrc
-chown user:user $mnt/home/$user/.vimrc
 
 touch $mnt/home/$user/.hushlogin
 chown user:user $mnt/home/$user/.hushlogin
