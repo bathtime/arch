@@ -564,6 +564,7 @@ arch-chroot $mnt systemctl enable systemd-oomd
 
 sed -Ei 's/^#(Color)$/\1\nILoveCandy/;s/^#(ParallelDownloads).*/\1 = 10/' $mnt/etc/pacman.conf
 
+
 ###  Make backups of boot when pacman is updated  ###
 
 mkdir -p $mnt/etc/pacman.d/hooks
