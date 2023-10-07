@@ -600,9 +600,33 @@ EOF
 
 systemctl enable reflector.timer
 
-#sudo -u $user yay mkinitcpio-overlayfs
 
 arch-chroot $mnt mkinitcpio -p linux
+
+}
+
+
+
+overlay_support () {
+
+arch-chroot $mnt sudo -u $user yay mkinitcpio-overlayfs
+
+
+
+echo 'ALL_config="/etc/mkinitcpio-overlay.conf"
+ALL_kver="/boot/vmlinuz-linux"
+ALL_microcode=(/boot/*-ucode.img)
+
+PRESETS=("fallback")
+
+fallback_image="/boot/initramfs-linux-fallback.img"
+fallback_options="-S autodetect"' > $mnt/etc/mkinitcpio.d/linux-fallback.preset
+
+cp $mnt/etc/mkinitcpio.conf $mnt/etc/mkinitcpio-overlay.conf
+sed -i 's/HOOKS=.*/HOOKS=\(systemd autodetect modconf keyboard sd-vconsole block filesystems overlayfs resume\)/' $mnt/etc/mkinitcpio-overlay.conf
+
+arch-chroot $mnt mkinitcpio --config /etc/mkinitcpio-overlay.conf -p linux-fallback
+arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
 
 }
 
