@@ -247,7 +247,7 @@ GRUB_DISTRIBUTOR=""
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
-GRUB_CMDLINE_LINUX="nmi_watchdog=0 loglevel=4 rd.udev.log_level=4 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold $extra_cmd"
+GRUB_CMDLINE_LINUX="nmi_watchdog=0 loglevel=4 rd.udev.log_level=4 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4hc zswap.max_pool_percent=20 zswap.zpool=z3fold $extra_cmd"
 GRUB_DISABLE_RECOVERY="true"
 GRUB_HIDDEN_TIMEOUT=2
 GRUB_RECORDFAIL_TIMEOUT=1
@@ -558,7 +558,7 @@ pacstrap -K $mnt terminus-font rsync reflector
 echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
 echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
 echo 'BINARIES=(setfont)' > $mnt/etc/mkinitcpio.conf.d/setfont.conf
-echo 'MODULES=(lz4)' > $mnt/etc/mkinitcpio.conf.d/lz4.conf
+echo 'MODULES=(lz4 lz4hc lz4hc_compress)' > $mnt/etc/mkinitcpio.conf.d/lz4.conf
 
 arch-chroot $mnt systemctl enable systemd-oomd
 
