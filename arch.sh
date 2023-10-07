@@ -358,7 +358,7 @@ if [ "$encrypt" -eq 1 ]; then
 
 else
 
-   echo 'HOOKS=(base udev autodetect modconf kms keyboard sd-vconsole block filesystems resume fsck)' > /etc/mkinitcpio.conf.d/myhooks.conf
+   echo 'HOOKS=(systemd autodetect modconf keyboard sd-vconsole block filesystems resume fsck)' > /etc/mkinitcpio.conf.d/myhooks.conf
 
 fi
 
