@@ -553,7 +553,7 @@ EOF
 
 install_tweaks () {
 
-pacstrap -K $mnt terminus-font rsync
+pacstrap -K $mnt terminus-font rsync reflector
 
 echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
 echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
@@ -582,6 +582,8 @@ Description = Backing up /boot...
 When = PostTransaction
 Exec = /usr/bin/rsync -a --delete /boot /.bootbackup
 EOF
+
+systemctl enable reflector.timer
 
 arch-chroot $mnt mkinitcpio -p linux
 
