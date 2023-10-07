@@ -373,7 +373,8 @@ if [ "$encrypt" -eq 1 ]; then
 
 else
 
-   echo 'HOOKS=(systemd autodetect modconf keyboard sd-vconsole block filesystems resume)' > /etc/mkinitcpio.conf.d/myhooks.conf
+   echo 'HOOKS=(systemd autodetect modconf kms keyboard sd-vconsole block filesystems resume)' > /etc/mkinitcpio.conf.d/myhooks.conf
+   echo 'MODULES_DECOMPRESS="yes"' > /etc/mkinitcpio.conf.d/decomp.conf
 
 fi
 
@@ -620,7 +621,7 @@ PRESETS=("default")
 default_image="/boot/initramfs-linux.img"
 fallback_options="-S autodetect"' > $mnt/etc/mkinitcpio.d/linux.preset
 
-sed -i 's/HOOKS=.*/HOOKS=\(systemd autodetect modconf keyboard sd-vconsole block filesystems resume\)/' $mnt/etc/mkinitcpio.conf
+sed -i 's/HOOKS=.*/HOOKS=\(systemd autodetect modconf kms keyboard sd-vconsole block filesystems resume\)/' $mnt/etc/mkinitcpio.conf
 
 mkinitcpio -p linux
 
