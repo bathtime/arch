@@ -366,16 +366,12 @@ mkdir -p /etc/mkinitcpio.conf.d
 
 
 if [ "$encrypt" -eq 1 ]; then
-
-   echo 'HOOKS=(systemd autodetect keyboard sd-vconsole modconf block sd-encrypt resume filesystems)' > /etc/mkinitcpio.conf.d/myhooks.conf
-
-   #echo 'HOOKS=(base udev autodetect modconf kms keyboard sd-vconsole block sd-encrypt filesystems resume fsck)' > /etc/mkinitcpio.conf.d/myhooks.conf
-
+   echo 'HOOKS=(base udev autodetect modconf kms keyboard sd-vconsole block sd-encrypt filesystems resume fsck)' > /etc/mkinitcpio.conf.d/myhooks.conf
 else
-
    echo 'HOOKS=(systemd autodetect modconf kms keyboard sd-vconsole block filesystems resume)' > /etc/mkinitcpio.conf.d/myhooks.conf
    echo 'MODULES_DECOMPRESS="yes"' > /etc/mkinitcpio.conf.d/decomp.conf
-
+   echo 'COMPRESSION="lz4"'        > /etc/mkinitcpio.conf.d/compress.conf
+   echo 'MODULES="lz4"'            > /etc/mkinitcpio.conf.d/modules.conf
 fi
 
 
@@ -574,7 +570,6 @@ pacstrap -K $mnt terminus-font rsync reflector
 echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
 echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
 echo 'BINARIES=(setfont)' > $mnt/etc/mkinitcpio.conf.d/setfont.conf
-echo 'MODULES=(lz4 lz4hc lz4hc_compress)' > $mnt/etc/mkinitcpio.conf.d/lz4.conf
 
 arch-chroot $mnt systemctl enable systemd-oomd
 
