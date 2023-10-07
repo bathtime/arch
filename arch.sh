@@ -179,6 +179,20 @@ check_on_root
 
 if [[ ! $(mount | grep -E "on /mnt") ]]; then
 
+if [ "$encrypt" -eq 1 ]; then
+
+   ESP=/dev/disk/by-partlabel/ESP
+   ROOT=/dev/disk/by-partlabel/CRYPTROOT
+   BTRFS="/dev/mapper/cryptroot"
+
+else
+
+   ESP=$disk$efiPart
+   ROOT=$disk$rootPart
+   BTRFS=$ROOT
+
+fi
+
 mountopts="noatime,compress-force=zstd:1,discard=async"
 
 mkdir -p $mnt/{etc,tmp}
