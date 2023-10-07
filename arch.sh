@@ -630,7 +630,10 @@ fi
 
 post_setup () {
 
-echo TODO
+   pacman -S plasma-desktop plasma-wayland-session plasma-pa dolphin konsole
+
+   cd /home/$user
+   sudo -u $user yay btrfs-assistant
 
 }
 
