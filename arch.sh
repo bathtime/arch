@@ -179,7 +179,7 @@ check_on_root
 
 if [[ ! $(mount | grep -E "on /mnt") ]]; then
 
-mountopts="ssd,noatime,compress-force=zstd:1,discard=async"
+mountopts="noatime,compress-force=zstd:1,discard=async"
 
 mkdir -p $mnt/{etc,tmp}
 
