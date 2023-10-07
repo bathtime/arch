@@ -332,6 +332,12 @@ echo 'LANG=en_US.UTF-8' > /etc/locale.conf
 echo 'Arch-Linux' > /etc/hostname
 echo 'KEYMAP=us' > /etc/vconsole.conf
 
+cat > /etc/hosts <<EOF2
+127.0.0.1   localhost
+::1         localhost
+127.0.1.1   $hostname.localdomain   $hostname
+EOF2
+
 locale-gen
 
 ###  Install necessary applications with proper permissions
@@ -547,12 +553,34 @@ EOF
 
 install_tweaks () {
 
-pacstrap -K $mnt terminus-font
+pacstrap -K $mnt terminus-font rsync
 
 echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
 echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
 echo 'BINARIES=(setfont)' > $mnt/etc/mkinitcpio.conf.d/setfont.conf
 echo 'MODULES=(lz4)' > $mnt/etc/mkinitcpio.conf.d/lz4.conf
+
+arch-chroot $mnt systemctl enable systemd-oomd
+
+sed -Ei 's/^#(Color)$/\1\nILoveCandy/;s/^#(ParallelDownloads).*/\1 = 10/' $mnt/etc/pacman.conf
+
+###  Make backups of boot when pacman is updated  ###
+
+mkdir -p $mnt/etc/pacman.d/hooks
+cat > $mnt/etc/pacman.d/hooks/50-bootbackup.hook <<EOF
+[Trigger]
+Operation = Upgrade
+Operation = Install
+Operation = Remove
+Type = Path
+Target = usr/lib/modules/*/vmlinuz
+
+[Action]
+Depends = rsync
+Description = Backing up /boot...
+When = PostTransaction
+Exec = /usr/bin/rsync -a --delete /boot /.bootbackup
+EOF
 
 arch-chroot $mnt mkinitcpio -p linux
 
@@ -671,6 +699,7 @@ swapPart=2
 rootPart=3
 subvols=(var_cache var_log var_tmp)
 user=user
+hostname=Arch
 encrypt=0
 password=1234567890
 
