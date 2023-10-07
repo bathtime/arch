@@ -661,7 +661,7 @@ fi
 
 post_setup () {
 
-   pacman -S plasma-desktop plasma-wayland-session plasma-pa dolphin konsole
+   pacman -S plasma-desktop plasma-wayland-session plasma-pa dolphin konsole firefox
 
    cd /home/$user
    sudo -u $user yay btrfs-assistant
