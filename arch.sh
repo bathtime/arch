@@ -755,6 +755,57 @@ post_setup () {
 
 
 
+backup_config () {
+
+cd /home/$user
+
+print_config
+
+tar cvf setup.tar $FILES
+
+#gpg -c setup.tar
+
+}
+
+
+
+print_config () {
+
+cd /home/$user
+
+for FILE in $CONFIG_FILES
+do
+    ls -la "$FILE"
+done
+
+}
+
+
+
+restore_config () {
+
+cd /home/$user
+
+tar xvzf setup.tar
+
+}
+
+
+
+delete_config () {
+
+cd /home/user
+
+for FILE in $CONFIG_FILES
+do
+    ls -la "$FILE"
+    rm -rf "$FILE"
+done
+
+}
+
+
+
 download_script () {
 
 echo -e "\nDowloading scripts from Github..."
@@ -791,6 +842,23 @@ user=user
 hostname=Arch
 password=1234567890
 encrypt=0
+
+CONFIG_FILES="
+.config/kded5rc
+.config/kglobalshortcutsrc
+.config/konsolerc
+.config/kscreenlockerrc
+.config/ksmserverrc
+.config/kwinrulesrc
+.config/plasma-org.kde.plasma.desktop-appletsrc
+.config/plasmashellrc
+.local/share/konsole/*.profile
+.local/share/kxmlgui5/konsole/konsoleui.rc
+.local/share/kxmlgui5/konsole/sessionui.rc
+.local/share/plasma/plasmoids/*
+.local/share/user-places.xbel
+.mozilla/*
+"
 
 
 # Make font big and readable
@@ -843,6 +911,7 @@ choices=(
 "Chroot"
 "Mount $mnt"
 "Unmount $mnt"
+"Configuration"
 "Print partitions"
 "Delete partitions"
 "Clean system"
@@ -885,6 +954,21 @@ do
         "Chroot install")	chroot_install ;;
         "Mount $mnt")		mount_mount  ;;
         "Unmount $mnt")		unmount_disk  ;;
+	"Configuration") echo -e "\nPlease choose an option:\n"
+		
+				choiceConfig=(backup restore print delete quit) 
+
+				select choiceConfig in "${choiceConfig[@]}"
+				do
+					case $choiceConfig in
+						"backup")	backup_config ;;
+						"restore")	restore_config ;;
+						"print")	print_config ;;
+						"delete")	delete_config ;;
+						"quit")		exit ;;
+						'')		echo -e "\nInvalid option!\n" ;;
+					esac						
+				done ;;
         "Print partitions")	print_partitions ;;
         "Delete partitions")	delete_partitions ;;
 	"Clean system")		clean_system ;;
