@@ -208,12 +208,12 @@ mkdir -p $mnt/{etc,tmp}
 mount --mkdir $ESP $mnt/efi
 
 # Make dirs nocow
-chattr -R +C $mnt/var/{cache,log,tmp}
+#chattr -R +C $mnt/var/{cache,log,tmp}
 
 #chmod 750 $mnt/root
 
 # Or you'll get an error when packages try to install
-chmod 1777 $mnt/var/tmp
+#chmod 1777 $mnt/var/tmp
 
 # mount efi partition
 mount --mkdir $ESP $mnt/efi
