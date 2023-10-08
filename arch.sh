@@ -746,7 +746,16 @@ fi
 
 post_setup () {
 
-   pacman -S plasma-desktop plasma-wayland-session plasma-pa dolphin konsole firefox
+   pacman -S plasma-desktop plasma-wayland-session plasma-pa kscreen dolphin konsole firefox
+
+echo '
+if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
+   startplasma-wayland
+fi
+' >> /home/$user/.bash_profile
+
+   chown user:user /home/$user/.bash_profile
+
 
    cd /home/$user
    sudo -u $user yay btrfs-assistant
@@ -761,7 +770,7 @@ cd /home/$user
 
 print_config
 
-tar cvf setup.tar $FILES
+sudo -u $user tar cvf setup.tar $FILES
 
 #gpg -c setup.tar
 
@@ -786,7 +795,7 @@ restore_config () {
 
 cd /home/$user
 
-tar xvzf setup.tar
+sudo -u $user tar xvf setup.tar
 
 }
 
@@ -982,3 +991,4 @@ do
         '')			echo -e "\nInvalid option!\n"; ;;
     esac
 done
+
