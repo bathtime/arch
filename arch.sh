@@ -320,6 +320,9 @@ sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
 
 #echo '/dev/zram0 none swap defaults,pri=100 0 0' >> /etc/fstab
 
+# Make /efi read-only
+sed -i 's/\/efi.*vfat.*rw/\/efi     vfat     ro/' $mnt/etc/fstab
+
 
 [ ! "$(cat $mnt/etc/fstab | grep 'none swap defaults 0 0')" ] && echo "UUID=$SWAP_UUID none swap defaults 0 0" >> $mnt/etc/fstab
 
@@ -527,12 +530,12 @@ systemctl enable snapper-cleanup.timer
 systemctl enable btrfs-scrub@-.timer
 #systemctl enable btrfs-trim.timer
  
-# Have snapper take a snapshot every 20 mins (default is every 1hr)
+# Have snapper take a snapshot every 120 mins (default is every 1hr)
 mkdir -p /etc/systemd/system/snapper-timeline.timer.d/
 cat > /etc/systemd/system/snapper-timeline.timer.d/frequency.conf << EOF2
 [Timer]
 OnCalendar=
-OnCalendar=*:0/20
+OnCalendar=*:0/120
 EOF2
 
 echo "To edit snapper config, run: vi /etc/snapper/configs/root"
@@ -770,9 +773,12 @@ cd /home/$user
 
 print_config
 
-sudo -u $user tar cvf setup.tar $FILES
+sudo -u $user tar cvf setup.tar $CONFIG_FILES
 
+ls -la setup.tar
 #gpg -c setup.tar
+
+exit
 
 }
 
@@ -786,6 +792,8 @@ for FILE in $CONFIG_FILES
 do
     ls -la "$FILE"
 done
+
+#find . -type f -printf "%-.22T+ %.8TX %p\n" | sort | cut -f 2- -d ' '
 
 }
 
@@ -853,14 +861,31 @@ password=1234567890
 encrypt=0
 
 CONFIG_FILES="
+.config/baloofilerc
+.config/fontconfig/fonts.conf
+.config/gtkrc
+.config/gtkrc-2.0
+.config/kactivitymanagerd-pluginsrc
+.config/kactivitymanagerdrc
+.config/kcminputrc
 .config/kded5rc
+.config/kdedefaults/package
+.config/kdeglobals
+.config/kfontinstuirc
 .config/kglobalshortcutsrc
 .config/konsolerc
+.config/krunnerrc
 .config/kscreenlockerrc
+.config/ksplashrc
 .config/ksmserverrc
+.config/kwinrc
 .config/kwinrulesrc
 .config/plasma-org.kde.plasma.desktop-appletsrc
 .config/plasmashellrc
+.config/powermanagementprofilesrc
+.config/systemsettingsrc
+.config/Trolltech.conf
+.local/bin/*
 .local/share/konsole/*.profile
 .local/share/kxmlgui5/konsole/konsoleui.rc
 .local/share/kxmlgui5/konsole/sessionui.rc
@@ -868,6 +893,8 @@ CONFIG_FILES="
 .local/share/user-places.xbel
 .mozilla/*
 "
+
+#CONFIG_FILES=".config/kded5rc .config/kglobalshortcutsrc .config/konsolerc .config/kscreenlockerrc .config/ksmserverrc .config/kwinrulesrc .config/plasma-org.kde.plasma.desktop-appletsrc .config/plasmashellrc .local/share/konsole/*.profile .local/share/kxmlgui5/konsole/konsoleui.rc .local/share/kxmlgui5/konsole/sessionui.rc .local/share/plasma/plasmoids/* .local/share/user-places.xbel .mozilla/*"
 
 
 # Make font big and readable
