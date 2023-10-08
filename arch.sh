@@ -4,6 +4,7 @@
 # Run with:
 # bash <(curl -sL bit.ly/a-install)
 
+set -e
 
 check_viable_disk () {
 
