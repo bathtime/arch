@@ -320,10 +320,16 @@ sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
 
 #echo '/dev/zram0 none swap defaults,pri=100 0 0' >> /etc/fstab
 
+
 [ ! "$(cat $mnt/etc/fstab | grep 'none swap defaults 0 0')" ] && echo "UUID=$SWAP_UUID none swap defaults 0 0" >> $mnt/etc/fstab
 
 # Put ~/.cache in tmpfs
-[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/')" ] && echo -e "tmpfs    /home/$user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> $mnt/etc/fstab
+[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/user/.cache')" ] && echo "tmpfs    /home/user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> $mnt/etc/fstab
+
+[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/cache')" ] && echo "tmpfs    /var/cache  tmpfs   rw,nodev,nosuid,mode=1755,size=2G   0 0" >> $mnt/etc/fstab
+[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/log')" ]   && echo "tmpfs    /var/log    tmpfs   rw,nodev,nosuid,mode=1775,size=2G   0 0" >> $mnt/etc/fstab
+[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/run')" ]   && echo "tmpfs    /var/run    tmpfs   rw,nodev,nosuid,mode=1777,size=2G   0 0" >> $mnt/etc/fstab
+
 
 systemctl daemon-reload
 
@@ -779,11 +785,12 @@ efiPart=1
 biosPart=0
 swapPart=2
 rootPart=3
-subvols=(var_cache var_log var_tmp)
+#subvols=(var_cache var_log var_tmp)
+subvols=()
 user=user
 hostname=Arch
-encrypt=0
 password=1234567890
+encrypt=0
 
 
 # Make font big and readable
