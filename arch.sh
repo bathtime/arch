@@ -313,6 +313,8 @@ SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 # Changing compression
 sed -i 's/zstd:3/zstd:1/' $mnt/etc/fstab
 
+sed -i 's/subvolid=.*,//g' $mnt/etc/fstab
+
 # genfstab will generate a swap drive. we're using a swap file instead
 sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
 
