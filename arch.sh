@@ -643,6 +643,33 @@ arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
 
 
 
+clean_system () {
+
+arch-chroot $mnt /bin/bash -e << EOF
+
+  rm -rf /var/log/*
+  pacman -Scc
+  sudo pacman -Qtdq
+  pacman -S ncdu
+  
+EOF
+
+# Clean pacman cache after every transaction
+mkdir -p $mnt/etc/pacman.d/hooks
+echo '[Trigger]
+Operation = Upgrade
+Operation = Install
+Operation = Remove
+Type = Package
+Target = *
+[Action]
+Description = Cleaning pacman cache...
+When = PostTransaction
+Exec = /usr/bin/pacman -Scc' > $mnt/etc/pacman.d/hooks/clean_package_cache.hook
+
+
+}
+
 reset_keys () {
 
 rm -rf /etc/pacman.d/gnupg
@@ -811,6 +838,7 @@ choices=(
 "Unmount $mnt"
 "Print partitions"
 "Delete partitions"
+"Clean system"
 "Connect wireless"
 "Download script"
 "Download apps"
@@ -852,6 +880,7 @@ do
         "Unmount $mnt")		unmount_disk  ;;
         "Print partitions")	print_partitions ;;
         "Delete partitions")	delete_partitions ;;
+	"Clean system")		clean_system ;;
         "Copy script")		copy_script ;;
         "Connect wireless")	connect_wireless ;;
         "Download script")	download_script ;;
