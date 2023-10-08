@@ -494,7 +494,9 @@ chown user:user $mnt/home/$user/.bashrc
 # Remember last cursor position in vim
 cat > $mnt/home/$user/.vimrc << EOF
 au BufReadPost *
-     if line("'\"") > 0 && line("'\"") <= line("$") && &filetype != "gitcommit" | execute("normal \`\"") | endif
+    \ if line("'\"") > 0 && line("'\"") <= line("$") && &filetype != "gitcommit" | 
+    \ execute("normal \`\"") | 
+    \ endif
 EOF
 chown user:user $mnt/home/$user/.vimrc
 
