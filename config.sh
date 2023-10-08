@@ -4,18 +4,20 @@ cd /home/user
 
 
 FILES="
-.local/share/kxmlgui5/konsole/konsoleui.rc
 .config/kded5rc
+.config/kglobalshortcutsrc
 .config/konsolerc
-.local/share/konsole/*.profile
-.config/plasmashellrc
-.config/kwinrulesrc
+.config/kscreenlockerrc
 .config/ksmserverrc
+.config/kwinrulesrc
 .config/plasma-org.kde.plasma.desktop-appletsrc
+.config/plasmashellrc
+.local/share/konsole/*.profile
+.local/share/kxmlgui5/konsole/konsoleui.rc
 .local/share/kxmlgui5/konsole/sessionui.rc
 .local/share/plasma/plasmoids/*
+.local/share/user-places.xbel
 .mozilla/*
-
 "
 
 for FILE in $FILES
@@ -33,6 +35,3 @@ exit
 #gpg -c setup.tar
 
 tar xvzf setup.tar
-
-#find . -type f -printf "%-.22T+ %M %n %-8u %-8g %8s %Tx %.8TX %p\n" | sort | cut -f 2- -d ' '
-
