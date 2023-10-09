@@ -592,25 +592,20 @@ grub-mkconfig -o $mnt/boot/grub/grub.cfg
 
 echo '#!/bin/bash
 
-# If root device is mounted as readonly, then we need to make some home dirs writable
 if [[ $(mount | grep " on / " | grep "ro") ]] || [[ "$1" = "-a" ]]; then
 
-   sudo mount -o uid=user -t tmpfs tmpfs /home/user/.config
-   sudo mount -o uid=user -t tmpfs tmpfs /home/user/.local
-   sudo mount -o uid=user -t tmpfs tmpfs /home/user/.mozilla
-  
-   echo "Extracting ~ config files..."
+   tmp_dir=/var/tmp/home-configs
+
+   mkdir -p $tmp_dir
 
    cd /home/user
-   tar -xf setup.tar
+   cp -r -p .{local,config,mozilla} $tmp_dir/
 
-else
+   mount -o uid=user -t tmpfs tmpfs /home/user/.config
+   mount -o uid=user -t tmpfs tmpfs /home/user/.local
+   mount -o uid=user -t tmpfs tmpfs /home/user/.mozilla
 
-   ### TODO: Make pacman hook for this
-   echo "Backing up ~ config files ..."
-
-   cd /home/user
-   tar cf setup.tar .local* .config* .mozilla*
+   sudo -u user cp -r $tmp_dir/.{config,local,mozilla} /home/user/
 
 fi' > $mnt/usr/local/bin/mount-user-tmpfs.sh
 
