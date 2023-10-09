@@ -580,7 +580,7 @@ makepkg -si
 
 paru --gendb
 
-pacman -R -y rust
+pacman -R --noconfirm rust
 
 EOF
 
