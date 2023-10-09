@@ -583,11 +583,14 @@ sed -Ei 's/^#(Color)$/\1\nILoveCandy/;s/^#(ParallelDownloads).*/\1 = 10/' $mnt/e
 
 
 
-###  Have grub fallback kernel be 'ro'
+###  Offer 'readonly' grub booting option  ###
 
-sed -i "s/.*Loading Linux.*/\n&\n\[ \"\$\{type\}\" = \"fallback\" \] \&\& perms=\"ro\" \|\| perms=\"rw\"\n/g" $mnt/etc/grub.d/10_linux
-sed -i "s/thisversion} rw /thisversion} \${perms} /g" $mnt/etc/grub.d/10_linux
+cp $mnt/etc/grub.d/10_linux /etc/grub.d/10_linux-readonly
+sed -i 's/\"\$title\"/\"\$title \(readonly\)\"/g' $mnt/etc/grub.d/10_linux-readonly
+sed -i 's/ rw / ro /g' $mnt/etc/grub.d/10_linux-readonly
+grub-mkconfig -o $mnt/boot/grub/grub.cfg
 
+## TODO: find a better way to run this file
 echo '#!/bin/bash
 
 # Check if root fs is mounted as readonly. If so, these dirs need to be mutable
