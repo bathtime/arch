@@ -583,31 +583,54 @@ sed -Ei 's/^#(Color)$/\1\nILoveCandy/;s/^#(ParallelDownloads).*/\1 = 10/' $mnt/e
 
 
 
-###  Offer 'readonly' grub booting option  ###
+###  Offer readonly grub booting option  ###
 
 cp $mnt/etc/grub.d/10_linux /etc/grub.d/10_linux-readonly
 sed -i 's/\"\$title\"/\"\$title \(readonly\)\"/g' $mnt/etc/grub.d/10_linux-readonly
 sed -i 's/ rw / ro /g' $mnt/etc/grub.d/10_linux-readonly
 grub-mkconfig -o $mnt/boot/grub/grub.cfg
 
-## TODO: find a better way to run this file
 echo '#!/bin/bash
 
-# Check if root fs is mounted as readonly. If so, these dirs need to be mutable
+# If root device is mounted as readonly, then we need to make some home dirs writable
 if [[ $(mount | grep " on / " | grep "ro") ]] || [[ "$1" = "-a" ]]; then
 
-sudo mount -o uid=user -t tmpfs tmpfs /home/user/.config
-sudo mount -o uid=user -t tmpfs tmpfs /home/user/.local
-sudo mount -o uid=user -t tmpfs tmpfs /home/user/.mozilla
+   sudo mount -o uid=user -t tmpfs tmpfs /home/user/.config
+   sudo mount -o uid=user -t tmpfs tmpfs /home/user/.local
+   sudo mount -o uid=user -t tmpfs tmpfs /home/user/.mozilla
+  
+   echo "Extracting ~ config files..."
 
-mkdir -p /home/user/.local/{bin,share,share/baloo} /home/user/.config/kdedefaults
+   cd /home/user
+   tar -xf setup.tar
 
-tar xvf /home/user/setup.tar
+else
 
-fi' > $mnt/home/$user/mount-readonly.sh
+   echo "Backing up ~ config files ..."
+
+   cd /home/user
+   tar cf setup.tar .local* .config* .mozilla*
+
+fi' > $mnt/usr/local/bin/mount-user-tmpfs.sh
+
 
 # So systemd won't remount as 'rw'
 arch-chroot $mnt systemctl mask systemd-remount-fs.service
+
+echo'[Unit]
+Description=Run script with systemd right before login prompt
+After=rc-local.service
+Before=getty.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/mount-user-tmpfs.sh
+
+[Install]
+WantedBy=multi-user.target' > $mnt/etc/systemd/system/readonly.service 
+
+arch-chroot $mnt systemctl enable readonly.service
 
 
 ###  Make backups of boot when pacman is updated  ###
