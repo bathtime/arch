@@ -582,12 +582,29 @@ arch-chroot $mnt systemctl enable systemd-oomd
 sed -Ei 's/^#(Color)$/\1\nILoveCandy/;s/^#(ParallelDownloads).*/\1 = 10/' $mnt/etc/pacman.conf
 
 
+
 ###  Have grub fallback kernel be 'ro'
-sed -i "s/.*Loading Linux.*/\n&\n\[ \"\$\{type\}\" = \"fallback\" \] \&\& perms=\"ro\" \|\| perms=\"rw\"\n/g" /etc/grub.d/10_linux
-sed -i "s/thisversion} rw /thisversion} \${perms} /g" /etc/grub.d/10_linux
+
+sed -i "s/.*Loading Linux.*/\n&\n\[ \"\$\{type\}\" = \"fallback\" \] \&\& perms=\"ro\" \|\| perms=\"rw\"\n/g" $mnt/etc/grub.d/10_linux
+sed -i "s/thisversion} rw /thisversion} \${perms} /g" $mnt/etc/grub.d/10_linux
+
+echo '#!/bin/bash
+
+# Check if root fs is mounted as readonly. If so, these dirs need to be mutable
+if [[ $(mount | grep " on / " | grep "ro") ]] || [[ "$1" = "-a" ]]; then
+
+sudo mount -o uid=user -t tmpfs tmpfs /home/user/.config
+sudo mount -o uid=user -t tmpfs tmpfs /home/user/.local
+sudo mount -o uid=user -t tmpfs tmpfs /home/user/.mozilla
+
+mkdir -p /home/user/.local/{bin,share,share/baloo} /home/user/.config/kdedefaults
+
+tar xvf /home/user/setup.tar
+
+fi' > $mnt/home/$user/mount-readonly.sh
 
 # So systemd won't remount as 'rw'
-sudo systemctl mask systemd-remount-fs.service
+arch-chroot $mnt systemctl mask systemd-remount-fs.service
 
 
 ###  Make backups of boot when pacman is updated  ###
