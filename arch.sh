@@ -582,6 +582,14 @@ arch-chroot $mnt systemctl enable systemd-oomd
 sed -Ei 's/^#(Color)$/\1\nILoveCandy/;s/^#(ParallelDownloads).*/\1 = 10/' $mnt/etc/pacman.conf
 
 
+###  Have grub fallback kernel be 'ro'
+sed -i "s/.*Loading Linux.*/\n&\n\[ \"\$\{type\}\" = \"fallback\" \] \&\& perms=\"ro\" \|\| perms=\"rw\"\n/g" /etc/grub.d/10_linux
+sed -i "s/thisversion} rw /thisversion} \${perms} /g" /etc/grub.d/10_linux
+
+# So systemd won't remount as 'rw'
+sudo systemctl mask systemd-remount-fs.service
+
+
 ###  Make backups of boot when pacman is updated  ###
 
 mkdir -p $mnt/etc/pacman.d/hooks
