@@ -606,6 +606,7 @@ if [[ $(mount | grep " on / " | grep "ro") ]] || [[ "$1" = "-a" ]]; then
 
 else
 
+   ### TODO: Make pacman hook for this
    echo "Backing up ~ config files ..."
 
    cd /home/user
