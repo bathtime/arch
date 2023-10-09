@@ -498,6 +498,8 @@ au BufReadPost *
     \ if line("'\"") > 0 && line("'\"") <= line("$") && &filetype != "gitcommit" | 
     \ execute("normal \`\"") | 
     \ endif
+
+syntax on
 EOF
 chown user:user $mnt/home/$user/.vimrc
 
