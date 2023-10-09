@@ -594,12 +594,12 @@ echo '#!/bin/bash
 
 if [[ $(mount | grep " on / " | grep "ro") ]] || [[ "$1" = "-a" ]]; then
 
-   tmp_dir=/var/tmp/home-configs
+   #mount -o uid=user -t tmpfs tmpfs /home/user/.cache
 
-   mkdir -p $tmp_dir
-
+   tmp_dir=/home/user/.cache
+   
    cd /home/user
-   cp -r -p .{local,config,mozilla} $tmp_dir/
+   sudo -u user cp -r -p .{local,config,mozilla} $tmp_dir/
 
    mount -o uid=user -t tmpfs tmpfs /home/user/.config
    mount -o uid=user -t tmpfs tmpfs /home/user/.local
