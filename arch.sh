@@ -562,14 +562,25 @@ install_aur () {
 arch-chroot $mnt /bin/bash -e << EOF
 
 cd /home/$user
-rm -rf yay-bin
+#rm -rf yay-bin
 
-sudo -u $user git clone https://aur.archlinux.org/yay-bin
+#sudo -u $user git clone https://aur.archlinux.org/yay-bin
 
-cd yay-bin
-sudo -u user makepkg -si
+#cd yay-bin
+#sudo -u user makepkg -si
 
-sudo -u $user yay -Y --gendb
+#sudo -u $user yay -Y --gendb
+
+
+#sudo pacman -S --needed base-devel
+
+git clone https://aur.archlinux.org/paru.git
+cd paru
+makepkg -si
+
+paru --gendb
+
+
 
 EOF
 
