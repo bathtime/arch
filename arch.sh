@@ -4,7 +4,7 @@
 # Run with:
 # bash <(curl -sL bit.ly/a-install)
 
-set -e
+#set -e
 
 check_viable_disk () {
 
@@ -253,7 +253,6 @@ SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 
 arch-chroot $mnt /bin/bash -e << EOF
 
-#grub-install --target=i386-pc $disk --recheck
 grub-install --target=x86_64-efi --efi-directory=/efi/ --bootloader-id=GRUB --removable
 
 cat > /etc/default/grub << EOF2
@@ -339,9 +338,6 @@ systemctl daemon-reload
 
 cat $mnt/etc/fstab
 
-# At this point you could log into your system 
-#arch-chroot $mnt printf "123455\n123456\n" | passwd root
-
 }
 
 
@@ -372,7 +368,7 @@ mkdir -p -m 750 /etc/sudoers.d
 
 pacman --noconfirm -Sy sudo tar man
 
-pacman --noconfirm -Sy dosfstools parted arch-install-scripts snapper git base-devel less
+pacman --noconfirm -Sy dosfstools parted arch-install-scripts snapper git base-devel
 
 mkdir -p /etc/mkinitcpio.conf.d
 
@@ -406,11 +402,10 @@ mkdir -p /etc/sudoers.d
 echo "$user ALL=(ALL)  NOPASSWD: /usr/bin/btrfs-assistant-launcher" > /etc/sudoers.d/nopasswd
 echo '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/wheel
 
-# Default root password is: 123456
-printf "123456\n123456\n" | passwd root
+printf "$password\n$password\n" | passwd root
 
 useradd -m $user -G wheel
-printf "123456\n123456\n" | passwd $user
+printf "$password\n$password\n" | passwd $user
 
 # Disable login by root
 #passwd --lock root
@@ -476,10 +471,7 @@ export MOZ_ENABLE_WAYLAND=1
 export XDG_RUNTIME_DIR=/run/$USER/1000
 export RUNLEVEL=3
 export QT_LOGGING_RULES="*=false"
-
-if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
-      echo "Auto-logged in."
-fi' > $mnt/home/$user/.bash_profile
+' > $mnt/home/$user/.bash_profile
 chown user:user $mnt/home/$user/.bash_profile
 
 touch $mnt/home/$user/.hushlogin
@@ -508,7 +500,6 @@ chown user:user $mnt/home/$user/.vimrc
 
 
 setup_snapper () {
-
 
 # Snapshot script
 echo '#!/bin/bash
@@ -554,7 +545,6 @@ snapshot.sh
 
 EOF
 
-
 }
 
 
@@ -564,17 +554,6 @@ install_aur () {
 arch-chroot $mnt /bin/bash -e << EOF
 
 cd /home/$user
-#rm -rf yay-bin
-
-#sudo -u $user git clone https://aur.archlinux.org/yay-bin
-
-#cd yay-bin
-#sudo -u user makepkg -si
-
-#sudo -u $user yay -Y --gendb
-
-
-#sudo pacman -S --needed base-devel
 
 git clone https://aur.archlinux.org/paru.git
 cd paru
@@ -866,18 +845,22 @@ pacman -S arch-install-scripts gptfdisk terminus-font
 
 mnt=/mnt
 efiPart=1
-biosPart=0
+biosPart=2
 swapPart=2
 rootPart=3
 #subvols=(var_cache var_log var_tmp)
 subvols=()
+
 user=user
 hostname=Arch
-password=1234567890
+password=123456
 encrypt=0
+
+
 
 CONFIG_FILES="
 .config/baloofilerc
+.config/dolphinrc
 .config/fontconfig/fonts.conf
 .config/gtkrc
 .config/gtkrc-2.0
@@ -902,19 +885,21 @@ CONFIG_FILES="
 .config/systemsettingsrc
 .config/Trolltech.conf
 .local/bin/*
+.local/share/color-schemes/*
+.local/share/dolphin/dolphinstaterc
 .local/share/konsole/*.profile
 .local/share/kxmlgui5/konsole/konsoleui.rc
 .local/share/kxmlgui5/konsole/sessionui.rc
 .local/share/plasma/plasmoids/*
 .local/share/user-places.xbel
 .mozilla/*
+.viminfo
+.vimrc
+mount-readonly.sh
 "
-
-#CONFIG_FILES=".config/kded5rc .config/kglobalshortcutsrc .config/konsolerc .config/kscreenlockerrc .config/ksmserverrc .config/kwinrulesrc .config/plasma-org.kde.plasma.desktop-appletsrc .config/plasmashellrc .local/share/konsole/*.profile .local/share/kxmlgui5/konsole/konsoleui.rc .local/share/kxmlgui5/konsole/sessionui.rc .local/share/plasma/plasmoids/* .local/share/user-places.xbel .mozilla/*"
 
 
 # Make font big and readable
-#pacman -S terminus-font
 setfont ter-132b
 
 if [[ ! "$1" = "" ]]; then
@@ -929,9 +914,6 @@ loadkeys en
 
 # Update system clock
 #timedatectl
-
-#[[ "$(cat /sys/firmware/efi/fw_platform_size)" -eq 64 ]] && echo "This computer is running in uefi mode" || echo "This computer is not running in uefi mode."
-
 
 
 while [[ "${1}" != "" ]]; do
