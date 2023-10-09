@@ -594,10 +594,9 @@ echo '#!/bin/bash
 
 if [[ $(mount | grep " on / " | grep "ro") ]] || [[ "$1" = "-a" ]]; then
 
-   #mount -o uid=user -t tmpfs tmpfs /home/user/.cache
-
    tmp_dir=/home/user/.cache
-   
+   #mount -o uid=user -t tmpfs tmpfs $tmp_dir
+
    cd /home/user
    sudo -u user cp -r -p .{local,config,mozilla} $tmp_dir/
 
