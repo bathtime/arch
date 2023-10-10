@@ -612,7 +612,7 @@ fi' > $mnt/usr/local/bin/mount-user-tmpfs.sh
 # So systemd won't remount as 'rw'
 arch-chroot $mnt systemctl mask systemd-remount-fs.service
 
-echo'[Unit]
+echo '[Unit]
 Description=Run script with systemd right before login prompt
 After=rc-local.service
 Before=getty.target
