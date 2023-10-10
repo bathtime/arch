@@ -607,7 +607,7 @@ if [[ $(mount | grep " on / " | grep "ro") ]] || [[ "$1" = "-a" ]]; then
    sudo -u user cp -r $tmp_dir/.{config,local,mozilla} /home/user/
 
 fi' > $mnt/usr/local/bin/mount-user-tmpfs.sh
-
+chmod +x $mnt/usr/local/bin/mount-user-tmpfs.sh
 
 # So systemd won't remount as 'rw'
 arch-chroot $mnt systemctl mask systemd-remount-fs.service
