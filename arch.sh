@@ -563,7 +563,6 @@ arch-chroot $mnt echo 123456 | sudo -u user chsh -s /bin/mksh     # user shell
 cp $mnt/etc/grub.d/10_linux /etc/grub.d/10_linux-readonly
 sed -i 's/\"\$title\"/\"\$title \(readonly\)\"/g' $mnt/etc/grub.d/10_linux-readonly
 sed -i 's/ rw / ro /g' $mnt/etc/grub.d/10_linux-readonly
-grub-mkconfig -o $mnt/boot/grub/grub.cfg
 
 echo '#!/bin/bash
 
@@ -602,6 +601,14 @@ WantedBy=multi-user.target' > $mnt/etc/systemd/system/readonly.service
 
 arch-chroot $mnt systemctl enable readonly.service
 
+
+
+grub-mkconfig -o /boot/grub/grub.cfg###  Add overlay boot option in grub menu  ###
+
+arch-chroot $mnt sudo -u $user paru -S mkinitcpio-overlay
+sudo sed -i 's/fallback initramfs/overlay initramfs/g' $mnt/etc/grub.d/{10_linux,10_linux-readonly}
+
+arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
 
 }
 
