@@ -603,7 +603,7 @@ arch-chroot $mnt systemctl enable readonly.service
 
 
 
-grub-mkconfig -o /boot/grub/grub.cfg###  Add overlay boot option in grub menu  ###
+###  Add overlay boot option in grub menu  ###
 
 arch-chroot $mnt sudo -u $user paru mkinitcpio-overlay
 sudo sed -i 's/fallback initramfs/overlay initramfs/g' $mnt/etc/grub.d/{10_linux,10_linux-readonly}
@@ -620,7 +620,7 @@ fallback_options="-S autodetect" > $mnt/etc/mkinitcpio.d/linux-overlay.preset
 echo 'MODULES=(lz4)
 BINARIES=()
 FILES=()
-HOOKS=(base udev autodetect modconf kms keyboard sd-vconsole block filesystems overlayfs resume)
+HOOKS=(base udev autodetect modconf keyboard sd-vconsole block filesystems overlayfs resume)
 COMPRESSION="lz4"
 MODULES_DECOMPRESS="yes"' > $mnt/etc/mkinitcpio-overlay.conf 
 
