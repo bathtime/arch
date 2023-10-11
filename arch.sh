@@ -605,7 +605,7 @@ arch-chroot $mnt systemctl enable readonly.service
 
 grub-mkconfig -o /boot/grub/grub.cfg###  Add overlay boot option in grub menu  ###
 
-arch-chroot $mnt sudo -u $user paru -S mkinitcpio-overlay
+arch-chroot $mnt sudo -u $user paru mkinitcpio-overlay
 sudo sed -i 's/fallback initramfs/overlay initramfs/g' $mnt/etc/grub.d/{10_linux,10_linux-readonly}
 
 arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
