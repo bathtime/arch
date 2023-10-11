@@ -119,12 +119,12 @@ delete_partitions
 
 parted -s $disk mklabel gpt
 parted -s --align=optimal $disk mkpart ESP fat32 1Mib 1000Mib 
-parted -s $disk set $efiPart esp on
+parted -s $disk set $espPart esp on
 parted -s --align=optimal $disk mkpart SWAP linux-swap 1005Mib 10Gib
 parted -s $disk set $swapPart swap on
 parted -s --align=optimal $disk mkpart ROOT btrfs 10Gib 100%
 
-mkfs.fat -F 32 -n EFI $disk$efiPart 
+mkfs.fat -F 32 -n EFI $disk$espPart 
 mkswap $disk$swapPart
 mkfs.btrfs -f -L ROOT $disk$rootPart
 
@@ -166,7 +166,7 @@ done
 mkdir -p $mnt/{etc,tmp}
 
 # mount efi partition
-mount --mkdir $disk$efiPart  $mnt/efi
+mount --mkdir $disk$espPart $mnt/efi
 
 fi
 
@@ -814,8 +814,7 @@ pacman -S arch-install-scripts gptfdisk terminus-font
 
 
 mnt=/mnt
-efiPart=1
-biosPart=2
+espPart=1
 swapPart=2
 rootPart=3
 subvols=()
