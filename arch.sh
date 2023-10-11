@@ -120,44 +120,19 @@ delete_partitions
 parted -s $disk mklabel gpt
 parted -s --align=optimal $disk mkpart ESP fat32 1Mib 1000Mib 
 parted -s $disk set $efiPart esp on
-
-#parted -s --align=optimal $disk mkpart BOOT ext4 1001Mib 2000Mib
-#parted -s --align=optimal $disk mkpart BOOT fat32 1001Mib 1004Mib 
-#parted -s $disk set 2 bios_grub on
-
 parted -s --align=optimal $disk mkpart SWAP linux-swap 1005Mib 10Gib
 parted -s $disk set $swapPart swap on
 parted -s --align=optimal $disk mkpart ROOT btrfs 10Gib 100%
 
-
-if [ "$encrypt" -eq 1 ]; then
-
-   ESP=/dev/disk/by-partlabel/ESP
-   ROOT=/dev/disk/by-partlabel/CRYPTROOT
-   BTRFS="/dev/mapper/cryptroot"
-
-   partprobe $disk
-
-   echo -n "$password" | cryptsetup luksFormat "$ROOT" -d -
-   echo -n "$password" | cryptsetup open "$ROOT" cryptroot -d - 
-
-else
-
-   ESP=$disk$efiPart
-   ROOT=$disk$rootPart
-   BTRFS=$ROOT
-
-fi
-
-
-mkfs.fat -F 32 -n EFI $ESP
+mkfs.fat -F 32 -n EFI $disk$efiPart 
 mkswap $disk$swapPart
-mkfs.btrfs -f -L ROOT $BTRFS
+mkfs.btrfs -f -L ROOT $disk$rootPart
 
 parted -s $disk print
 
+
 echo -e "\nMounting $mnt..."
-mount --mkdir $BTRFS $mnt
+mount --mkdir $disk$rootPart $mnt
 
 cd $mnt
 
@@ -180,44 +155,18 @@ check_on_root
 
 if [[ ! $(mount | grep -E "on /mnt") ]]; then
 
-if [ "$encrypt" -eq 1 ]; then
-
-   ESP=/dev/disk/by-partlabel/ESP
-   ROOT=/dev/disk/by-partlabel/CRYPTROOT
-   BTRFS="/dev/mapper/cryptroot"
-
-else
-
-   ESP=$disk$efiPart
-   ROOT=$disk$rootPart
-   BTRFS=$ROOT
-
-fi
-
 mountopts="noatime,compress-force=zstd:1,discard=async"
-
 
 echo -e "\nMounting...\n"
 for subvol in '' "${subvols[@]}"; do
-    mount --mkdir -o "$mountopts",subvol=@"$subvol" $BTRFS $mnt/"${subvol//_//}"
-    echo "mount -o $mountopts,subvol=@$subvol $BTRFS /mnt/${subvol//_//}"
+    mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
+    echo "mount -o $mountopts,subvol=@$subvol $disk$rootPart /mnt/${subvol//_//}"
 done
 
 mkdir -p $mnt/{etc,tmp}
 
 # mount efi partition
-mount --mkdir $ESP $mnt/efi
-
-# Make dirs nocow
-#chattr -R +C $mnt/var/{cache,log,tmp}
-
-#chmod 750 $mnt/root
-
-# Or you'll get an error when packages try to install
-#chmod 1777 $mnt/var/tmp
-
-# mount efi partition
-mount --mkdir $ESP $mnt/efi
+mount --mkdir $disk$efiPart  $mnt/efi
 
 fi
 
@@ -250,6 +199,7 @@ pacstrap -K $mnt grub grub-btrfs os-prober efibootmgr inotify-tools lz4
 
 SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 
+extra_cmd=
 
 arch-chroot $mnt /bin/bash -e << EOF
 
@@ -262,7 +212,7 @@ GRUB_DISTRIBUTOR=""
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
-GRUB_CMDLINE_LINUX="quiet nowatchdog loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold $extra_cmd"
+GRUB_CMDLINE_LINUX="nowatchdog loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold $extra_cmd"
 GRUB_DISABLE_RECOVERY="true"
 GRUB_HIDDEN_TIMEOUT=2
 GRUB_RECORDFAIL_TIMEOUT=1
@@ -272,14 +222,6 @@ GRUB_TIMEOUT=0
 # grub-mkconfig -o /boot/grub/grub.cfg
 
 EOF2
-
-
-if [ "$encrypt" -eq 1 ]; then
-
-   ENCRYPT_UUID=$(blkid -s UUID -o value $ROOT)
-   sed -i "\,^GRUB_CMDLINE_LINUX=\"\",s,\",&rd.luks.name=$ENCRYPT_UUID=cryptroot root=$BTRFS," $mnt/etc/default/grub
-
-fi
 
 
 # Allows grub to run snapshots
@@ -313,12 +255,11 @@ SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 # Changing compression
 sed -i 's/zstd:3/zstd:1/' $mnt/etc/fstab
 
+# Bad idea to use subids when rolling back 
 sed -i 's/subvolid=.*,//g' $mnt/etc/fstab
 
 # genfstab will generate a swap drive. we're using a swap file instead
 sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
-
-#echo '/dev/zram0 none swap defaults,pri=100 0 0' >> /etc/fstab
 
 # Make /efi read-only
 sed -i 's/\/efi.*vfat.*rw/\/efi     vfat     ro/' $mnt/etc/fstab
@@ -373,15 +314,14 @@ pacman --noconfirm -Sy dosfstools parted arch-install-scripts snapper git base-d
 mkdir -p /etc/mkinitcpio.conf.d
 
 
-if [ "$encrypt" -eq 1 ]; then
-   echo 'HOOKS=(base udev autodetect modconf kms keyboard sd-vconsole block sd-encrypt filesystems resume fsck)' > /etc/mkinitcpio.conf.d/myhooks.conf
-else
-   echo 'HOOKS=(systemd autodetect modconf kms keyboard sd-vconsole block filesystems resume)' > /etc/mkinitcpio.conf.d/myhooks.conf
-   echo 'MODULES_DECOMPRESS="yes"' > /etc/mkinitcpio.conf.d/decomp.conf
-   echo 'COMPRESSION="lz4"'        > /etc/mkinitcpio.conf.d/compress.conf
-   echo 'MODULES="lz4"'            > /etc/mkinitcpio.conf.d/modules.conf
-fi
+#echo 'HOOKS=(base udev autodetect modconf kms keyboard sd-vconsole block filesystems resume fsck)' > /etc/mkinitcpio.conf.d/myhooks.conf
+echo 'HOOKS=(systemd autodetect modconf keyboard sd-vconsole block filesystems resume)' > /etc/mkinitcpio.conf.d/myhooks.conf
 
+echo 'MODULES_DECOMPRESS="yes"' > /etc/mkinitcpio.conf.d/decomp.conf
+echo 'COMPRESSION="lz4"'        > /etc/mkinitcpio.conf.d/compress.conf
+echo 'MODULES="lz4"'            > /etc/mkinitcpio.conf.d/modules.conf
+
+fi
 
 mkinitcpio -p linux
 
@@ -464,7 +404,7 @@ fi
 
 PATH="$HOME/.local/bin:$PATH"
 
-export EDITOR=/usr/bin/vi
+export EDITOR=/usr/bin/vim
 export QT_QPA_PLATFORM=wayland
 export QT_IM_MODULE=Maliit
 export MOZ_ENABLE_WAYLAND=1
@@ -523,7 +463,7 @@ systemctl enable snapper-cleanup.timer
 #systemctl enable snapper-boot.timer
  
 #systemctl enable btrfs-balance.timer
-systemctl enable btrfs-scrub@-.timer
+#systemctl enable btrfs-scrub@-.timer
 #systemctl enable btrfs-trim.timer
  
 # Have snapper take a snapshot every 120 mins (default is every 1hr)
@@ -555,11 +495,11 @@ arch-chroot $mnt /bin/bash -e << EOF
 
 cd /home/$user
 
-git clone https://aur.archlinux.org/paru.git
+sudo -u $user git clone https://aur.archlinux.org/paru.git
 cd paru
-makepkg -si
+sudo -u $user makepkg -si
 
-paru --gendb
+sudo -u $user paru --gendb
 
 pacman -R --noconfirm rust
 
@@ -571,15 +511,50 @@ EOF
 
 install_tweaks () {
 
-pacstrap -K $mnt terminus-font rsync reflector
+
+pacstrap -K $mnt terminus-font mksh
 
 echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
 echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
-echo 'BINARIES=(setfont)' > $mnt/etc/mkinitcpio.conf.d/setfont.conf
 
 arch-chroot $mnt systemctl enable systemd-oomd
 
 sed -Ei 's/^#(Color)$/\1\nILoveCandy/;s/^#(ParallelDownloads).*/\1 = 10/' $mnt/etc/pacman.conf
+
+
+
+###  Shell (change to mksh)  ###
+
+echo 'HISTFILE=/root/.mksh_history
+HISTSIZE=5000
+export VISUAL="emacs"
+export EDITOR="/usr/bin/vim"
+set -o emacs' > $mnt/root/.mkshrc
+
+echo 'HISTFILE=/home/$USER/.mksh_history
+HISTSIZE=5000
+export VISUAL="emacs"
+export EDITOR="/usr/bin/vim"
+set -o emacs' > $mnt/home/$user/.mkshrc
+chown user:user $mnt/home/$user/.mkshrc
+
+echo -e 'PATH="$HOME/.local/bin:$PATH"
+ 
+export EDITOR=/usr/bin/vim
+export ENV="/home/$USER/.mkshrc"
+export QT_QPA_PLATFORM=wayland
+export QT_IM_MODULE=Maliit
+export MOZ_ENABLE_WAYLAND=1
+export XDG_RUNTIME_DIR=/tmp/runtime-user
+export XDG_RUNTIME_DIR=/run/$USER/1000
+export RUNLEVEL=3
+export QT_LOGGING_RULES="*=false"
+
+' > $mnt/home/$user/.profile
+chown user:user $mnt/home/$user/.profile 
+
+arch-chroot $mnt chsh -s /bin/mksh                                # root shell
+arch-chroot $mnt echo 123456 | sudo -u user chsh -s /bin/mksh     # user shell
 
 
 
@@ -628,67 +603,6 @@ WantedBy=multi-user.target' > $mnt/etc/systemd/system/readonly.service
 arch-chroot $mnt systemctl enable readonly.service
 
 
-###  Make backups of boot when pacman is updated  ###
-
-mkdir -p $mnt/etc/pacman.d/hooks
-cat > $mnt/etc/pacman.d/hooks/50-bootbackup.hook <<EOF
-[Trigger]
-Operation = Upgrade
-Operation = Install
-Operation = Remove
-Type = Path
-Target = usr/lib/modules/*/vmlinuz
-
-[Action]
-Depends = rsync
-Description = Backing up /boot...
-When = PostTransaction
-Exec = /usr/bin/rsync -a --delete /boot /.bootbackup
-EOF
-
-systemctl enable reflector.timer
-
-
-arch-chroot $mnt mkinitcpio -p linux
-
-}
-
-
-
-overlay_support () {
-
-arch-chroot $mnt sudo -u $user yay -S mkinitcpio-overlayfs
-
-echo 'ALL_config="/etc/mkinitcpio.conf"
-ALL_kver="/boot/vmlinuz-linux"
-ALL_microcode=(/boot/*-ucode.img)
-
-PRESETS=("default")
-
-default_image="/boot/initramfs-linux.img"
-fallback_options="-S autodetect"' > $mnt/etc/mkinitcpio.d/linux.preset
-
-sed -i 's/HOOKS=.*/HOOKS=\(systemd autodetect modconf kms keyboard sd-vconsole block filesystems resume\)/' $mnt/etc/mkinitcpio.conf
-
-mkinitcpio -p linux
-
-exit
-
-echo 'ALL_config="/etc/mkinitcpio-overlay.conf"
-ALL_kver="/boot/vmlinuz-linux"
-ALL_microcode=(/boot/*-ucode.img)
-
-PRESETS=("fallback")
-
-fallback_image="/boot/initramfs-linux-fallback.img"
-fallback_options="-S autodetect"' > $mnt/etc/mkinitcpio.d/linux-fallback.preset
-
-cp $mnt/etc/mkinitcpio.conf $mnt/etc/mkinitcpio-overlay.conf
-sed -i 's/HOOKS=.*/HOOKS=\(base udev autodetect modconf keyboard sd-vconsole block filesystems overlayfs resume\)/' $mnt/etc/mkinitcpio-overlay.conf
-
-arch-chroot $mnt mkinitcpio --config /etc/mkinitcpio-overlay.conf -p linux-fallback
-arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
-
 }
 
 
@@ -698,9 +612,9 @@ clean_system () {
 arch-chroot $mnt /bin/bash -e << EOF
 
   rm -rf /var/log/*
+  pacman -S ncdu
   pacman -Scc
   sudo pacman -Qtdq
-  pacman -S ncdu
   
 EOF
 
@@ -720,6 +634,8 @@ Exec = /usr/bin/pacman -Scc' > $mnt/etc/pacman.d/hooks/clean_package_cache.hook
 
 }
 
+
+
 reset_keys () {
 
 rm -rf /etc/pacman.d/gnupg
@@ -727,6 +643,7 @@ pacman-key --init
 pacman-key --populate
 
 }
+
 
 
 copy_script () {
@@ -790,7 +707,7 @@ fi
 
 post_setup () {
 
-   pacman -S plasma-desktop plasma-wayland-session plasma-pa kscreen dolphin konsole firefox
+pacman -S plasma-desktop plasma-wayland-session plasma-pa kscreen dolphin konsole firefox
 
 echo '
 if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
@@ -798,11 +715,18 @@ if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
 fi
 ' >> /home/$user/.bash_profile
 
-   chown user:user /home/$user/.bash_profile
+chown user:user /home/$user/.bash_profile
 
+echo '
+if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
+   startplasma-wayland
+fi
+' >> /home/$user/.profile
 
-   cd /home/$user
-   sudo -u $user yay btrfs-assistant
+chown user:user /home/$user/.profile
+
+cd /home/$user
+sudo -u $user paru btrfs-assistant
    
 }
 
@@ -834,7 +758,7 @@ do
     ls -la "$FILE"
 done
 
-#find . -type f -printf "%-.22T+ %.8TX %p\n" | sort | cut -f 2- -d ' '
+find . -type f -printf "%-.22T+ %.8TX %p\n" | sort | cut -f 2- -d ' '
 
 }
 
@@ -894,19 +818,18 @@ efiPart=1
 biosPart=2
 swapPart=2
 rootPart=3
-#subvols=(var_cache var_log var_tmp)
 subvols=()
 
 user=user
 hostname=Arch
 password=123456
-encrypt=0
 
 
 
 CONFIG_FILES="
 .config/baloofilerc
 .config/dolphinrc
+.config/epy/configuration.json
 .config/fontconfig/fonts.conf
 .config/gtkrc
 .config/gtkrc-2.0
@@ -919,6 +842,7 @@ CONFIG_FILES="
 .config/kfontinstuirc
 .config/kglobalshortcutsrc
 .config/konsolerc
+.config/konsolesshconfig
 .config/krunnerrc
 .config/kscreenlockerrc
 .config/ksplashrc
