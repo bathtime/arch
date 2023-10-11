@@ -566,7 +566,7 @@ sed -i 's/ rw / ro /g' $mnt/etc/grub.d/10_linux-readonly
 
 echo '#!/bin/bash
 
-if [[ $(mount | grep " on / " | grep "ro") ]] || [[ "$1" = "-a" ]]; then
+if [[ $(mount | grep " on / " | grep "(ro") ]] || [[ "$1" = "-a" ]]; then
 
    tmp_dir=/home/user/.cache
    #mount -o uid=user -t tmpfs tmpfs $tmp_dir
