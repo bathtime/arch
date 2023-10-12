@@ -616,7 +616,7 @@ ALL_microcode=(/boot/*-ucode.img)
 PRESETS=("fallback")
 
 fallback_image="/boot/initramfs-linux-fallback.img"
-fallback_options="-S autodetect" > $mnt/etc/mkinitcpio.d/linux-overlay.preset
+fallback_options="-S autodetect"' > $mnt/etc/mkinitcpio.d/linux-overlay.preset
 
 echo 'MODULES=(lz4)
 BINARIES=()
