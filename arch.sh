@@ -516,6 +516,7 @@ pacstrap -K $mnt terminus-font mksh
 
 echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
 echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
+echo 'vm.vfs_cache_pressure=50' > $mnt/etc/sysctl.d/99-cache-pressure.conf
 
 arch-chroot $mnt systemctl enable systemd-oomd
 
