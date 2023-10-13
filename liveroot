@@ -1,0 +1,67 @@
+#!/usr/bin/ash
+
+
+create_archive() {
+            
+   echo "Creating archive file..."
+   cd /real_root/@/
+
+   tar --exclude=rootfs.tar.gz --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ --exclude=/mnt/ --exclude=/etc/pacman.d/gnupg/ -czf /real_root/@/rootfs.tar.gz . 
+
+}
+
+
+run_hook() {
+
+   echo "Press any key now to load filesystem into RAM..."
+
+   if read -t 2 -s -n 1; then
+
+      poll_device ${root} 2
+      mkdir /real_root/
+      mount ${root} /real_root/
+      mount -t tmpfs -o size=80% none /new_root/
+
+ROOT="${root}"
+
+      echo "Press <e> to extract archive to tmpfs, <c> to copy directly to tmpfs, <n> to create a new archive file, or <d> to be dumped into emergency shell."
+
+      read -n 1 -s key
+
+      if [[ "$key" = "e" ]] || [[ "$key" = "n" ]]; then
+
+         if [[ ! -f "/real_root/@/rootfs.tar.gz" ]] || [[ "$key" = "n" ]]; then
+            create_archive
+         fi
+
+         echo "Extracting archive to RAM. Please be patient..."
+         tar -xzf /real_root/@/rootfs.tar.gz -C /new_root/
+
+      elif [[ "$key" = "c" ]]; then
+
+         echo "Copying root filesystem to RAM. Please be patient..."
+#         cp -p -a -R /real_root/@/* /new_root/
+rsync -a --exclude=rootfs.tar.gz --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ --exclude=/mnt/ /real_root/@/ /new_root/
+
+         echo "Done copying files."
+
+         echo "Done copying root files. You may safely remove the disk."
+         sleep 2
+
+      else
+         echo "Entering emergency shell."
+      fi
+
+      touch /new_root/LIVE
+      umount /real_root/
+
+
+      LIVE_mount() {
+         echo "Live system on RAM."
+      }
+
+      mount_handler=LIVE_mount
+
+   fi
+}
+
