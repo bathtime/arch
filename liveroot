@@ -17,7 +17,7 @@ run_latehook() {
    if read -t 4 -s -n 1; then
 
 
-      echo -e "\nPlease choose an option:\n\n<o> run in overlay mode\n<e> extract archive to tmpfs\n<c> copy / directly to tmpfs\n<n> create a new archive file\n<d> enter emergency shell\n<b> continue boot\n"
+      echo -e "\nPlease choose an option:\n\n<s>run a snapshot\n<o> run in overlay mode\n<e> extract archive to tmpfs\n<c> copy / directly to tmpfs\n<n> create a new archive file\n<d> enter emergency shell\n<b> continue boot\n"
 
       read -n 1 -s key
 
@@ -37,11 +37,19 @@ run_latehook() {
          mkdir -p ${OFS_COWSPACE}
          mount -t tmpfs cowspace ${OFS_COWSPACE}
 
-         mkdir -p ${OFS_UPPER}
-         mkdir -p ${OFS_WORK}
+         mkdir -p ${OFS_UPPER} ${OFS_WORK}
 
          mount -t overlay -o lowerdir=${OFS_LOWER},upperdir=${OFS_UPPER},workdir=${OFS_WORK} rootfs ${ROOT_MNT}
 
+      elif [[ "$key" = "s" ]]; then
+ 
+         local root_mnt="/new_root"
+         local lower_dir=$(mktemp -d -p /)
+         local ram_dir=$(mktemp -d -p /)
+         mount --move ${root_mnt} ${lower_dir}
+         mount -t tmpfs cowspace ${ram_dir}
+         mkdir -p ${ram_dir}/upper ${ram_dir}/work
+         mount -t overlay -o lowerdir=${lower_dir},upperdir=${ram_dir}/upper,workdir=${ram_dir}/work rootfs ${root_mnt}
 
       elif [[ "$key" = "e" ]] || [[ "$key" = "n" ]] || [[ "$key" = "c" ]]; then
 
@@ -89,5 +97,3 @@ run_latehook() {
 
    fi
 }
-
-
