@@ -272,7 +272,7 @@ sed -i 's/\/efi.*vfat.*rw/\/efi     vfat     ro/' $mnt/etc/fstab
 
 [ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/cache')" ] && echo "tmpfs    /var/cache  tmpfs   rw,nodev,nosuid,mode=1755,size=2G   0 0" >> $mnt/etc/fstab
 [ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/log')" ]   && echo "tmpfs    /var/log    tmpfs   rw,nodev,nosuid,mode=1775,size=2G   0 0" >> $mnt/etc/fstab
-[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/run')" ]   && echo "tmpfs    /var/run    tmpfs   rw,nodev,nosuid,mode=1777,size=2G   0 0" >> $mnt/etc/fstab
+[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/tmp')" ]   && echo "tmpfs    /var/tmp    tmpfs   rw,nodev,nosuid,mode=1777,size=2G   0 0" >> $mnt/etc/fstab
 
 
 systemctl daemon-reload
@@ -565,9 +565,12 @@ cp $mnt/etc/grub.d/10_linux /etc/grub.d/10_linux-readonly
 sed -i 's/\"\$title\"/\"\$title \(readonly\)\"/g' $mnt/etc/grub.d/10_linux-readonly
 sed -i 's/ rw / ro /g' $mnt/etc/grub.d/10_linux-readonly
 
+# So systemd won't remount as 'rw'
+arch-chroot $mnt systemctl mask systemd-remount-fs.service
 
 
-###  Add tmpfs/overlay hook  ###
+
+###  Add tmpfs/overlay hook options  ###
 
 echo '#!/usr/bin/sh
 
@@ -588,7 +591,7 @@ run_latehook() {
    if read -t 4 -s -n 1; then
 
 
-      echo -e "\nPlease choose an option:\n\n<s>run a snapshot\n<o> run in overlay mode\n<e> extract archive to tmpfs\n<c> copy / directly to tmpfs\n<n> create a new archive file\n<d> enter emergency shell\n<b> continue boot\n"
+      echo -e "\nPlease choose an option:\n\n<o>run in overlay mode 1\n<p> run in overlay mode 2\n<e> extract archive to tmpfs\n<c> copy / directly to tmpfs\n<n> create a new archive file\n<d> enter emergency shell\n<b> continue boot\n"
 
       read -n 1 -s key
 
@@ -596,23 +599,23 @@ run_latehook() {
       if [[ "$key" = "o" ]]; then
 
          ROOT_MNT="/new_root"
-         OFS_DIRS="/run/archroot"
-         OFS_LOWER="${OFS_DIRS}/root_ro"
-         OFS_COWSPACE="${OFS_DIRS}/cowspace"
-         OFS_UPPER="${OFS_COWSPACE}/upper"
-         OFS_WORK="${OFS_COWSPACE}/work"
+         DIRS="/run/archroot"
+         LOWER="${DIRS}/root_ro"
+         COWSPACE="${DIRS}/cowspace"
+         UPPER="${COWSPACE}/upper"
+         WORK="${COWSPACE}/work"
 
-         mkdir -p ${OFS_LOWER}
-         mount --move ${ROOT_MNT} ${OFS_LOWER}
+         mkdir -p ${LOWER}
+         mount --move ${ROOT_MNT} ${LOWER}
 
-         mkdir -p ${OFS_COWSPACE}
-         mount -t tmpfs cowspace ${OFS_COWSPACE}
+         mkdir -p ${COWSPACE}
+         mount -t tmpfs cowspace ${COWSPACE}
 
-         mkdir -p ${OFS_UPPER} ${OFS_WORK}
+         mkdir -p ${UPPER} ${WORK}
 
-         mount -t overlay -o lowerdir=${OFS_LOWER},upperdir=${OFS_UPPER},workdir=${OFS_WORK} rootfs ${ROOT_MNT}
+         mount -t overlay -o lowerdir=${LOWER},upperdir=${UPPER},workdir=${WORK} rootfs ${ROOT_MNT}
 
-      elif [[ "$key" = "s" ]]; then
+      elif [[ "$key" = "p" ]]; then
  
          local root_mnt="/new_root"
          local lower_dir=$(mktemp -d -p /)
