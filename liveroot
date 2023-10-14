@@ -7,7 +7,6 @@ create_archive() {
    cd /real_root/@/
 
    tar --exclude=rootfs.tar.gz --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ --exclude=/mnt/ --exclude=/etc/pacman.d/gnupg/ -czf /real_root/@/rootfs.tar.gz . 
-
 }
 
 
@@ -18,7 +17,7 @@ run_latehook() {
    if read -t 4 -s -n 1; then
 
 
-      echo -e "\nPlease choose an option:\n\n<o> run in overlay mode\n<e> extract archive to tmpfs\n<c> copy / directly to tmpfs\n<n> create a new archive file\n<d> dump into emergency shell\n"
+      echo -e "\nPlease choose an option:\n\n<o> run in overlay mode\n<e> extract archive to tmpfs\n<c> copy / directly to tmpfs\n<n> create a new archive file\n<d> enter emergency shell\n<b> continue boot\n"
 
       read -n 1 -s key
 
@@ -32,14 +31,14 @@ run_latehook() {
          OFS_UPPER="${OFS_COWSPACE}/upper"
          OFS_WORK="${OFS_COWSPACE}/work"
 
-         [ -d ${OFS_LOWER} ] || mkdir -p ${OFS_LOWER}
+         mkdir -p ${OFS_LOWER}
          mount --move ${ROOT_MNT} ${OFS_LOWER}
 
          mkdir -p ${OFS_COWSPACE}
          mount -t tmpfs cowspace ${OFS_COWSPACE}
 
-         [ -d ${OFS_UPPER} ] || mkdir -p ${OFS_UPPER}
-         [ -d ${OFS_WORK} ] || mkdir -p ${OFS_WORK}
+         mkdir -p ${OFS_UPPER}
+         mkdir -p ${OFS_WORK}
 
          mount -t overlay -o lowerdir=${OFS_LOWER},upperdir=${OFS_UPPER},workdir=${OFS_WORK} rootfs ${ROOT_MNT}
 
@@ -61,6 +60,7 @@ run_latehook() {
          elif [[ "$key" = "c" ]]; then
 
             echo "Copying root filesystem to RAM. Please be patient..."
+
             #cp -p -a -R /real_root/@/* /new_root/
             rsync -a --exclude=rootfs.tar.gz --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ --exclude=/mnt/ /real_root/@/ /new_root/
 
@@ -75,11 +75,19 @@ run_latehook() {
          
          mount_handler=LIVE_mount
 
-      else
+      elif [[ "$key" = "d" ]]; then
 
          echo "Entering emergency shell."
+
+         bash
+
+      elif [[ "$key" = "b" ]]; then
+
+         echo "Continuing boot..."
 
       fi
 
    fi
 }
+
+
