@@ -1,6 +1,8 @@
-#!/bin/ash
+#!/bin/sh
 
 build() {
+  add_binary rsync
+  add_module "overlay"
   add_runscript
 }
 
