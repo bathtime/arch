@@ -193,7 +193,7 @@ ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
 
 arch-chroot $mnt /bin/bash -e << EOF
 
-efibootmgr --create --disk $disk --part $espPart --label "Arch Linux" --loader /boot/vmlinuz-linux --unicode "root=$ROOT_UUID resume=$SWAP_UUID rw initrd=\initramfs-linux.img"
+efibootmgr --create --disk $disk --part $espPart --label "Arch Linux" --loader /boot/vmlinuz-linux --unicode "root=$ROOT_UUID resume=$SWAP_UUID rw initrd=\boot\initramfs-linux.img"
 
 efibootmgr --unicode
 
@@ -204,6 +204,21 @@ efibootmgr --bootorder 0015 --unicode
 
 
 EOF
+
+}
+
+
+
+install_SYSTEMDBOOT () {
+
+#arch-chroot $mnt bootctl --esp-path=/efi --boot-path=/boot install
+#arch-chroot $mnt bootctl --esp-path=/efi install
+arch-chroot $mnt bootctl install
+arch-chroot $mnt bootctl update
+arch-chroot $mnt systemctl enable systemd-boot-update.service 
+
+
+
 
 }
 
@@ -263,6 +278,17 @@ systemctl enable grub-btrfsd.service
 
 # Remove grub os-prober message
 sed -i 's/grub_warn/#grub_warn/g' /etc/grub.d/30_os-prober
+
+
+
+###  Offer readonly grub booting option  ###
+
+cp $mnt/etc/grub.d/10_linux /etc/grub.d/10_linux-readonly
+sed -i 's/\"\$title\"/\"\$title \(readonly\)\"/g' $mnt/etc/grub.d/10_linux-readonly
+sed -i 's/ rw / ro /g' $mnt/etc/grub.d/10_linux-readonly
+
+# So systemd won't remount as 'rw'
+arch-chroot $mnt systemctl mask systemd-remount-fs.service
 
 
 grub-mkconfig -o /boot/grub/grub.cfg
@@ -340,9 +366,9 @@ locale-gen
 ###  Install necessary applications with proper permissions
 mkdir -p -m 750 /etc/sudoers.d
 
-pacman --noconfirm -Sy sudo tar man
+#pacman --noconfirm -Sy sudo tar man
 
-pacman --noconfirm -Sy dosfstools parted arch-install-scripts snapper git base-devel
+#pacman --noconfirm -Sy dosfstools parted arch-install-scripts git base-devel
 
 mkdir -p /etc/mkinitcpio.conf.d
 
@@ -354,9 +380,8 @@ echo 'MODULES_DECOMPRESS="yes"' > /etc/mkinitcpio.conf.d/decomp.conf
 echo 'COMPRESSION="lz4"'        > /etc/mkinitcpio.conf.d/compress.conf
 echo 'MODULES="lz4"'            > /etc/mkinitcpio.conf.d/modules.conf
 
-fi
 
-mkinitcpio -p linux
+#mkinitcpio -p linux
 
 
 # Autologin to tty1
@@ -424,7 +449,7 @@ EOF
 
 ###  Finish setting up user  ###
 
-sudo -u $user mkdir -p .local/bin
+arch-chroot $mnt sudo -u $user mkdir -p /home/$user/.local/bin
 
 echo '# If running bash
 if [ -n "$BASH_VERSION" ]; then
@@ -524,11 +549,12 @@ EOF
 
 install_aur () {
 
-arch-chroot $mnt /bin/bash -e << EOF
+arch-chroot $mnt /bin/bash << EOF
 
 cd /home/$user
 
 sudo -u $user git clone https://aur.archlinux.org/paru.git
+#sudo -u $user git clone https://aur.archlinux.org/yay.git
 cd paru
 sudo -u $user makepkg -si
 
@@ -590,18 +616,13 @@ chown user:user $mnt/home/$user/.profile
 arch-chroot $mnt chsh -s /bin/mksh                                # root shell
 arch-chroot $mnt echo 123456 | sudo -u user chsh -s /bin/mksh     # user shell
 
+}
 
 
-###  Offer readonly grub booting option  ###
 
-cp $mnt/etc/grub.d/10_linux /etc/grub.d/10_linux-readonly
-sed -i 's/\"\$title\"/\"\$title \(readonly\)\"/g' $mnt/etc/grub.d/10_linux-readonly
-sed -i 's/ rw / ro /g' $mnt/etc/grub.d/10_linux-readonly
+install_hooks () {
 
-# So systemd won't remount as 'rw'
-arch-chroot $mnt systemctl mask systemd-remount-fs.service
-
-
+arch-chroot $mnt pacman -S rsync
 
 ###  Add tmpfs/overlay hook options  ###
 
@@ -762,6 +783,10 @@ COMPRESSION="lz4"
 MODULES_DECOMPRESS="yes"' > $mnt/etc/mkinitcpio.conf
 
 arch-chroot $mnt mkinitcpio -P 
+
+# So systemd won't remount as 'rw'
+arch-chroot $mnt systemctl mask systemd-remount-fs.service
+
 
 }
 
@@ -1067,8 +1092,8 @@ choices=(
 "General setup"
 "Install aur"
 "Install tweaks"
+"Install hooks"
 "Setup snapper"
-"Overlay support"
 "Copy script"
 "Chroot install"
 "Chroot"
@@ -1096,7 +1121,7 @@ do
         "Install pacstrap")	install_pacstrap ;;
 	"Install boot manager") echo -e "\nWhich boot manager would you like to install?\n"
 		
-				choiceBoot=(grub efiSTUB rEFInd quit) 
+				choiceBoot=(grub efiSTUB rEFInd systemD quit) 
 
 				select choiceBoot in "${choiceBoot[@]}"
 				do
@@ -1104,6 +1129,7 @@ do
 						"grub")		install_GRUB ;;
 						"efiSTUB")	install_EFISTUB ;;
 						"rEFInd")	install_REFIND ;;
+						"systemD")	install_SYSTEMDBOOT ;;
 						"quit")		exit ;;
 						'')		echo -e "\nInvalid option!\n" ;;
 					esac						
@@ -1112,8 +1138,8 @@ do
 	"General setup")	general_setup ;;
         "Install aur")		install_aur ;;
         "Install tweaks")	install_tweaks ;;
+        "Install hooks")	install_hooks ;;
 	"Setup snapper")	setup_snapper ;;
-        "Overlay support")	overlay_support ;;
         "Chroot")		do_chroot ;;
         "Chroot install")	chroot_install ;;
         "Mount $mnt")		mount_mount  ;;
