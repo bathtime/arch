@@ -572,7 +572,7 @@ arch-chroot $mnt systemctl mask systemd-remount-fs.service
 
 ###  Add tmpfs/overlay hook options  ###
 
-echo '#!/usr/bin/sh
+echo '#!/usr/bin/bash
 
 
 create_archive() {
@@ -591,12 +591,43 @@ run_latehook() {
    if read -t 4 -s -n 1; then
 
 
-      echo -e "\nPlease choose an option:\n\n<o>run in overlay mode 1\n<p> run in overlay mode 2\n<e> extract archive to tmpfs\n<c> copy / directly to tmpfs\n<n> create a new archive file\n<d> enter emergency shell\n<b> continue boot\n"
+      echo -e "\nPlease choose an option:\n\n<s> snapshot mode\n<o> run in overlay mode 1\n<p> run in overlay mode 2\n<e> extract archive to tmpfs\n<c> copy / directly to tmpfs\n<n> create a new archive file\n<d> enter emergency shell\n<b> continue boot\n"
 
       read -n 1 -s key
 
 
-      if [[ "$key" = "o" ]]; then
+      if [[ "$key" = "s" ]]; then
+
+         echo "Premount" 
+         poll_device ${root} 2
+
+         root_dir=/new_root
+
+         mkdir -p $root_dir 
+
+         mount --mkdir -o subvolid=256 ${root} $root_dir
+      
+         btrfs subvolume list -ts $root_dir | less
+         read -n 3 -p "Choose a snapshot (256 is current system): " subvol 
+
+
+         echo -e "\nPlease enter extra mount options (ex., ro ):"
+         read options 
+         [ ! "$options" = "" ] && options=","$options
+
+         echo -e "\nWill proceed with the following mount:\n\nmount -o subvolid=$subvol$options ${root} /\n"
+         sleep 4
+
+         umount $root_dir
+         mount --mkdir -o subvolid=$subvol$options ${root} $root_dir
+
+         if [ "$?" -ne 0 ]; then
+            echo "Couldn't mount that choice. Chosing default (256)."
+            sleep 2
+            mount --mkdir -o subvolid=256 ${root} $root_dir 
+         fi
+
+      elif [[ "$key" = "o" ]]; then
 
          ROOT_MNT="/new_root"
          DIRS="/run/archroot"
@@ -678,6 +709,7 @@ echo '#!/bin/sh
 build() {
   add_binary rsync
   add_binary bash
+  add_binary btrfs
   add_module "overlay"
   add_runscript
 }
