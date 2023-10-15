@@ -2,6 +2,8 @@
 
 build() {
   add_binary rsync
+  add_binary bash
+  add_binary btrfs
   add_module "overlay"
   add_runscript
 }
