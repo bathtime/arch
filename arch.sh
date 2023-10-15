@@ -598,7 +598,6 @@ run_latehook() {
 
       if [[ "$key" = "s" ]]; then
 
-         echo "Premount" 
          poll_device ${root} 2
 
          root_dir=/new_root
