@@ -188,7 +188,39 @@ pacstrap -K $mnt base linux linux-firmware btrfs-progs vim vi libarchive intel-u
 
 install_EFISTUB () {
 
-echo
+SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
+ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
+
+arch-chroot $mnt /bin/bash -e << EOF
+
+efibootmgr --create --disk $disk --part $espPart --label "Arch Linux" --loader /boot/vmlinuz-linux --unicode "root=$ROOT_UUID resume=$SWAP_UUID rw initrd=\initramfs-linux.img"
+
+efibootmgr --unicode
+
+efibootmgr  | grep 'BootCurrent' | sed 's/BootCurrent: //g'
+
+# TODO: fix having to enter boot code manually
+efibootmgr --bootorder 0015 --unicode
+
+
+EOF
+
+}
+
+
+
+install_REFIND () {
+
+arch-chroot $mnt pacman -S refind
+
+arch-chroot $mnt refind-install --usedefault $disk$espPart --alldrivers
+
+#arch-chroot $mnt mkrlconf
+
+SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
+ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
+
+echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw rootflags=subvol=@ quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" > $mnt/boot/refind_linux.conf
 
 }
 
