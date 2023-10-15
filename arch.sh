@@ -74,16 +74,17 @@ echo -e "\nDrives found:\n"
 
 lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd"
 disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-disks+=$(echo -e "\nquit")
+disks+=$(echo -e "\nunmount\nquit")
 
 echo -e "\nWhich drive?\n"
 
-select choice in $disks
+select disk in $disks
 do
-   case $choice in
+   case $disk in
         quit) echo -e "\nQuitting!"; exit; ;;
+        unmount) unmount_disk; exit; ;;
         '')   echo -e "\nInvalid option!\n"; ;;
-        *)    disk=$choice; echo; break; ;;
+        *)    break; ;;
     esac
 done
 
@@ -621,7 +622,7 @@ run_latehook() {
          mount --mkdir -o subvolid=$subvol$options ${root} $root_dir
 
          if [ "$?" -ne 0 ]; then
-            echo "Couldn't mount that choice. Chosing default (256)."
+            echo "Could not mount that choice. Chosing default (256)."
             sleep 2
             mount --mkdir -o subvolid=256 ${root} $root_dir 
          fi
@@ -1051,6 +1052,7 @@ choices=(
 "Post setup"
 "Reset pacman keys"
 "Quit"
+"Unmount then quit"
 )
 
 
@@ -1109,6 +1111,7 @@ do
         "Post setup")		post_setup ;;
         "Reset pacman keys")    reset_keys ;;
 	"Quit")			echo -e "\nQuitting!"; exit; ;;
+	"Unmount then quit")    unmount_disk; echo -e "\nQuitting!"; exit; ;;
         '')			echo -e "\nInvalid option!\n"; ;;
     esac
 done
