@@ -102,6 +102,10 @@ unmount_disk
 echo -e "\nWiping disk...\n"
 
 wipefs -af $disk 
+
+which sgdisk
+[ "$?" -eq 1 ] && pacman -S gptfdisk 
+
 sgdisk -Zo $disk
 
 # Not sure if this is required but can't hurt
@@ -177,7 +181,7 @@ install_pacstrap () {
 check_on_root
 
 source /etc/profile
-pacstrap -K $mnt base linux linux-firmware btrfs-progs vim vi libarchive intel-ucode
+pacstrap -K $mnt base linux linux-firmware btrfs-progs vim vi libarchive $ucode
 
 }
 
@@ -227,7 +231,7 @@ ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
 echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw rootflags=subvol=@ quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" > $mnt/boot/refind_linux.conf
 echo "\"Boot read only\"  \"root=UUID=$ROOT_UUID ro rootflags=subvol=@ quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" >> $mnt/boot/refind_linux.conf
 
-sed -i 's/#enable_touch/enable_touch/g; s/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g' $/mnt/efi/EFI/BOOT/refind.conf
+sed -i 's/#enable_touch/enable_touch/g; s/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g' $mnt/efi/EFI/BOOT/refind.conf
 
 }
 
@@ -350,11 +354,11 @@ pacman --noconfirm -Sy dosfstools parted arch-install-scripts git base-devel sud
 
 mkdir -p /etc/mkinitcpio.conf.d
 
-echo 'HOOKS=(systemd autodetect modconf keyboard sd-vconsole block filesystems resume)' > /etc/mkinitcpio.conf.d/myhooks.conf
+echo 'HOOKS=(systemd autodetect modconf kms keyboard sd-vconsole block filesystems resume)' > /etc/mkinitcpio.conf.d/myhooks.conf
 
-echo 'MODULES_DECOMPRESS="yes"' > /etc/mkinitcpio.conf.d/decomp.conf
-echo 'COMPRESSION="lz4"'        > /etc/mkinitcpio.conf.d/compress.conf
-echo 'MODULES="lz4"'            > /etc/mkinitcpio.conf.d/modules.conf
+#echo 'MODULES_DECOMPRESS="yes"' > /etc/mkinitcpio.conf.d/decomp.conf
+#echo 'COMPRESSION="lz4"'        > /etc/mkinitcpio.conf.d/compress.conf
+#echo 'MODULES="lz4"'            > /etc/mkinitcpio.conf.d/modules.conf
 
 mkinitcpio -p linux
 
@@ -527,16 +531,16 @@ arch-chroot $mnt /bin/bash << EOF
 
 cd /home/$user
 
-sudo -u $user git clone https://aur.archlinux.org/paru.git
+sudo -u $user git clone https://aur.archlinux.org/$aurApp.git
 
-cd paru
+cd $aurApp
 sudo -u $user makepkg -si
 
-sudo -u $user paru --gendb
+sudo -u $user $aurApp --gendb
 
-pacman -R --noconfirm rust
+pacman -R rust go
 
-rm -rf /home/$user/paru/*
+rm -rf /home/$user/$aurApp/*
 
 EOF
 
@@ -546,8 +550,10 @@ EOF
 
 install_tweaks () {
 
+arch-chroot $mnt sudo -u user $aurApp -S --noconfirm mksh
 
-pacstrap -K $mnt terminus-font mksh ncdu
+
+pacstrap -K $mnt terminus-font ncdu
 
 echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
 echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
@@ -609,7 +615,8 @@ create_archive() {
    echo "Creating archive file..."
    cd /real_root/@/
 
-   tar --exclude=rootfs.tar.gz --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ --exclude=/mnt/ --exclude=/etc/pacman.d/gnupg/ -czf /real_root/@/rootfs.tar.gz . 
+   tar --exclude=rootfs.tar.gz --exclude=./dev/* --exclude=./proc/* --exclude=./sys/* --exclude=./tmp/* --exclude=./run/* --exclude=./mnt/* --exclude=./.snapshots/* --exclude=./var/tmp/* --exclude=./var/cache/* --exclude=./var/log/* --exclude=./etc/pacman.d/gnupg/* -czf /real_root/@/rootfs.tar.gz .
+
 }
 
 
@@ -833,7 +840,7 @@ fi
 chown user:user /home/$user/.profile
 
 cd /home/$user
-sudo -u $user paru btrfs-assistant
+sudo -u $user $AUR btrfs-assistant
    
 }
 
@@ -904,11 +911,27 @@ echo -e"\n*** Remember to update fstab and install a boot manager! ***\n"
 }
 
 
+create_archive () {
+
+echo "Creating archive file..."
+
+cd / 
+
+tar --exclude=rootfs.tar.gz --exclude=./dev/* --exclude=./proc/* --exclude=./sys/* --exclude=./tmp/* --exclude=./run/* --exclude=./mnt/* --exclude=./.snapshots/* --exclude=./var/tmp/* --exclude=./var/cache/* --exclude=./var/log/* --exclude=./etc/pacman.d/gnupg/* -czf rootfs.tar.gz .
+
+}
+
+
+
+
 mnt=/mnt
 espPart=1
 swapPart=2
 rootPart=3
 subvols=()
+
+ucode=intel-ucode
+aurApp=yay
 
 user=user
 hostname=Arch
@@ -994,7 +1017,6 @@ choices=(
 "Post setup"
 "Reset pacman keys"
 "Quit"
-"Unmount then quit"
 )
 
 
@@ -1051,7 +1073,6 @@ do
         "Post setup")		post_setup ;;
         "Reset pacman keys")    reset_keys ;;
 	"Quit")			echo -e "\nQuitting!"; exit; ;;
-	"Unmount then quit")    unmount_disk; echo -e "\nQuitting!"; exit; ;;
         '')			echo -e "\nInvalid option!\n"; ;;
     esac
 done
