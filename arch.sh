@@ -1009,6 +1009,7 @@ echo -e "\nCloning disk. Please be patient...\n"
 
 rsync -a --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ --exclude=/mnt/ / $mnt/
 
+mkdir $mnt/{dev,proc,run,sys}
 
 
 
