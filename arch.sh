@@ -237,6 +237,11 @@ ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
 
 echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw rootflags=subvol=@ quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" > $mnt/boot/refind_linux.conf
 
+arch-chroot $mnt sed -i 's/#enable_touch/enable_touch/g; s/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs boot,@/g' /efi/EFI/BOOT/refind.conf
+
+# Not sure if this needs to be done again
+#arch-chroot $mnt refind-install --usedefault $disk$espPart --alldrivers
+
 }
 
 
