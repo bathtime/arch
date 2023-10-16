@@ -6,7 +6,8 @@ create_archive() {
    echo "Creating archive file..."
    cd /real_root/@/
 
-   tar --exclude=rootfs.tar.gz --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ --exclude=/mnt/ --exclude=/etc/pacman.d/gnupg/ -czf /real_root/@/rootfs.tar.gz . 
+   tar --exclude=rootfs.tar.gz --exclude=./.snapshots/* --exclude=./boot/* --exclude=./proc/* --exclude=./run/* --exclude=./dev/* --exclude=./sys/* --exclude=./tmp/* --exclude=./mnt/*  --exclude=./var/tmp/* --exclude=./var/cache/* --exclude=./var/log/* --exclude=./etc/pacman.d/gnupg/* -czf /real_root/@/rootfs.tar.gz . 
+
 }
 
 
@@ -14,7 +15,7 @@ run_latehook() {
 
    echo -e "\nPress any key for extra boot options.\n"
 
-   if read -t 4 -s -n 1; then
+   if read -t 3 -s -n 1; then
 
 
       echo -e "\nPlease choose an option:\n\n<s> snapshot mode\n<o> run in overlay mode 1\n<p> run in overlay mode 2\n<e> extract archive to tmpfs\n<c> copy / directly to tmpfs\n<n> create a new archive file\n<d> enter emergency shell\n<b> continue boot\n"
@@ -24,7 +25,6 @@ run_latehook() {
 
       if [[ "$key" = "s" ]]; then
 
-         echo "Premount" 
          poll_device ${root} 2
 
          root_dir=/new_root
@@ -39,16 +39,16 @@ run_latehook() {
 
          echo -e "\nPlease enter extra mount options (ex., ro ):"
          read options 
-         [ ! "$options" = "" ] && options=","$options
+         [ ! "$options" = "" ] && options=$options","
 
-         echo -e "\nWill proceed with the following mount:\n\nmount -o subvolid=$subvol$options ${root} /\n"
+         echo -e "\nWill proceed with the following mount:\n\nmount -o $options""subvolid=$subvol ${root} /\n"
          sleep 4
 
          umount $root_dir
-         mount --mkdir -o subvolid=$subvol$options ${root} $root_dir
+         mount --mkdir -o "$options"subvolid=$subvol ${root} $root_dir
 
          if [ "$?" -ne 0 ]; then
-            echo "Couldn't mount that choice. Chosing default (256)."
+            echo "Could not mount that choice. Chosing default (256)."
             sleep 2
             mount --mkdir -o subvolid=256 ${root} $root_dir 
          fi
@@ -128,3 +128,6 @@ run_latehook() {
 
    fi
 }
+
+
+
