@@ -576,7 +576,7 @@ EOF
 install_tweaks () {
 
 
-pacstrap -K $mnt terminus-font mksh
+pacstrap -K $mnt terminus-font mksh ncdu
 
 echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
 echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
