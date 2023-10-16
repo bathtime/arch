@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-# Run with:
+# Download and run with:
 # bash <(curl -sL bit.ly/a-install)
 
 #set -e
@@ -97,7 +97,6 @@ echo -e "\nSetup config:\n\ndisk: $disk, mounted on $mnt\nuser: $user\n"
 delete_partitions () {
 
 check_on_root
-
 unmount_disk
 
 echo -e "\nWiping disk...\n"
@@ -106,8 +105,8 @@ wipefs -af $disk
 sgdisk -Zo $disk
 
 # Not sure if this is required but can't hurt
-echo "Wiping first 25mb of disk. Please be patient..."
-dd if=/dev/zero of=$disk bs=1M count=25
+#echo "Wiping first 25mb of disk. Please be patient..."
+#dd if=/dev/zero of=$disk bs=1M count=25
 
 }
 
@@ -119,11 +118,11 @@ check_on_root
 delete_partitions
 
 parted -s $disk mklabel gpt
-parted -s --align=optimal $disk mkpart ESP fat32 1Mib 1000Mib 
+parted -s --align=optimal $disk mkpart ESP fat32 1Mib 512Mib 
 parted -s $disk set $espPart esp on
-parted -s --align=optimal $disk mkpart SWAP linux-swap 1005Mib 10Gib
+parted -s --align=optimal $disk mkpart SWAP linux-swap 512Mib 8512Mib
 parted -s $disk set $swapPart swap on
-parted -s --align=optimal $disk mkpart ROOT btrfs 10Gib 100%
+parted -s --align=optimal $disk mkpart ROOT btrfs 8512Mib 100%
 
 mkfs.fat -F 32 -n EFI $disk$espPart 
 mkswap $disk$swapPart
@@ -141,7 +140,7 @@ for subvol in '' "${subvols[@]}"; do
     btrfs su cr /mnt/@"$subvol"
 done
 
-#mkdir -p $mnt/{etc,tmp}
+mkdir -p $mnt/{etc,tmp}
 
 unmount_disk
 mount_mount
@@ -163,8 +162,6 @@ for subvol in '' "${subvols[@]}"; do
     mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
     echo "mount -o $mountopts,subvol=@$subvol $disk$rootPart /mnt/${subvol//_//}"
 done
-
-mkdir -p $mnt/{etc,tmp}
 
 # mount efi partition
 mount --mkdir $disk$espPart $mnt/efi
@@ -194,14 +191,11 @@ ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
 arch-chroot $mnt /bin/bash -e << EOF
 
 efibootmgr --create --disk $disk --part $espPart --label "Arch Linux" --loader /boot/vmlinuz-linux --unicode "root=$ROOT_UUID resume=$SWAP_UUID rw initrd=\boot\initramfs-linux.img"
-
 efibootmgr --unicode
-
 efibootmgr  | grep 'BootCurrent' | sed 's/BootCurrent: //g'
 
 # TODO: fix having to enter boot code manually
 efibootmgr --bootorder 0015 --unicode
-
 
 EOF
 
@@ -216,9 +210,6 @@ install_SYSTEMDBOOT () {
 arch-chroot $mnt bootctl install
 arch-chroot $mnt bootctl update
 arch-chroot $mnt systemctl enable systemd-boot-update.service 
-
-
-
 
 }
 
@@ -236,6 +227,7 @@ SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
 
 echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw rootflags=subvol=@ quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" > $mnt/boot/refind_linux.conf
+echo "\"Boot read only\"  \"root=UUID=$ROOT_UUID ro rootflags=subvol=@ quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" >> $mnt/boot/refind_linux.conf
 
 arch-chroot $mnt sed -i 's/#enable_touch/enable_touch/g; s/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g' /efi/EFI/BOOT/refind.conf
 
@@ -295,7 +287,6 @@ sed -i 's/ rw / ro /g' $mnt/etc/grub.d/10_linux-readonly
 # So systemd won't remount as 'rw'
 arch-chroot $mnt systemctl mask systemd-remount-fs.service
 
-
 grub-mkconfig -o /boot/grub/grub.cfg
 
 EOF
@@ -331,13 +322,10 @@ sed -i 's/\/efi.*vfat.*rw/\/efi     vfat     ro/' $mnt/etc/fstab
 
 [ ! "$(cat $mnt/etc/fstab | grep 'none swap defaults 0 0')" ] && echo "UUID=$SWAP_UUID none swap defaults 0 0" >> $mnt/etc/fstab
 
-# Put ~/.cache in tmpfs
 [ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/user/.cache')" ] && echo "tmpfs    /home/user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> $mnt/etc/fstab
-
 [ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/cache')" ] && echo "tmpfs    /var/cache  tmpfs   rw,nodev,nosuid,mode=1755,size=2G   0 0" >> $mnt/etc/fstab
 [ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/log')" ]   && echo "tmpfs    /var/log    tmpfs   rw,nodev,nosuid,mode=1775,size=2G   0 0" >> $mnt/etc/fstab
 [ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/tmp')" ]   && echo "tmpfs    /var/tmp    tmpfs   rw,nodev,nosuid,mode=1777,size=2G   0 0" >> $mnt/etc/fstab
-
 
 systemctl daemon-reload
 
@@ -371,22 +359,17 @@ locale-gen
 ###  Install necessary applications with proper permissions
 mkdir -p -m 750 /etc/sudoers.d
 
-#pacman --noconfirm -Sy sudo tar man
-
-#pacman --noconfirm -Sy dosfstools parted arch-install-scripts git base-devel
+pacman --noconfirm -Sy dosfstools parted arch-install-scripts git base-devel sudo tar man
 
 mkdir -p /etc/mkinitcpio.conf.d
 
-
-#echo 'HOOKS=(base udev autodetect modconf kms keyboard sd-vconsole block filesystems resume fsck)' > /etc/mkinitcpio.conf.d/myhooks.conf
 echo 'HOOKS=(systemd autodetect modconf keyboard sd-vconsole block filesystems resume)' > /etc/mkinitcpio.conf.d/myhooks.conf
 
 echo 'MODULES_DECOMPRESS="yes"' > /etc/mkinitcpio.conf.d/decomp.conf
 echo 'COMPRESSION="lz4"'        > /etc/mkinitcpio.conf.d/compress.conf
 echo 'MODULES="lz4"'            > /etc/mkinitcpio.conf.d/modules.conf
 
-
-#mkinitcpio -p linux
+mkinitcpio -p linux
 
 
 # Autologin to tty1
@@ -402,7 +385,6 @@ EOF2
 
 # Setup sudo
 mkdir -p /etc/sudoers.d
-echo "$user ALL=(ALL)  NOPASSWD: /usr/bin/btrfs-assistant-launcher" > /etc/sudoers.d/nopasswd
 echo '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/wheel
 
 printf "$password\n$password\n" | passwd root
@@ -559,13 +541,15 @@ arch-chroot $mnt /bin/bash << EOF
 cd /home/$user
 
 sudo -u $user git clone https://aur.archlinux.org/paru.git
-#sudo -u $user git clone https://aur.archlinux.org/yay.git
+
 cd paru
 sudo -u $user makepkg -si
 
 sudo -u $user paru --gendb
 
 pacman -R --noconfirm rust
+
+rm -rf /home/$user/paru/*
 
 EOF
 
@@ -576,7 +560,7 @@ EOF
 install_tweaks () {
 
 
-pacstrap -K $mnt terminus-font mksh
+pacstrap -K $mnt terminus-font mksh ncdu
 
 echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
 echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
@@ -629,6 +613,7 @@ install_hooks () {
 
 arch-chroot $mnt pacman -S rsync
 
+
 ###  Add tmpfs/overlay hook options  ###
 
 echo '#!/usr/bin/bash
@@ -649,11 +634,9 @@ run_latehook() {
 
    if read -t 4 -s -n 1; then
 
-
       echo -e "\nPlease choose an option:\n\n<s> snapshot mode\n<o> run in overlay mode 1\n<p> run in overlay mode 2\n<e> extract archive to tmpfs\n<c> copy / directly to tmpfs\n<n> create a new archive file\n<d> enter emergency shell\n<b> continue boot\n"
 
       read -n 1 -s key
-
 
       if [[ "$key" = "s" ]]; then
 
@@ -667,7 +650,6 @@ run_latehook() {
       
          btrfs subvolume list -ts $root_dir | less
          read -n 3 -p "Choose a snapshot (256 is current system): " subvol 
-
 
          echo -e "\nPlease enter extra mount options (ex., ro ):"
          read options 
@@ -792,38 +774,7 @@ arch-chroot $mnt mkinitcpio -P
 # So systemd won't remount as 'rw'
 arch-chroot $mnt systemctl mask systemd-remount-fs.service
 
-
 }
-
-
-
-clean_system () {
-
-arch-chroot $mnt /bin/bash -e << EOF
-
-  rm -rf /var/log/*
-  pacman -S ncdu
-  pacman -Scc
-  sudo pacman -Qtdq
-  
-EOF
-
-# Clean pacman cache after every transaction
-mkdir -p $mnt/etc/pacman.d/hooks
-echo '[Trigger]
-Operation = Upgrade
-Operation = Install
-Operation = Remove
-Type = Package
-Target = *
-[Action]
-Description = Cleaning pacman cache...
-When = PostTransaction
-Exec = /usr/bin/pacman -Scc' > $mnt/etc/pacman.d/hooks/clean_package_cache.hook
-
-
-}
-
 
 
 reset_keys () {
@@ -840,6 +791,7 @@ copy_script () {
 
 echo -e "\nCopying script to $mnt\n"
 cp arch.sh $mnt
+cp arch.sh $mnt/home/$user/
 
 }
 
@@ -856,25 +808,6 @@ echo -e "\nEntering chroot. Type 'exit' to leave.\n"
 arch-chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
 
 echo -e "\nExiting chroot...\n"
-
-}
-
-
-
-chroot_install () {
-
-   check_on_root
-   copy_script
-
-   arch-chroot $mnt /chroot.sh $disk
-} 
-
-
-
-print_partitions () {
-
-lsblk
-blkid
 
 }
 
@@ -939,40 +872,11 @@ exit
 
 
 
-print_config () {
-
-cd /home/$user
-
-for FILE in $CONFIG_FILES
-do
-    ls -la "$FILE"
-done
-
-find . -type f -printf "%-.22T+ %.8TX %p\n" | sort | cut -f 2- -d ' '
-
-}
-
-
-
 restore_config () {
 
 cd /home/$user
 
 sudo -u $user tar xvf setup.tar
-
-}
-
-
-
-delete_config () {
-
-cd /home/user
-
-for FILE in $CONFIG_FILES
-do
-    ls -la "$FILE"
-    rm -rf "$FILE"
-done
 
 }
 
@@ -1011,8 +915,6 @@ rsync -a --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --excl
 
 mkdir $mnt/{dev,proc,run,sys}
 
-
-
 }
 
 
@@ -1027,9 +929,7 @@ hostname=Arch
 password=123456
 
 
-
-CONFIG_FILES="
-.config/baloofilerc
+CONFIG_FILES=".config/baloofilerc
 .config/dolphinrc
 .config/epy/configuration.json
 .config/fontconfig/fonts.conf
@@ -1067,12 +967,8 @@ CONFIG_FILES="
 .mozilla/*
 .viminfo
 .vimrc
-mount-readonly.sh
-"
+mount-readonly.sh"
 
-
-# Make font big and readable
-setfont ter-132b
 
 if [[ ! "$1" = "" ]]; then
    disk=$1
@@ -1081,24 +977,10 @@ else
 fi
 
 check_viable_disk
-
 loadkeys en
 
-# Update system clock
-#timedatectl
-
-
-while [[ "${1}" != "" ]]; do
-        case "${1}" in
-        -c|--copy)      copy_script     ; exit ;;
-        -d|--download)  download_scripts ; exit ;;
-        -a|--apps)      download_apps    ; exit ;;
-        -p|--post)      post_setup       ; exit ;;
-        -w|--wireless)  connect_wireless ; exit ;;
-    esac
-    
-    shift 1
-done
+# Make font big and readable
+setfont ter-132b
 
 
 choices=(
@@ -1119,7 +1001,6 @@ choices=(
 "Unmount $mnt"
 "Clone disk"
 "Configuration"
-"Print partitions"
 "Delete partitions"
 "Clean system"
 "Connect wireless"
@@ -1173,13 +1054,10 @@ do
 					case $choiceConfig in
 						"backup")	backup_config ;;
 						"restore")	restore_config ;;
-						"print")	print_config ;;
-						"delete")	delete_config ;;
 						"quit")		exit ;;
 						'')		echo -e "\nInvalid option!\n" ;;
 					esac						
 				done ;;
-        "Print partitions")	print_partitions ;;
         "Delete partitions")	delete_partitions ;;
 	"Clean system")		clean_system ;;
         "Copy script")		copy_script ;;
