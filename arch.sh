@@ -221,18 +221,13 @@ arch-chroot $mnt pacman -S refind
 
 arch-chroot $mnt refind-install --usedefault $disk$espPart --alldrivers
 
-#arch-chroot $mnt mkrlconf
-
 SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
 
 echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw rootflags=subvol=@ quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" > $mnt/boot/refind_linux.conf
 echo "\"Boot read only\"  \"root=UUID=$ROOT_UUID ro rootflags=subvol=@ quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" >> $mnt/boot/refind_linux.conf
 
-arch-chroot $mnt sed -i 's/#enable_touch/enable_touch/g; s/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g' /efi/EFI/BOOT/refind.conf
-
-# Not sure if this needs to be done again
-#arch-chroot $mnt refind-install --usedefault $disk$espPart --alldrivers
+sed -i 's/#enable_touch/enable_touch/g; s/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g' $/mnt/efi/EFI/BOOT/refind.conf
 
 }
 
@@ -243,8 +238,6 @@ install_GRUB () {
 pacstrap -K $mnt grub grub-btrfs os-prober efibootmgr inotify-tools lz4
 
 SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
-
-extra_cmd=
 
 arch-chroot $mnt /bin/bash -e << EOF
 
@@ -257,7 +250,7 @@ GRUB_DISTRIBUTOR=""
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
-GRUB_CMDLINE_LINUX="nowatchdog loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold $extra_cmd"
+GRUB_CMDLINE_LINUX="nowatchdog loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
 GRUB_DISABLE_RECOVERY="true"
 GRUB_HIDDEN_TIMEOUT=2
 GRUB_RECORDFAIL_TIMEOUT=1
@@ -304,9 +297,6 @@ genfstab -U $mnt > $mnt/etc/fstab
 
 SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 
-# No zram 
-#sed -i '/zram0/d' $mnt/etc/fstab
-
 # Changing compression
 sed -i 's/zstd:3/zstd:1/' $mnt/etc/fstab
 
@@ -319,9 +309,7 @@ sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
 # Make /efi read-only
 sed -i 's/\/efi.*vfat.*rw/\/efi     vfat     ro/' $mnt/etc/fstab
 
-
 [ ! "$(cat $mnt/etc/fstab | grep 'none swap defaults 0 0')" ] && echo "UUID=$SWAP_UUID none swap defaults 0 0" >> $mnt/etc/fstab
-
 [ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/user/.cache')" ] && echo "tmpfs    /home/user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> $mnt/etc/fstab
 [ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/cache')" ] && echo "tmpfs    /var/cache  tmpfs   rw,nodev,nosuid,mode=1755,size=2G   0 0" >> $mnt/etc/fstab
 [ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/log')" ]   && echo "tmpfs    /var/log    tmpfs   rw,nodev,nosuid,mode=1775,size=2G   0 0" >> $mnt/etc/fstab
@@ -339,11 +327,10 @@ general_setup () {
 
 arch-chroot $mnt /bin/bash -e << EOF
 
-echo -e 'en_US.UTF-8 UTF-8\nen_US ISO-8859-1' > /etc/locale.gen  
-
 hwclock --systohc
 ln -sf /usr/share/zoneinfo/Canada/Eastern /etc/localtime
 
+echo -e 'en_US.UTF-8 UTF-8\nen_US ISO-8859-1' > /etc/locale.gen  
 echo 'LANG=en_US.UTF-8' > /etc/locale.conf
 echo 'Arch-Linux' > /etc/hostname
 echo 'KEYMAP=us' > /etc/vconsole.conf
@@ -434,7 +421,7 @@ systemctl enable iwd.service dhcpcd.service
 EOF
 
 
-###  Finish setting up user  ###
+###  Set up user files  ###
 
 arch-chroot $mnt sudo -u $user mkdir -p /home/$user/.local/bin
 
@@ -565,11 +552,9 @@ pacstrap -K $mnt terminus-font mksh ncdu
 echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
 echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
 echo 'vm.vfs_cache_pressure=50' > $mnt/etc/sysctl.d/99-cache-pressure.conf
-
-arch-chroot $mnt systemctl enable systemd-oomd
-
 sed -Ei 's/^#(Color)$/\1\nILoveCandy/;s/^#(ParallelDownloads).*/\1 = 10/' $mnt/etc/pacman.conf
 
+arch-chroot $mnt systemctl enable systemd-oomd
 
 
 ###  Shell (change to mksh)  ###
@@ -714,7 +699,6 @@ run_latehook() {
 
             echo "Copying root filesystem to RAM. Please be patient..."
 
-            #cp -p -a -R /real_root/@/* /new_root/
             rsync -a --exclude=rootfs.tar.gz --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ --exclude=/mnt/ /real_root/@/ /new_root/
 
          fi
@@ -915,6 +899,8 @@ rsync -a --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --excl
 
 mkdir $mnt/{dev,proc,run,sys}
 
+echo -e"\n*** Remember to update fstab and install a boot manager! ***\n"
+
 }
 
 
@@ -995,7 +981,6 @@ choices=(
 "Install hooks"
 "Setup snapper"
 "Copy script"
-"Chroot install"
 "Chroot"
 "Mount $mnt"
 "Unmount $mnt"
@@ -1041,7 +1026,6 @@ do
         "Install hooks")	install_hooks ;;
 	"Setup snapper")	setup_snapper ;;
         "Chroot")		do_chroot ;;
-        "Chroot install")	chroot_install ;;
         "Mount $mnt")		mount_mount  ;;
         "Unmount $mnt")		unmount_disk  ;;
 	"Clone disk")		clone_disk ;;
