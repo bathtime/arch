@@ -119,11 +119,11 @@ check_on_root
 delete_partitions
 
 parted -s $disk mklabel gpt
-parted -s --align=optimal $disk mkpart ESP fat32 1Mib 512Mib 
+parted -s --align=optimal $disk mkpart ESP fat32 1Mib 1000Mib 
 parted -s $disk set $espPart esp on
-parted -s --align=optimal $disk mkpart SWAP linux-swap 512Mib 8512Mib
+parted -s --align=optimal $disk mkpart SWAP linux-swap 1005Mib 10Gib
 parted -s $disk set $swapPart swap on
-parted -s --align=optimal $disk mkpart ROOT btrfs 8512Mib 100%
+parted -s --align=optimal $disk mkpart ROOT btrfs 10Gib 100%
 
 mkfs.fat -F 32 -n EFI $disk$espPart 
 mkswap $disk$swapPart
@@ -141,7 +141,7 @@ for subvol in '' "${subvols[@]}"; do
     btrfs su cr /mnt/@"$subvol"
 done
 
-mkdir -p $mnt/{etc,tmp}
+#mkdir -p $mnt/{etc,tmp}
 
 unmount_disk
 mount_mount
@@ -576,7 +576,7 @@ EOF
 install_tweaks () {
 
 
-pacstrap -K $mnt terminus-font mksh ncdu
+pacstrap -K $mnt terminus-font mksh
 
 echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
 echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
@@ -1003,6 +1003,18 @@ pacman -S arch-install-scripts gptfdisk terminus-font
 
 
 
+clone_disk () {
+
+echo -e "\nCloning disk. Please be patient...\n"
+
+rsync -a --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ --exclude=/mnt/ / $mnt/
+
+
+
+
+}
+
+
 mnt=/mnt
 espPart=1
 swapPart=2
@@ -1104,6 +1116,7 @@ choices=(
 "Chroot"
 "Mount $mnt"
 "Unmount $mnt"
+"Clone disk"
 "Configuration"
 "Print partitions"
 "Delete partitions"
@@ -1149,6 +1162,7 @@ do
         "Chroot install")	chroot_install ;;
         "Mount $mnt")		mount_mount  ;;
         "Unmount $mnt")		unmount_disk  ;;
+	"Clone disk")		clone_disk ;;
 	"Configuration") echo -e "\nPlease choose an option:\n"
 		
 				choiceConfig=(backup restore print delete quit) 
@@ -1178,4 +1192,5 @@ do
         '')			echo -e "\nInvalid option!\n"; ;;
     esac
 done
+
 
