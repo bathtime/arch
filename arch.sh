@@ -119,11 +119,11 @@ check_on_root
 delete_partitions
 
 parted -s $disk mklabel gpt
-parted -s --align=optimal $disk mkpart ESP fat32 1Mib 1000Mib 
+parted -s --align=optimal $disk mkpart ESP fat32 1Mib 512Mib 
 parted -s $disk set $espPart esp on
-parted -s --align=optimal $disk mkpart SWAP linux-swap 1005Mib 10Gib
+parted -s --align=optimal $disk mkpart SWAP linux-swap 512Mib 8512Mib
 parted -s $disk set $swapPart swap on
-parted -s --align=optimal $disk mkpart ROOT btrfs 10Gib 100%
+parted -s --align=optimal $disk mkpart ROOT btrfs 8512Mib 100%
 
 mkfs.fat -F 32 -n EFI $disk$espPart 
 mkswap $disk$swapPart
