@@ -645,7 +645,7 @@ echo '#!/usr/bin/bash
 
 create_archive() {
             
-   echo "Creating archive file..."
+   echo -e "Creating archive file...\n"
    cd /real_root/@/
 
    #tar --exclude=rootfs.tar.gz --exclude=./dev/* --exclude=./proc/* --exclude=./sys/* --exclude=./tmp/* --exclude=./run/* --exclude=./mnt/* --exclude=./.snapshots/* --exclude=./var/tmp/* --exclude=./var/cache/* --exclude=./var/log/* --exclude=./etc/pacman.d/gnupg/* -czf /real_root/@/rootfs.tar.gz .
