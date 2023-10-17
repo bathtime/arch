@@ -209,6 +209,8 @@ EOF
 
 install_SYSTEMDBOOT () {
 
+exit
+
 #arch-chroot $mnt bootctl --esp-path=/efi --boot-path=/boot install
 #arch-chroot $mnt bootctl --esp-path=/efi install
 arch-chroot $mnt bootctl install
@@ -354,10 +356,10 @@ pacman --noconfirm -Sy dosfstools parted arch-install-scripts git base-devel sud
 
 mkdir -p /etc/mkinitcpio.conf.d
 
-echo 'HOOKS=(systemd autodetect modconf kms keyboard sd-vconsole block filesystems resume)' > /etc/mkinitcpio.conf.d/myhooks.conf
+#echo 'HOOKS=(systemd autodetect modconf kms keyboard sd-vconsole block filesystems resume)' > /etc/mkinitcpio.conf.d/myhooks.conf
 
-#echo 'MODULES_DECOMPRESS="yes"' > /etc/mkinitcpio.conf.d/decomp.conf
-#echo 'COMPRESSION="lz4"'        > /etc/mkinitcpio.conf.d/compress.conf
+echo 'MODULES_DECOMPRESS="yes"' > /etc/mkinitcpio.conf.d/decomp.conf
+echo 'COMPRESSION="lz4"'        > /etc/mkinitcpio.conf.d/compress.conf
 #echo 'MODULES="lz4"'            > /etc/mkinitcpio.conf.d/modules.conf
 
 mkinitcpio -p linux
@@ -414,9 +416,9 @@ EOF2
 
 # So iwd can automatically connect without any further interaction
 mkdir -p /var/lib/iwd
-cat > /var/lib/iwd/BELL364.psk << EOF2
+cat > /var/lib/iwd/"$wifi_ssid".psk << EOF2
 [Security]
-Passphrase=13FDC4A93E3C
+Passphrase="$wifi_pass"
 EOF2
 
 echo "Enabling network services..."
@@ -533,14 +535,17 @@ cd /home/$user
 
 sudo -u $user git clone https://aur.archlinux.org/$aurApp.git
 
+[ "$aurApp" = "paru" ] && pacman -Sy --noconfirm cargo
+
 cd $aurApp
 sudo -u $user makepkg -si
 
 sudo -u $user $aurApp --gendb
 
-pacman -R rust go
+[ "$aurApp" = "paru" ] && pacman -R rust
+[ "$aurApp" = "yay" ] && pacman -R rust
 
-rm -rf /home/$user/$aurApp/*
+rm -rf /home/$user/{.cargo,$aurApp/*} /usr/lib/{go,rustlib}
 
 EOF
 
@@ -624,7 +629,7 @@ run_latehook() {
 
    echo -e "\nPress any key for extra boot options.\n"
 
-   if read -t 4 -s -n 1; then
+   if read -t 2 -s -n 1; then
 
       echo -e "\nPlease choose an option:\n\n<s> snapshot mode\n<o> run in overlay mode 1\n<p> run in overlay mode 2\n<e> extract archive to tmpfs\n<c> copy / directly to tmpfs\n<n> create a new archive file\n<d> enter emergency shell\n<b> continue boot\n"
 
@@ -755,7 +760,7 @@ HELPEOF
 echo 'MODULES=(lz4)
 BINARIES=()
 FILES=()
-HOOKS=(base udev keyboard autodetect modconf sd-vconsole block filesystems liveroot resume)
+HOOKS=(base udev keyboard autodetect kms modconf sd-vconsole block filesystems liveroot resume)
 COMPRESSION="lz4"
 #COMPRESSION_OPTIONS=()
 MODULES_DECOMPRESS="yes"' > $mnt/etc/mkinitcpio.conf
@@ -807,7 +812,7 @@ echo -e "\nExiting chroot...\n"
 connect_wireless () {
 
 echo -e "\nAttempting to connect to wireless...\n"
-iwctl --passphrase 13FDC4A93E3C station wlan0 connect BELL364
+iwctl --passphrase $wifi_pass station wlan0 connect $wifi_ssid
 
 if [[ "$?" -eq 0 ]]; then
    echo "Connection successful!"
@@ -931,12 +936,14 @@ rootPart=3
 subvols=()
 
 ucode=intel-ucode
-aurApp=yay
+aurApp=paru
 
 user=user
 hostname=Arch
 password=123456
 
+wifi_ssid="BELL364"
+wifi_pass="13FDC4A93E3C"
 
 CONFIG_FILES=".config/baloofilerc
 .config/dolphinrc
@@ -1033,10 +1040,10 @@ do
 				select choiceBoot in "${choiceBoot[@]}"
 				do
 					case $choiceBoot in
-						"grub")		install_GRUB ;;
-						"efiSTUB")	install_EFISTUB ;;
-						"rEFInd")	install_REFIND ;;
-						"systemD")	install_SYSTEMDBOOT ;;
+						"grub")		install_GRUB; exit ;;
+						"efiSTUB")	install_EFISTUB; exit ;;
+						"rEFInd")	install_REFIND; exit ;;
+						"systemD")	install_SYSTEMDBOOT; exit ;;
 						"quit")		exit ;;
 						'')		echo -e "\nInvalid option!\n" ;;
 					esac						
