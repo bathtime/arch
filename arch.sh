@@ -652,7 +652,7 @@ create_archive() {
 
    rm -rf /real_root/@/root.squashfs
 
-   mksquashfs . /real_root/@/root.squashfs -noappend -no-recovery -mem-percent 50 -e *rootfs.tar.gz -e *root.squashfs -e ./dev/ -e ./proc/ -e ./sys -e ./tmp -e ./run -e ./mnt -e ./.snapshots/ -e ./var/tmp/ -e ./var/cache/ -e ./var/log/ -e ./etc/pacman.d/gnupg/
+   mksquashfs . /real_root/@/root.squashfs -noappend -no-recovery -mem-percent 50 -e *rootfs.tar.gz -e *root.squashfs -e ./boot/ -e ./efi/ -e ./dev/ -e ./proc/ -e ./sys -e ./tmp -e ./run -e ./mnt -e ./.snapshots/ -e ./var/tmp/ -e ./var/cache/ -e ./var/log/ -e ./etc/pacman.d/gnupg/
 
    ls -la /real_root/@/root.squashfs
 
