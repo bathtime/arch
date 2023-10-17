@@ -648,8 +648,9 @@ create_archive() {
    echo "Creating archive file..."
    cd /real_root/@/
 
-   tar --exclude=rootfs.tar.gz --exclude=./dev/* --exclude=./proc/* --exclude=./sys/* --exclude=./tmp/* --exclude=./run/* --exclude=./mnt/* --exclude=./.snapshots/* --exclude=./var/tmp/* --exclude=./var/cache/* --exclude=./var/log/* --exclude=./etc/pacman.d/gnupg/* -czf /real_root/@/rootfs.tar.gz .
+   #tar --exclude=rootfs.tar.gz --exclude=./dev/* --exclude=./proc/* --exclude=./sys/* --exclude=./tmp/* --exclude=./run/* --exclude=./mnt/* --exclude=./.snapshots/* --exclude=./var/tmp/* --exclude=./var/cache/* --exclude=./var/log/* --exclude=./etc/pacman.d/gnupg/* -czf /real_root/@/rootfs.tar.gz .
 
+   mksquashfs /real_root/@/ /real_root/@/root.squashfs -e /rootfs.tar.gz -e /root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/cache/ -e /var/log/ -e /etc/pacman.d/gnupg/
 }
 
 
@@ -733,7 +734,8 @@ run_latehook() {
             [[ ! -f "/real_root/@/rootfs.tar.gz" ]] || [[ "$key" = "n" ]] && create_archive
 
             echo "Extracting archive to RAM. Please be patient..."
-            tar -xzf /real_root/@/rootfs.tar.gz -C /new_root/
+
+            #tar -xzf /real_root/@/rootfs.tar.gz -C /new_root/
             unsquashfs -d /new_root -f /real_root/@/root.squashfs
 
          elif [[ "$key" = "c" ]]; then
@@ -942,7 +944,9 @@ echo "Creating archive file..."
 
 cd / 
 
-tar --exclude=rootfs.tar.gz --exclude=./dev/* --exclude=./proc/* --exclude=./sys/* --exclude=./tmp/* --exclude=./run/* --exclude=./mnt/* --exclude=./.snapshots/* --exclude=./var/tmp/* --exclude=./var/cache/* --exclude=./var/log/* --exclude=./etc/pacman.d/gnupg/* -czf rootfs.tar.gz .
+#tar --exclude=rootfs.tar.gz --exclude=./dev/* --exclude=./proc/* --exclude=./sys/* --exclude=./tmp/* --exclude=./run/* --exclude=./mnt/* --exclude=./.snapshots/* --exclude=./var/tmp/* --exclude=./var/cache/* --exclude=./var/log/* --exclude=./etc/pacman.d/gnupg/* -czf rootfs.tar.gz .
+
+mksquashfs / /root.squashfs -e /rootfs.tar.gz -e /root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/cache/ -e /var/log/ -e /etc/pacman.d/gnupg/
 
 }
 
@@ -1018,7 +1022,6 @@ choices=(
 "Chroot"
 "Mount $mnt"
 "Unmount $mnt"
-"Create archive"
 "Clone disk"
 "Configuration"
 "Delete partitions"
@@ -1062,7 +1065,6 @@ do
         "Chroot")		do_chroot ;;
         "Mount $mnt")		mount_mount  ;;
         "Unmount $mnt")		unmount_disk  ;;
-	"Create archive")       create_archive ;;
 	"Clone disk")		clone_disk ;;
 	"Configuration") echo -e "\nPlease choose an option:\n"
 		
