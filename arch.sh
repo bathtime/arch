@@ -380,7 +380,7 @@ locale-gen
 ###  Install necessary applications with proper permissions
 mkdir -p -m 750 /etc/sudoers.d
 
-pacman --noconfirm -Sy dosfstools parted arch-install-scripts git base-devel sudo tar man
+pacman --noconfirm -Sy dosfstools parted arch-install-scripts git base-devel sudo tar man squashfs-tools
 
 mkdir -p /etc/mkinitcpio.conf.d
 
@@ -919,7 +919,7 @@ fi
 
 download_apps () {
 
-pacman -S arch-install-scripts gptfdisk terminus-font 
+pacman -S arch-install-scripts gptfdisk terminus-font squashfs-tools
 
 }
 
@@ -946,7 +946,9 @@ cd /
 
 #tar --exclude=rootfs.tar.gz --exclude=./dev/* --exclude=./proc/* --exclude=./sys/* --exclude=./tmp/* --exclude=./run/* --exclude=./mnt/* --exclude=./.snapshots/* --exclude=./var/tmp/* --exclude=./var/cache/* --exclude=./var/log/* --exclude=./etc/pacman.d/gnupg/* -czf rootfs.tar.gz .
 
-mksquashfs / /root.squashfs -e /rootfs.tar.gz -e /root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/cache/ -e /var/log/ -e /etc/pacman.d/gnupg/
+time mksquashfs / root.squashfs -e rootfs.tar.gz -e /root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/cache/ -e /var/log/ -e /etc/pacman.d/gnupg/
+
+ls -la root.squashfs
 
 }
 
@@ -1022,6 +1024,7 @@ choices=(
 "Chroot"
 "Mount $mnt"
 "Unmount $mnt"
+"Create squashfs image"
 "Clone disk"
 "Configuration"
 "Delete partitions"
@@ -1065,6 +1068,7 @@ do
         "Chroot")		do_chroot ;;
         "Mount $mnt")		mount_mount  ;;
         "Unmount $mnt")		unmount_disk  ;;
+	"Create squashfs image") create_archive ;;
 	"Clone disk")		clone_disk ;;
 	"Configuration") echo -e "\nPlease choose an option:\n"
 		
