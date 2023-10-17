@@ -734,6 +734,7 @@ run_latehook() {
 
             echo "Extracting archive to RAM. Please be patient..."
             tar -xzf /real_root/@/rootfs.tar.gz -C /new_root/
+            unsquashfs -d /new_root -f /real_root/@/root.squashfs
 
          elif [[ "$key" = "c" ]]; then
 
