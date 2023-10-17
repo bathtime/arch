@@ -1017,6 +1017,7 @@ choices=(
 "Chroot"
 "Mount $mnt"
 "Unmount $mnt"
+"Create archive"
 "Clone disk"
 "Configuration"
 "Delete partitions"
@@ -1060,6 +1061,7 @@ do
         "Chroot")		do_chroot ;;
         "Mount $mnt")		mount_mount  ;;
         "Unmount $mnt")		unmount_disk  ;;
+	"Create archive")       create_archive ;;
 	"Clone disk")		clone_disk ;;
 	"Configuration") echo -e "\nPlease choose an option:\n"
 		
