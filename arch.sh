@@ -652,7 +652,7 @@ create_archive() {
 
    rm -rf /real_root/@/root.squashfs
 
-   mksquashfs . /real_root/@/root.squashfs -noappend -no-recovery -mem-percent 50 -e *rootfs.tar.gz -e *root.squashfs -e ./boot/ -e ./efi/ -e ./dev/ -e ./proc/ -e ./sys -e ./tmp -e ./run -e ./mnt -e ./.snapshots/ -e ./var/tmp/ -e ./var/cache/ -e ./var/log/ -e ./etc/pacman.d/gnupg/  -e ./var/lib/systemd/random-seed
+   mksquashfs . /real_root/@/root.squashfs -noappend -no-recovery -mem-percent 50 -e root.squashfs -e boot/* -e efi/* -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/ -e .snapshots/ -e var/tmp/* -e var/cache/* -e var/log/* -e etc/pacman.d/gnupg/ -e var/lib/systemd/random-seed
 
    ls -la /real_root/@/root.squashfs
 
@@ -740,8 +740,8 @@ run_latehook() {
 
             echo "Extracting archive to RAM. Please be patient..."
 
-            #tar -xzf /real_root/@/rootfs.tar.gz -C /new_root/
-            unsquashfs -d /new_root -f /real_root/@/root.squashfs
+            #unsquashfs -d /new_root -f /real_root/@/root.squashfs
+	    mount '/real_root/@/root.squashfs' /new_root/ -t squashfs -o loop
 
          elif [[ "$key" = "c" ]]; then
 
@@ -750,15 +750,6 @@ run_latehook() {
             rsync -a --exclude=rootfs.tar.gz --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ --exclude=/mnt/ /real_root/@/ /new_root/
 
          fi
-
-         #touch /new_root/LIVE
-         umount -l /real_root/
-
-         #LIVE_mount() {
-         #   echo "Live system on RAM."
-         #}
-         
-         #mount_handler=LIVE_mount
 
       elif [[ "$key" = "d" ]]; then
 
