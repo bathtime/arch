@@ -6,6 +6,32 @@
 
 #set -e
 
+
+
+mnt=/mnt
+espPart=1
+swapPart=2
+rootPart=3
+subvols=()
+
+ucode=intel-ucode
+aurApp=paru
+
+user=user
+hostname=Arch
+password=123456
+
+wifi_ssid="BELL364"
+wifi_pass="13FDC4A93E3C"
+
+
+# Post setup
+
+post_install_apps="plasma-desktop plasma-wayland-session plasma-pa kscreen dolphin konsole firefox"
+autostartapp="startplasma-wayland"
+
+
+
 check_viable_disk () {
 
 if [[ "$disk" == "" ]]; then
@@ -181,7 +207,7 @@ install_pacstrap () {
 check_on_root
 
 source /etc/profile
-pacstrap -K $mnt base linux linux-firmware btrfs-progs vim vi libarchive $ucode
+pacstrap -K $mnt base linux linux-firmware btrfs-progs vim vi libarchive $ucode gptfdisk
 
 }
 
@@ -330,6 +356,8 @@ cat $mnt/etc/fstab
 
 
 general_setup () {
+
+copy_script
 
 arch-chroot $mnt /bin/bash -e << EOF
 
@@ -785,9 +813,10 @@ pacman-key --populate
 
 copy_script () {
 
-echo -e "\nCopying script to $mnt\n"
-cp arch.sh $mnt
-cp arch.sh $mnt/home/$user/
+[ -d /home/$user ] && cp arch.sh $mnt/home/$user || cp arch.sh $mnt/
+
+[ "$?" -eq 0 ] && echo -e "\nScript copied!" || echo -e "\nScript not copied."
+
 
 }
 
@@ -796,7 +825,6 @@ cp arch.sh $mnt/home/$user/
 do_chroot () {
 
 check_on_root
-copy_script
 mount_mount
 
 echo -e "\nEntering chroot. Type 'exit' to leave.\n"
@@ -826,27 +854,18 @@ fi
 
 post_setup () {
 
-pacman -S plasma-desktop plasma-wayland-session plasma-pa kscreen dolphin konsole firefox
+pacman -S "$post_install_apps"
 
-echo '
-if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
-   startplasma-wayland
-fi
-' >> /home/$user/.bash_profile
+echo 'if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
+   #autostartapp
+fi' >> /home/$user/.bash_profile
 
-chown user:user /home/$user/.bash_profile
+echo 'if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
+   #autostartapp
+fi' >> /home/$user/.profile
+chown user:user /home/$user/{.profile,bash_profile}
 
-echo '
-if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
-   startplasma-wayland
-fi
-' >> /home/$user/.profile
-
-chown user:user /home/$user/.profile
-
-cd /home/$user
-sudo -u $user $AUR btrfs-assistant
-   
+sed -i "s/#autostartapp/$autostartapp/" $mnt/home/$user/{.profile,bash_profile}
 }
 
 
@@ -928,22 +947,6 @@ tar --exclude=rootfs.tar.gz --exclude=./dev/* --exclude=./proc/* --exclude=./sys
 
 
 
-
-mnt=/mnt
-espPart=1
-swapPart=2
-rootPart=3
-subvols=()
-
-ucode=intel-ucode
-aurApp=paru
-
-user=user
-hostname=Arch
-password=123456
-
-wifi_ssid="BELL364"
-wifi_pass="13FDC4A93E3C"
 
 CONFIG_FILES=".config/baloofilerc
 .config/dolphinrc
