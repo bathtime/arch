@@ -652,7 +652,7 @@ create_archive() {
 
    rm -rf /real_root/@/root.squashfs
 
-   mksquashfs . /real_root/@/root.squashfs -noappend -no-recovery -mem-percent 50 -e *rootfs.tar.gz -e *root.squashfs -e ./boot/ -e ./efi/ -e ./dev/ -e ./proc/ -e ./sys -e ./tmp -e ./run -e ./mnt -e ./.snapshots/ -e ./var/tmp/ -e ./var/cache/ -e ./var/log/ -e ./etc/pacman.d/gnupg/
+   mksquashfs . /real_root/@/root.squashfs -noappend -no-recovery -mem-percent 50 -e *rootfs.tar.gz -e *root.squashfs -e ./boot/ -e ./efi/ -e ./dev/ -e ./proc/ -e ./sys -e ./tmp -e ./run -e ./mnt -e ./.snapshots/ -e ./var/tmp/ -e ./var/cache/ -e ./var/log/ -e ./etc/pacman.d/gnupg/  -e ./var/lib/systemd/random-seed
 
    ls -la /real_root/@/root.squashfs
 
@@ -751,14 +751,14 @@ run_latehook() {
 
          fi
 
-         touch /new_root/LIVE
-         umount /real_root/
+         #touch /new_root/LIVE
+         umount -l /real_root/
 
-         LIVE_mount() {
-            echo "Live system on RAM."
-         }
+         #LIVE_mount() {
+         #   echo "Live system on RAM."
+         #}
          
-         mount_handler=LIVE_mount
+         #mount_handler=LIVE_mount
 
       elif [[ "$key" = "d" ]]; then
 
