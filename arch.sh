@@ -650,7 +650,12 @@ create_archive() {
 
    #tar --exclude=rootfs.tar.gz --exclude=./dev/* --exclude=./proc/* --exclude=./sys/* --exclude=./tmp/* --exclude=./run/* --exclude=./mnt/* --exclude=./.snapshots/* --exclude=./var/tmp/* --exclude=./var/cache/* --exclude=./var/log/* --exclude=./etc/pacman.d/gnupg/* -czf /real_root/@/rootfs.tar.gz .
 
-   mksquashfs /real_root/@/ /real_root/@/root.squashfs -e /rootfs.tar.gz -e /root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/cache/ -e /var/log/ -e /etc/pacman.d/gnupg/
+   rm -rf /real_root/@/root.squashfs
+
+   mksquashfs . /real_root/@/root.squashfs -noappend -no-recovery -mem-percent 50 -e *rootfs.tar.gz -e *root.squashfs -e ./dev/ -e ./proc/ -e ./sys -e ./tmp -e ./run -e ./mnt -e ./.snapshots/ -e ./var/tmp/ -e ./var/cache/ -e ./var/log/ -e ./etc/pacman.d/gnupg/
+
+   ls -la /real_root/@/root.squashfs
+
 }
 
 
@@ -946,7 +951,9 @@ cd /
 
 #tar --exclude=rootfs.tar.gz --exclude=./dev/* --exclude=./proc/* --exclude=./sys/* --exclude=./tmp/* --exclude=./run/* --exclude=./mnt/* --exclude=./.snapshots/* --exclude=./var/tmp/* --exclude=./var/cache/* --exclude=./var/log/* --exclude=./etc/pacman.d/gnupg/* -czf rootfs.tar.gz .
 
-time mksquashfs / root.squashfs -e rootfs.tar.gz -e /root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/cache/ -e /var/log/ -e /etc/pacman.d/gnupg/
+rm -rf /root.squashfs
+
+time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e rootfs.tar.gz -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/cache/ -e /var/log/ -e /etc/pacman.d/gnupg/
 
 ls -la root.squashfs
 
