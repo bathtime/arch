@@ -646,40 +646,56 @@ echo '#!/usr/bin/bash
 create_archive() {
             
    echo -e "Creating archive file...\n"
-   cd /real_root/@/
 
-   #tar --exclude=rootfs.tar.gz --exclude=./dev/* --exclude=./proc/* --exclude=./sys/* --exclude=./tmp/* --exclude=./run/* --exclude=./mnt/* --exclude=./.snapshots/* --exclude=./var/tmp/* --exclude=./var/cache/* --exclude=./var/log/* --exclude=./etc/pacman.d/gnupg/* -czf /real_root/@/rootfs.tar.gz .
+   cd $real_root/@/
 
-   rm -rf /real_root/@/root.squashfs
+   mksquashfs . $real_root/@/root.squashfs -noappend -no-recovery -mem-percent 50 -e root.squashfs -e boot/* -e efi/* -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/ -e .snapshots/ -e var/tmp/* -e var/cache/* -e var/log/* -e etc/pacman.d/gnupg/ -e var/lib/systemd/random-seed
 
-   mksquashfs . /real_root/@/root.squashfs -noappend -no-recovery -mem-percent 50 -e root.squashfs -e boot/* -e efi/* -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/ -e .snapshots/ -e var/tmp/* -e var/cache/* -e var/log/* -e etc/pacman.d/gnupg/ -e var/lib/systemd/random-seed
+   ls -la $real_root/@/root.squashfs
 
-   ls -la /real_root/@/root.squashfs
+}
+
+create_overlay() {
+
+   local lower_dir=$(mktemp -d -p /)
+   local ram_dir=$(mktemp -d -p /)
+   mount --move ${new_root} ${lower_dir}
+   mount -t tmpfs cowspace ${ram_dir}
+   mkdir -p ${ram_dir}/upper ${ram_dir}/work
+   mount -t overlay -o lowerdir=${lower_dir},upperdir=${ram_dir}/upper,workdir=${ram_dir}/work rootfs ${new_root}
 
 }
 
 
 run_latehook() {
 
+
    echo -e "\nPress any key for extra boot options.\n"
 
-   if read -t 2 -s -n 1; then
 
-      echo -e "\nPlease choose an option:\n\n<s> snapshot mode\n<o> run in overlay mode 1\n<p> run in overlay mode 2\n<e> extract archive to tmpfs\n<c> copy / directly to tmpfs\n<n> create a new archive file\n<d> enter emergency shell\n<b> continue boot\n"
+   if read -t 4 -s -n 1; then
+
+      echo -e "\nPlease choose an option:\n\n\
+<s> run snapshot\n\
+<w> run snapshot + overlay\n\
+<o> run in overlay mode\n\
+<e> run squashfs + overlay\n\
+<n> create & run squashfs + overlay\n\
+<c> copy / to tmpfs\n\
+<d> emergency shell\n\n\
+<enter> continue boot\n"
 
       read -n 1 -s key
 
-      if [[ "$key" = "s" ]]; then
+      new_root=/new_root
+      mkdir -p $new_root
 
-         poll_device ${root} 2
 
-         root_dir=/new_root
+      if [[ "$key" = "s" ]] || [[ "$key" = "w" ]]; then
 
-         mkdir -p $root_dir 
-
-         mount --mkdir -o subvolid=256 ${root} $root_dir
+         mount --mkdir -o subvolid=256 ${root} $new_root
       
-         btrfs subvolume list -ts $root_dir | less
+         btrfs subvolume list -ts $new_root | less
          read -n 3 -p "Choose a snapshot (256 is current system): " subvol 
 
          echo -e "\nPlease enter extra mount options (ex., ro ):"
@@ -689,68 +705,52 @@ run_latehook() {
          echo -e "\nWill proceed with the following mount:\n\nmount -o subvolid=$subvol$options ${root} /\n"
          sleep 4
 
-         umount $root_dir
-         mount --mkdir -o subvolid=$subvol$options ${root} $root_dir
+         umount $new_root
+         mount --mkdir -o subvolid=$subvol$options ${root} $new_root
 
          if [ "$?" -ne 0 ]; then
-            echo "Could not mount that choice. Chosing default (256)."
+            echo "Could not mount subvol ($subvol). Chosing default (256)."
             sleep 2
-            mount --mkdir -o subvolid=256 ${root} $root_dir 
+            mount --mkdir -o subvolid=256 ${root} $new_root 
          fi
+
+         [[ "$key" = "w" ]] && create_overlay
 
       elif [[ "$key" = "o" ]]; then
 
-         ROOT_MNT="/new_root"
-         DIRS="/run/archroot"
-         LOWER="${DIRS}/root_ro"
-         COWSPACE="${DIRS}/cowspace"
-         UPPER="${COWSPACE}/upper"
-         WORK="${COWSPACE}/work"
-
-         mkdir -p ${LOWER}
-         mount --move ${ROOT_MNT} ${LOWER}
-
-         mkdir -p ${COWSPACE}
-         mount -t tmpfs cowspace ${COWSPACE}
-
-         mkdir -p ${UPPER} ${WORK}
-
-         mount -t overlay -o lowerdir=${LOWER},upperdir=${UPPER},workdir=${WORK} rootfs ${ROOT_MNT}
-
-      elif [[ "$key" = "p" ]]; then
- 
-         local root_mnt="/new_root"
-         local lower_dir=$(mktemp -d -p /)
-         local ram_dir=$(mktemp -d -p /)
-         mount --move ${root_mnt} ${lower_dir}
-         mount -t tmpfs cowspace ${ram_dir}
-         mkdir -p ${ram_dir}/upper ${ram_dir}/work
-         mount -t overlay -o lowerdir=${lower_dir},upperdir=${ram_dir}/upper,workdir=${ram_dir}/work rootfs ${root_mnt}
+         create_overlay
 
       elif [[ "$key" = "e" ]] || [[ "$key" = "n" ]] || [[ "$key" = "c" ]]; then
 
-         poll_device ${root} 2
-         mkdir /real_root/
-         mount ${root} /real_root/
-      
+         real_root=/real_root
+         mkdir $real_root
+         mount ${root} $real_root
+
          if [[ "$key" = "e" ]] || [[ "$key" = "n" ]]; then
 
-            [[ ! -f "/real_root/@/rootfs.tar.gz" ]] || [[ "$key" = "n" ]] && create_archive
+            [[ ! -f "$real_root/@/root.squashfs" ]] || [[ "$key" = "n" ]] && create_archive
 
             echo "Extracting archive to RAM. Please be patient..."
 
-            #unsquashfs -d /new_root -f /real_root/@/root.squashfs
-	    mount '/real_root/@/root.squashfs' /new_root/ -t squashfs -o loop
+            #unsquashfs -d /new_root -f $real_root/@/root.squashfs
+            
+            mount "$real_root/@/root.squashfs" $new_root -t squashfs -o loop
+
+            create_overlay
+
+            umount -l $real_root
+bash
 
          elif [[ "$key" = "c" ]]; then
-        
-	    mount -t tmpfs -o size=80% none /new_root/
+
+            mount -t tmpfs -o size=80% none $new_root
 
             echo "Copying root filesystem to RAM. Please be patient..."
 
-            rsync -a --exclude=rootfs.tar.gz --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ --exclude=/mnt/ /real_root/@/ /new_root/
+            rsync -a --exclude=rootfs.tar.gz --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ --exclude=/mnt/ /real_root/@/ $new_root
 
          fi
+
 
       elif [[ "$key" = "d" ]]; then
 
@@ -758,14 +758,36 @@ run_latehook() {
 
          bash
 
-      elif [[ "$key" = "b" ]]; then
+      else
 
          echo "Continuing boot..."
 
       fi
 
    fi
-}' > $mnt/usr/lib/initcpio/hooks/liveroot
+
+
+}
+
+
+
+#         ROOT_MNT="/new_root"
+#         DIRS="/run/archroot"
+#         LOWER="${DIRS}/root_ro"
+#         COWSPACE="${DIRS}/cowspace"
+#         UPPER="${COWSPACE}/upper"
+#         WORK="${COWSPACE}/work"
+
+#         mkdir -p ${LOWER}
+#         mount --move ${ROOT_MNT} ${LOWER}
+
+#         mkdir -p ${COWSPACE}
+#         mount -t tmpfs cowspace ${COWSPACE}
+
+#         mkdir -p ${UPPER} ${WORK}
+
+#         mount -t overlay -o lowerdir=${LOWER},upperdir=${UPPER},workdir=${WORK} rootfs ${ROOT_MNT}
+' > $mnt/usr/lib/initcpio/hooks/liveroot
 
 
 echo '#!/bin/sh
