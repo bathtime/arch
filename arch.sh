@@ -732,7 +732,6 @@ run_latehook() {
          poll_device ${root} 2
          mkdir /real_root/
          mount ${root} /real_root/
-         mount -t tmpfs -o size=80% none /new_root/
       
          if [[ "$key" = "e" ]] || [[ "$key" = "n" ]]; then
 
@@ -744,6 +743,8 @@ run_latehook() {
 	    mount '/real_root/@/root.squashfs' /new_root/ -t squashfs -o loop
 
          elif [[ "$key" = "c" ]]; then
+        
+	    mount -t tmpfs -o size=80% none /new_root/
 
             echo "Copying root filesystem to RAM. Please be patient..."
 
