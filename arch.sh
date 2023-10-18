@@ -774,9 +774,12 @@ build() {
   add_binary rsync
   add_binary bash
   add_binary btrfs
+  add_binary unsquashfs 
   add_binary mksquashfs
-  add_binary unsquashfs
-  add_module "overlay"
+  add_binary unionfs
+  add_module overlay
+  add_module loop
+  add_module squashfs
   add_runscript
 }
 
