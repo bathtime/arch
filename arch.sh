@@ -642,14 +642,13 @@ arch-chroot $mnt pacman -S rsync
 
 echo '#!/usr/bin/bash
 
-
 create_archive() {
             
    echo -e "Creating archive file...\n"
 
    cd $real_root/@/
 
-   mksquashfs . $real_root/@/root.squashfs -noappend -no-recovery -mem-percent 50 -e root.squashfs -e boot/* -e efi/* -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/ -e .snapshots/ -e var/tmp/* -e var/cache/* -e var/log/* -e etc/pacman.d/gnupg/ -e var/lib/systemd/random-seed
+   mksquashfs . $real_root/@/root.squashfs -noappend -no-recovery -mem-percent 50 -e root.squashfs -e boot/* -e efi/* -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/ -e .snapshots/ -e var/tmp/* -e var/cache/* -e var/log/* -e etc/pacman.d/gnupg/* -e var/lib/systemd/random-seed
 
    ls -la $real_root/@/root.squashfs
 
@@ -666,12 +665,9 @@ create_overlay() {
 
 }
 
-
 run_latehook() {
 
-
    echo -e "\nPress any key for extra boot options.\n"
-
 
    if read -t 4 -s -n 1; then
 
@@ -689,7 +685,6 @@ run_latehook() {
 
       new_root=/new_root
       mkdir -p $new_root
-
 
       if [[ "$key" = "s" ]] || [[ "$key" = "w" ]]; then
 
@@ -730,16 +725,15 @@ run_latehook() {
 
             [[ ! -f "$real_root/@/root.squashfs" ]] || [[ "$key" = "n" ]] && create_archive
 
-            echo "Extracting archive to RAM. Please be patient..."
+            echo "Extracting archive to RAM..."
 
-            #unsquashfs -d /new_root -f $real_root/@/root.squashfs
+            #unsquashfs -d @new_root -f $real_root/@/root.squashfs
             
             mount "$real_root/@/root.squashfs" $new_root -t squashfs -o loop
 
             create_overlay
 
             umount -l $real_root
-bash
 
          elif [[ "$key" = "c" ]]; then
 
@@ -750,7 +744,6 @@ bash
             rsync -a --exclude=root.squashfs --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ --exclude=/mnt/ $real_root/@/ $new_root
 
          fi
-
 
       elif [[ "$key" = "d" ]]; then
 
@@ -766,27 +759,7 @@ bash
 
    fi
 
-
 }
-
-
-
-#         ROOT_MNT="/new_root"
-#         DIRS="/run/archroot"
-#         LOWER="${DIRS}/root_ro"
-#         COWSPACE="${DIRS}/cowspace"
-#         UPPER="${COWSPACE}/upper"
-#         WORK="${COWSPACE}/work"
-
-#         mkdir -p ${LOWER}
-#         mount --move ${ROOT_MNT} ${LOWER}
-
-#         mkdir -p ${COWSPACE}
-#         mount -t tmpfs cowspace ${COWSPACE}
-
-#         mkdir -p ${UPPER} ${WORK}
-
-#         mount -t overlay -o lowerdir=${LOWER},upperdir=${UPPER},workdir=${WORK} rootfs ${ROOT_MNT}
 ' > $mnt/usr/lib/initcpio/hooks/liveroot
 
 
