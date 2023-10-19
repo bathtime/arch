@@ -129,8 +129,7 @@ echo -e "\nWiping disk...\n"
 
 wipefs -af $disk 
 
-which sgdisk
-[ "$?" -eq 1 ] && pacman -S gptfdisk 
+[ ! -f /usr/bin/sgdisk ] && pacman -S gptfdisk 
 
 sgdisk -Zo $disk
 
@@ -248,7 +247,6 @@ sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
 #sed -i 's/\/efi.*vfat.*rw/\/efi     vfat     ro/' $mnt/etc/fstab
 
 [ ! "$(cat $mnt/etc/fstab | grep 'none swap defaults 0 0')" ] && echo "UUID=$SWAP_UUID none swap defaults 0 0" >> $mnt/etc/fstab
-[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/user/.cache')" ] && echo "tmpfs    /home/user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> $mnt/etc/fstab
 [ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/cache')" ] && echo "tmpfs    /var/cache  tmpfs   rw,nodev,nosuid,mode=1755,size=2G   0 0" >> $mnt/etc/fstab
 [ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/log')" ]   && echo "tmpfs    /var/log    tmpfs   rw,nodev,nosuid,mode=1775,size=2G   0 0" >> $mnt/etc/fstab
 [ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/tmp')" ]   && echo "tmpfs    /var/tmp    tmpfs   rw,nodev,nosuid,mode=1777,size=2G   0 0" >> $mnt/etc/fstab
@@ -281,19 +279,15 @@ default_image="/boot/initramfs-linux.img"
 #default_uki="/efi/EFI/Linux/arch-linux.efi"
 ' > $mnt/etc/mkinitcpio.d/linux.preset
 
+[ ! -f $mnt/usr/bin/efibootmgr ] && pacstrap -K $mnt efibootmgr
 
 arch-chroot $mnt /bin/bash -e << EOF
 
-#pacman -Sy --noconfirm efibootmgr
-
-mkdir -p /boot/efi/boot
-cp /boot/vmlinuz-linux /boot/efi/boot/bootx64.efi
+mkdir -p /boot/efi/arch
 
 mkinitcpio -p linux
 
-#efibootmgr --create --disk $disk --part $espPart --label "Arch Linux" --loader "\efi\boot\bootx64.efi" --unicode -o 0004,0007,0003
-
-efibootmgr --create --disk $disk --part $espPart --label "Arch Linux 2" --loader "\efi\boot\bootx64.efi" --unicode "root=$ROOT_UUID rootflags=subvol=@ resume=$SWAP_UUID rw initrd=\initramfs-linux.img" -o 0004,0007,0004
+efibootmgr --create --disk $disk --part $espPart --label "Arch Linux" --loader "/vmlinuz-linux" --unicode "root=$ROOT_UUID rootflags=subvol=@ resume=$SWAP_UUID rw initrd=\boot\efi\arch\initramfs-linux.img"
 
 
 
@@ -357,7 +351,7 @@ install_REFIND () {
 
 mount_mount
 
-arch-chroot $mnt pacman -S refind
+[ ! -f $mnt/usr/bin/refind-install ] && pacstrap -K $mnt refind
 
 arch-chroot $mnt refind-install --usedefault $disk$espPart --alldrivers
 
@@ -430,13 +424,14 @@ EOF
 
 
 
-
-
 general_setup () {
 
 mount_mount
-
 copy_script
+
+[ ! -f $mnt/usr/bin/sudo ] && pacstrap -K $mnt sudo
+
+[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/user/.cache')" ] && echo "tmpfs    /home/user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> $mnt/etc/fstab
 
 arch-chroot $mnt /bin/bash -e << EOF
 
@@ -459,7 +454,6 @@ locale-gen
 ###  Install necessary applications with proper permissions
 mkdir -p -m 750 /etc/sudoers.d
 
-pacman --noconfirm -Sy dosfstools parted arch-install-scripts git base-devel sudo tar man gptfdisk
 
 
 # Autologin to tty1
@@ -482,7 +476,10 @@ printf "$password\n$password\n" | passwd root
 
 userdel $user
 rm -rf /home/$user
+
 useradd -m $user -G wheel
+sleep 1
+
 printf "$password\n$password\n" | passwd $user
 
 # Disable login by root
@@ -498,7 +495,7 @@ PS1="# "' > /root/.bashrc
 
 ###  Setup network  ###
 
-pacman --noconfirm -Sy iw iwd dhcpcd
+[ ! -f /usr/bin/dhcpcd ] && pacman --noconfirm -Sy iw iwd dhcpcd
 
 # Helps with slow booting caused by waiting for a connection
 mkdir -p /etc/systemd/system/dhcpcd@.service.d/
@@ -633,18 +630,23 @@ install_aur () {
 
 mount_mount
 
+[ ! -f $mnt/usr/bin/git ] && pacstrap -K $mnt git base-devel
+
 arch-chroot $mnt /bin/bash << EOF
+
 
 cd /home/$user
 
 sudo -u $user git clone https://aur.archlinux.org/$aurApp.git
 
-[ "$aurApp" = "paru" ] && pacman -Sy --noconfirm cargo
+[ "$aurApp" = "paru" ] && [ ! -f /usr/bin/cargo ] && pacman -Sy --noconfirm cargo
 
 cd $aurApp
-sudo -u $user makepkg -si
 
+sudo -u $user makepkg -si
 sudo -u $user $aurApp --gendb
+
+exit
 
 [ "$aurApp" = "paru" ] && pacman -R rust
 [ "$aurApp" = "yay" ] && pacman -R rust
@@ -661,10 +663,9 @@ install_tweaks () {
 
 mount_mount
 
-arch-chroot $mnt sudo -u user $aurApp -S --noconfirm mksh
+[ ! -f $mnt/usr/bin/mksh ] && arch-chroot $mnt sudo -u $user $aurApp -S --noconfirm mksh
 
-
-pacstrap -K $mnt terminus-font ncdu
+[ ! -f $mnt/usr/bin/ncdu ] && pacstrap -K $mnt terminus-font ncdu dosfstools parted arch-install-scripts tar man gptfdisk
 
 echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
 echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
@@ -704,8 +705,10 @@ export QT_LOGGING_RULES="*=false"
 ' > $mnt/home/$user/.profile
 chown user:user $mnt/home/$user/.profile 
 
-arch-chroot $mnt chsh -s /usr/bin/mksh                                # root shell
-arch-chroot $mnt echo 123456 | sudo -u user chsh -s /usr/bin/mksh     # user shell
+arch-chroot $mnt /bin/bash << EOF
+chsh -s /usr/bin/mksh                          # root shell
+echo 123456 | sudo -u $user chsh -s /bin/mksh  # user shell
+EOF
 
 }
 
@@ -715,7 +718,7 @@ install_hooks () {
 
 mount_mount
 
-arch-chroot $mnt pacman -S rsync squashfs-tools
+[ -f $mnt/bin/rsync ] && pacstrap -K $mnt rsync squashfs-tools
 
 
 ###  Add tmpfs/overlay hook options  ###
@@ -783,14 +786,18 @@ run_latehook() {
          mount --mkdir -o subvolid=256 ${root} $new_root
       
          btrfs subvolume list -ts $new_root | less
-         read -n 3 -p "Choose a snapshot (256 is current system): " subvol 
+	 read -n 3 -p "Enter snapshot number (or press <enter> for current subvolume (256)): " subvol 
+
+	 if [ ! "$subvol" ]; then
+            echo -e "\nDefault subvolum chosen.\n"
+	    subvol=256
+         fi
 
          echo -e "\nPlease enter extra mount options (ex., ro ):"
          read options 
-         [ ! "$options" = "" ] && options=","$options
+         [ "$options" ] && options=","$options
 
          echo -e "\nWill proceed with the following mount:\n\nmount -o subvolid=$subvol$options ${root} /\n"
-         sleep 4
 
          umount $new_root
          mount --mkdir -o subvolid=$subvol$options ${root} $new_root
@@ -917,6 +924,18 @@ arch-chroot $mnt mkinitcpio -P
 arch-chroot $mnt systemctl mask systemd-remount-fs.service
 
 }
+
+
+
+setup_snapshots () {
+
+rm -rf $mnt/.snapshots/
+mkdir -p $mnt/.snapshots
+
+arch-chroot $mnt btrfs subvolume snapshot / /.snapshots/first
+
+}
+
 
 
 reset_keys () {
@@ -1136,6 +1155,7 @@ choices=(
 "Install aur"
 "Install tweaks"
 "Install hooks"
+"Setup snapshots"
 "Setup snapper"
 "Copy script"
 "Chroot"
@@ -1182,6 +1202,7 @@ do
         "Install aur")		install_aur ;;
         "Install tweaks")	install_tweaks ;;
         "Install hooks")	install_hooks ;;
+	"Setup snapshots")	setup_snapshots ;;
 	"Setup snapper")	setup_snapper ;;
         "Chroot")		do_chroot ;;
         "Mount $mnt")		mount_mount  ;;
