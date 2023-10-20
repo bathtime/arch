@@ -70,25 +70,32 @@ if [[ "$(mount | grep $mnt)" ]]; then
    [[ "$(pwd | grep $mnt)" ]] && cd ..
 
    sync
-
    umount -n -R $mnt
 
    if [[ "$(mount | grep 'on '$mnt)" ]]; then
-      echo "Couldn't unmount. Trying alternative method. Please be patient..." 
+
+      echo "\nCouldn't unmount. Trying alternative method. Please be patient...\n" 
+
       sync
-      sleep 2
-      umount -R -l $mnt
+      sleep 1
+      umount -R -f $mnt
+
+      if [[ "$(mount | grep 'on '$mnt)" ]]; then
+         echo "\nCouldn't unmount. Using lazy method...\n" 
+         sleep 1
+         umount -R -l $mnt
+      fi
    fi 
 
    if [[ "$?" -eq 0 ]]; then
-      echo "Unmount successful."
+      echo -e "\nUnmount successful.\n"
    else
-      echo "ERROR ($?): could not unmount!"
+      echo -e "\nERROR ($?): could not unmount!\n"
       exit
    fi 
 
 else
-   echo "Disk already unmounted!"
+   echo -e "\nDisk already unmounted!\n"
 fi
 
 }
@@ -1042,9 +1049,22 @@ mount_mount
 
 echo -e "\nEntering chroot. Type 'exit' to leave.\n"
 
-arch-chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
+cd $mnt
+
+mount -t proc /proc proc/
+mount -t sysfs /sys sys/
+mount --rbind /dev dev/
+mount --rbind /run run/
+mount --rbind /sys/firmware/efi/efivars sys/firmware/efi/efivars/
+cp /etc/resolv.conf etc/resolv.conf
+
+chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
 
 echo -e "\nExiting chroot...\n"
+
+cd /
+
+unmount_disk
 
 }
 
@@ -1221,8 +1241,7 @@ loadkeys en
 setfont ter-132b
 
 
-choices=(
-"Choose disk"
+choices=("Choose disk"
 "Partition disk"
 "Install base"
 "Setup fstab"
@@ -1248,8 +1267,8 @@ choices=(
 "Download apps"
 "Post setup"
 "Reset pacman keys"
-"Quit"
-)
+"Quit")
+
 
 
 select choice in "${choices[@]}" 
@@ -1261,8 +1280,7 @@ do
         "Setup fstab")		setup_fstab ;;
 	"Install boot manager") echo -e "\nWhich boot manager would you like to install?\n"
 		
-				choiceBoot=(EFISTUB uki grub rEFInd systemD quit) 
-
+				
 				select choiceBoot in "${choiceBoot[@]}"
 				do
 					case $choiceBoot in
@@ -1324,5 +1342,4 @@ do
         '')			echo -e "\nInvalid option!\n"; ;;
     esac
 done
-
 
