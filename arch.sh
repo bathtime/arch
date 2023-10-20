@@ -97,22 +97,31 @@ fi
 
 choose_disk () {
 
+search_disks=1
+
+while [ $search_disks -eq 1 ]; do
+
 echo -e "\nDrives found:\n"
 
 lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd"
 disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-disks+=$(echo -e "\nunmount\nquit")
+disks+=$(echo -e "\nunmount\nrefresh\nquit")
 
 echo -e "\nWhich drive?\n"
 
 select disk in $disks
 do
    case $disk in
-        quit) echo -e "\nQuitting!"; exit; ;;
         unmount) unmount_disk; exit; ;;
-        '')   echo -e "\nInvalid option!\n"; ;;
-        *)    break; ;;
+	refresh) 
+
+	break;	;;
+        quit) echo -e "\nQuitting!"; exit; ;;
+        '')   echo -e "\nInvalid option!\n" ; break ;;
+        *)    search_disks=0; break; ;;
     esac
+done
+
 done
 
 echo -e "\nSetup config:\n\ndisk: $disk, mounted on $mnt\nuser: $user\n"
@@ -194,8 +203,7 @@ for subvol in '' "${subvols[@]}"; do
 done
 
 # mount efi partition
-#mount --mkdir $disk$espPart $mnt/efi
-mount --mkdir $disk$espPart $mnt/boot
+mount --mkdir $disk$espPart $mnt$efi_path
 
 fi
 
@@ -203,7 +211,7 @@ fi
 
 
 
-install_pacstrap () {
+install_base () {
 
 mount_mount
 
@@ -212,12 +220,24 @@ check_on_root
 source /etc/profile
 pacstrap -K $mnt base linux linux-firmware btrfs-progs vim vi libarchive $ucode gptfdisk
 
+
+###  Prepare auto-login  ###
+
+# Does a user already exist?
+if [ ! "$(grep user /etc/passwd)" ]; then
+   login_user=root
+else
+   login_user=$user
+fi
+
+echo -e "\nCreating auto-login for $login_user.\n"
+
 mkdir -p $mnt/etc/systemd/system/getty@tty1.service.d
 cat > $mnt/etc/systemd/system/getty@tty1.service.d/autologin.conf << EOF
 [Service]
 Type=simple
 ExecStart=
-ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin root --noclear %I 38400 linux
+ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin $login_user --noclear %I 38400 linux
 EOF
 
 }
@@ -247,7 +267,7 @@ sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
 # Make /efi read-only
 #sed -i 's/\/efi.*vfat.*rw/\/efi     vfat     ro/' $mnt/etc/fstab
 
-[ ! "$(cat $mnt/etc/fstab | grep 'none swap defaults 0 0')" ] && echo "UUID=$SWAP_UUID none swap defaults 0 0" >> $mnt/etc/fstab
+[ ! "$(cat $mnt/etc/fstab | grep 'none swap defaults 0 0')" ] && echo -e "UUID=$SWAP_UUID none swap defaults 0 0\n" >> $mnt/etc/fstab
 [ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/cache')" ] && echo "tmpfs    /var/cache  tmpfs   rw,nodev,nosuid,mode=1755,size=2G   0 0" >> $mnt/etc/fstab
 [ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/log')" ]   && echo "tmpfs    /var/log    tmpfs   rw,nodev,nosuid,mode=1775,size=2G   0 0" >> $mnt/etc/fstab
 [ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/tmp')" ]   && echo "tmpfs    /var/tmp    tmpfs   rw,nodev,nosuid,mode=1777,size=2G   0 0" >> $mnt/etc/fstab
@@ -262,6 +282,10 @@ cat $mnt/etc/fstab
 
 install_EFISTUB () {
 
+echo "TODO."
+
+exit
+
 mount_mount
 
 SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
@@ -274,8 +298,8 @@ ALL_microcode=(/boot/*-ucode.img)
 
 PRESETS=("default")
 
-#default_image="/efi/EFI/arch/initramfs-linux.img"
-default_image="/boot/initramfs-linux.img"
+default_image="/efi/EFI/boot/initramfs-linux.img"
+#default_image="/boot/initramfs-linux.img"
 #default_image="/boot/efi/boot/bootx64.efi"
 #default_uki="/efi/EFI/Linux/arch-linux.efi"
 ' > $mnt/etc/mkinitcpio.d/linux.preset
@@ -284,12 +308,13 @@ default_image="/boot/initramfs-linux.img"
 
 arch-chroot $mnt /bin/bash -e << EOF
 
-mkdir -p /boot/efi/arch
-
 mkinitcpio -p linux
 
-efibootmgr --create --disk $disk --part $espPart --label "Arch Linux" --loader "/vmlinuz-linux" --unicode "root=$ROOT_UUID rootflags=subvol=@ resume=$SWAP_UUID rw initrd=\boot\EFI\BOOT\bootx64.efi"
+efibootmgr --create --disk $disk --part $espPart --label "Arch Linux" --loader "/vmlinuz-linux" --unicode "root=$ROOT_UUID rootflags=subvol=@ resume=$SWAP_UUID rw initrd=\EFI\boot\initramfs-linux.img"
 
+# An example of deleting entries:
+# efibootmgr -B 0001 -L 'Arch Linux 2'
+efibootmgr --unicode
 
 
 EOF
@@ -299,6 +324,10 @@ EOF
 
 
 install_uki () {
+
+echo "TODO."
+
+exit
 
 mount_mount
 
@@ -335,6 +364,8 @@ EOF
 
 
 install_SYSTEMDBOOT () {
+
+echo "TODO"
 
 exit
 
@@ -496,8 +527,6 @@ alias ls="ls --color=auto"
 alias grep="grep --color=auto"
 alias vi="vim"
 PS1="# "' > /root/.bashrc
-
-
 
 EOF
 
@@ -704,11 +733,12 @@ sed -Ei 's/^#(Color)$/\1\nILoveCandy/;s/^#(ParallelDownloads).*/\1 = 10/' $mnt/e
 
 arch-chroot $mnt systemctl enable systemd-oomd
 
+
+###  Setup mksh  ###
+
 if [ ! -f $mnt/usr/bin/mksh ]; then
 
 arch-chroot $mnt sudo -u $user $aurApp -S --noconfirm mksh
-
-###  Shell (change to mksh)  ###
 
 echo 'HISTFILE=/root/.mksh_history
 HISTSIZE=5000
@@ -775,6 +805,8 @@ create_archive() {
 }
 
 create_overlay() {
+
+   echo -e "\nCreating overlay...\n"
 
    local lower_dir=$(mktemp -d -p /)
    local ram_dir=$(mktemp -d -p /)
@@ -999,7 +1031,6 @@ copy_script () {
 
 [ "$?" -eq 0 ] && echo -e "\nScript copied!" || echo -e "\nScript not copied."
 
-
 }
 
 
@@ -1193,7 +1224,7 @@ setfont ter-132b
 choices=(
 "Choose disk"
 "Partition disk"
-"Install pacstrap"
+"Install base"
 "Setup fstab"
 "Install boot manager"
 "General setup"
@@ -1226,7 +1257,7 @@ do
    case $choice in
         "Choose disk")		choose_disk ;;
         "Partition disk")	create_partitions ;;
-        "Install pacstrap")	install_pacstrap ;;
+        "Install base")		install_base ;;
         "Setup fstab")		setup_fstab ;;
 	"Install boot manager") echo -e "\nWhich boot manager would you like to install?\n"
 		
