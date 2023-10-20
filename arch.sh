@@ -429,7 +429,22 @@ general_setup () {
 mount_mount
 copy_script
 
+# Setup sudo
 [ ! -f $mnt/usr/bin/sudo ] && pacstrap -K $mnt sudo
+
+mkdir -p $mnt/etc/sudoers.d
+echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/wheel
+
+rm -rf $mnt/home/$user
+arch-chroot $mnt userdel user 
+
+arch-chroot $mnt useradd -m user -G wheel
+
+if [ ! "$(grep user /etc/passwd)" ]; then
+   echo -e "\nUser was not created. Exiting.\n"
+   exit
+fi
+
 
 [ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/user/.cache')" ] && echo "tmpfs    /home/user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> $mnt/etc/fstab
 
@@ -467,18 +482,7 @@ ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin $user --n
 EOF2
 
 
-# Setup sudo
-mkdir -p /etc/sudoers.d
-echo '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/wheel
-
 printf "$password\n$password\n" | passwd root
-
-
-userdel user
-rm -rf /home/user
-
-useradd -m user -G wheel
-
 printf "$password\n$password\n" | passwd user
 
 # Disable login by root
@@ -717,7 +721,7 @@ install_hooks () {
 
 mount_mount
 
-[ -f $mnt/bin/rsync ] && pacstrap -K $mnt rsync squashfs-tools
+[ ! -f $mnt/bin/rsync ] && pacstrap -K $mnt rsync squashfs-tools
 
 
 ###  Add tmpfs/overlay hook options  ###
@@ -916,6 +920,16 @@ HOOKS=(base udev keyboard autodetect kms modconf sd-vconsole block filesystems l
 COMPRESSION="lz4"
 #COMPRESSION_OPTIONS=()
 MODULES_DECOMPRESS="yes"' > $mnt/etc/mkinitcpio.conf
+
+echo 'ALL_config="/etc/mkinitcpio.conf"
+ALL_kver="/boot/vmlinuz-linux"
+ALL_microcode=(/boot/*-ucode.img)
+
+PRESETS=("default")
+
+#default_config="/etc/mkinitcpio.conf"
+default_image="/boot/initramfs-linux.img"
+' > $mnt/etc/mkinitcpio.d/linux.preset
 
 arch-chroot $mnt mkinitcpio -P 
 
