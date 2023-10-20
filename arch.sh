@@ -287,7 +287,7 @@ mkdir -p /boot/efi/arch
 
 mkinitcpio -p linux
 
-efibootmgr --create --disk $disk --part $espPart --label "Arch Linux" --loader "/vmlinuz-linux" --unicode "root=$ROOT_UUID rootflags=subvol=@ resume=$SWAP_UUID rw initrd=\boot\efi\arch\initramfs-linux.img"
+efibootmgr --create --disk $disk --part $espPart --label "Arch Linux" --loader "/vmlinuz-linux" --unicode "root=$ROOT_UUID rootflags=subvol=@ resume=$SWAP_UUID rw initrd=\boot\EFI\BOOT\bootx64.efi"
 
 
 
@@ -474,13 +474,12 @@ echo '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/wheel
 printf "$password\n$password\n" | passwd root
 
 
-userdel $user
-rm -rf /home/$user
+userdel user
+rm -rf /home/user
 
-useradd -m $user -G wheel
-sleep 1
+useradd -m user -G wheel
 
-printf "$password\n$password\n" | passwd $user
+printf "$password\n$password\n" | passwd user
 
 # Disable login by root
 #passwd --lock root
