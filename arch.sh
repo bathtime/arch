@@ -74,14 +74,16 @@ if [[ "$(mount | grep $mnt)" ]]; then
 
    if [[ "$(mount | grep 'on '$mnt)" ]]; then
 
-      echo "\nCouldn't unmount. Trying alternative method. Please be patient...\n" 
+      echo -e "\nCouldn't unmount. Trying alternative method. Please be patient...\n" 
+
+      findmnt -R $mnt
 
       sync
-      sleep 1
       umount -R -f $mnt
+      sleep 1
 
       if [[ "$(mount | grep 'on '$mnt)" ]]; then
-         echo "\nCouldn't unmount. Using lazy method...\n" 
+         echo -e "\nCouldn't unmount. Using lazy method...\n" 
          sleep 1
          umount -R -l $mnt
       fi
