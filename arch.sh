@@ -364,6 +364,8 @@ echo "\"Boot read only\"  \"root=UUID=$ROOT_UUID ro rootflags=subvol=@ quiet nmi
 
 sed -i 's/#enable_touch/enable_touch/g; s/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g' $mnt/boot/efi/boot/refind.conf
 
+rm -rf /boot/grub
+
 }
 
 
@@ -569,18 +571,18 @@ mkdir -p $mnt/etc/systemd/system/dhcpcd@.service.d/
 echo '[Service]
 ExecStart=
 ExecStart=/usr/bin/dhcpcd -b -q %I
-' $mnt/etc/systemd/system/dhcpcd@.service.d/no-wait.conf
+' > $mnt/etc/systemd/system/dhcpcd@.service.d/no-wait.conf
 
 mkdir -p $mnt/etc/iwd
 echo '[General]
 EnableNetworkConfiguration=true
-' $mnt/etc/iwd/main.conf
+' > $mnt/etc/iwd/main.conf
 
 # So iwd can automatically connect without any further interaction
 mkdir -p $mnt/var/lib/iwd
-echo '[Security]
+echo "[Security]
 Passphrase="$wifi_pass"
-' $mnt/var/lib/iwd/"$wifi_ssid".psk
+" > $mnt/var/lib/iwd/"$wifi_ssid".psk
 
 echo "Enabling network services..."
 arch-chroot $mnt systemctl disable wpa_supplicant.service
