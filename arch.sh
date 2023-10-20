@@ -13,6 +13,7 @@ espPart=1
 swapPart=2
 rootPart=3
 subvols=()
+efi_path=/boot/efi
 
 ucode=intel-ucode
 aurApp=paru
@@ -377,7 +378,7 @@ SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 
 arch-chroot $mnt /bin/bash -e << EOF
 
-grub-install --target=x86_64-efi --efi-directory=/efi/ --bootloader-id=GRUB --removable
+grub-install --target=x86_64-efi --efi-directory=$efi_path --bootloader-id=GRUB --removable
 
 cat > /etc/default/grub << EOF2
 
@@ -496,34 +497,6 @@ PS1="# "' > /root/.bashrc
 
 
 
-###  Setup network  ###
-
-[ ! -f /usr/bin/dhcpcd ] && pacman --noconfirm -Sy iw iwd dhcpcd
-
-# Helps with slow booting caused by waiting for a connection
-mkdir -p /etc/systemd/system/dhcpcd@.service.d/
-cat > /etc/systemd/system/dhcpcd@.service.d/no-wait.conf << EOF2
-[Service]
-ExecStart=
-ExecStart=/usr/bin/dhcpcd -b -q %I
-EOF2
-
-mkdir -p /etc/iwd
-cat > /etc/iwd/main.conf << EOF2
-[General]
-EnableNetworkConfiguration=true
-EOF2
-
-# So iwd can automatically connect without any further interaction
-mkdir -p /var/lib/iwd
-cat > /var/lib/iwd/"$wifi_ssid".psk << EOF2
-[Security]
-Passphrase="$wifi_pass"
-EOF2
-
-echo "Enabling network services..."
-systemctl enable iwd.service dhcpcd.service
-
 EOF
 
 
@@ -562,16 +535,72 @@ alias vi="vim"
 PS1="$ "' > $mnt/home/$user/.bashrc
 chown user:user $mnt/home/$user/.bashrc
 
-# Remember last cursor position in vim
+
 cat > $mnt/home/$user/.vimrc << EOF
+
 au BufReadPost *
     \ if line("'\"") > 0 && line("'\"") <= line("$") && &filetype != "gitcommit" | 
     \ execute("normal \`\"") | 
     \ endif
 
+set mouse=c
+
 syntax on
+
 EOF
+
 chown user:user $mnt/home/$user/.vimrc
+cp $mnt/home/$user/.vimrc $mnt/root/
+
+}
+
+
+
+setup_network_iwd () {
+
+mount_mount
+
+###  Setup network  ###
+
+arch-chroot $mnt pacman -S iw iwd dhcpcd
+
+# Helps with slow booting caused by waiting for a connection
+mkdir -p $mnt/etc/systemd/system/dhcpcd@.service.d/
+echo '[Service]
+ExecStart=
+ExecStart=/usr/bin/dhcpcd -b -q %I
+' $mnt/etc/systemd/system/dhcpcd@.service.d/no-wait.conf
+
+mkdir -p $mnt/etc/iwd
+echo '[General]
+EnableNetworkConfiguration=true
+' $mnt/etc/iwd/main.conf
+
+# So iwd can automatically connect without any further interaction
+mkdir -p $mnt/var/lib/iwd
+echo '[Security]
+Passphrase="$wifi_pass"
+' $mnt/var/lib/iwd/"$wifi_ssid".psk
+
+echo "Enabling network services..."
+arch-chroot $mnt systemctl disable wpa_supplicant.service
+arch-chroot $mnt systemctl enable iwd.service dhcpcd.service
+
+}
+
+
+
+setup_network_wpa () {
+
+mount_mount
+
+arch-chroot $mnt pacman -S iw wpa_supplicant dhcpcd
+
+arch-chroot $mnt systemctl disable iwd.service
+arch-chroot $mnt systemctl enable wpa_supplicant.service
+
+mkdir -p $mnt/etc/wpa_supplicant
+arch-chroot $mnt wpa_passphrase "$wifi_ssid" "$wifi_pass" > $mnt/etc/wpa_supplicant/"$wifi_ssid".conf
 
 }
 
@@ -632,6 +661,8 @@ EOF
 install_aur () {
 
 mount_mount
+
+pacstrap -K $mnt base-devel git less
 
 arch-chroot $mnt /bin/bash << EOF
 
@@ -1164,6 +1195,7 @@ choices=(
 "Setup fstab"
 "Install boot manager"
 "General setup"
+"Setup network"
 "Install aur"
 "Install tweaks"
 "Install hooks"
@@ -1211,6 +1243,19 @@ do
 					esac						
 				done ;;
 	"General setup")	general_setup ;;
+       	"Setup network") echo -e "\nWhich network manager would you like to install?\n"
+		
+				choices=(iwd wpa_supplicant quit) 
+
+				select choice in "${choices[@]}"
+				do
+					case $choice in
+						"iwd")			setup_network_iwd ;;
+						"wpa_supplicant")	setup_network_wpa ;;
+						"quit")		exit ;;
+						'')		echo -e "\nInvalid option!\n" ;;
+					esac						
+				done ;;
         "Install aur")		install_aur ;;
         "Install tweaks")	install_tweaks ;;
         "Install hooks")	install_hooks ;;
