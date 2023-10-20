@@ -633,23 +633,18 @@ install_aur () {
 
 mount_mount
 
-[ ! -f $mnt/usr/bin/git ] && pacstrap -K $mnt git base-devel
-
 arch-chroot $mnt /bin/bash << EOF
-
 
 cd /home/$user
 
 sudo -u $user git clone https://aur.archlinux.org/$aurApp.git
 
-[ "$aurApp" = "paru" ] && [ ! -f /usr/bin/cargo ] && pacman -Sy --noconfirm cargo
+[ "$aurApp" = "paru" ] && pacman -Sy --noconfirm cargo
 
 cd $aurApp
-
 sudo -u $user makepkg -si
-sudo -u $user $aurApp --gendb
 
-exit
+sudo -u $user $aurApp --gendb
 
 [ "$aurApp" = "paru" ] && pacman -R rust
 [ "$aurApp" = "yay" ] && pacman -R rust
@@ -666,7 +661,6 @@ install_tweaks () {
 
 mount_mount
 
-[ ! -f $mnt/usr/bin/mksh ] && arch-chroot $mnt sudo -u $user $aurApp -S --noconfirm mksh
 
 [ ! -f $mnt/usr/bin/ncdu ] && pacstrap -K $mnt terminus-font ncdu dosfstools parted arch-install-scripts tar man gptfdisk
 
@@ -677,6 +671,9 @@ sed -Ei 's/^#(Color)$/\1\nILoveCandy/;s/^#(ParallelDownloads).*/\1 = 10/' $mnt/e
 
 arch-chroot $mnt systemctl enable systemd-oomd
 
+if [ ! -f $mnt/usr/bin/mksh ]; then
+
+arch-chroot $mnt sudo -u $user $aurApp -S --noconfirm mksh
 
 ###  Shell (change to mksh)  ###
 
@@ -712,6 +709,8 @@ arch-chroot $mnt /bin/bash << EOF
 chsh -s /usr/bin/mksh                          # root shell
 echo 123456 | sudo -u $user chsh -s /bin/mksh  # user shell
 EOF
+
+fi
 
 }
 
