@@ -4,8 +4,34 @@
 # Download and run with:
 # bash <(curl -sL bit.ly/a-install)
 
-set -e
 
+###  Set error detection  ###
+ 
+error() {
+
+   local sourcefile=$1
+   local lineno=$2
+   local errornum=$3
+   local command=$4
+
+   echo -e "\e[0;41m\n\n$1: Error $3 on line $2: \n\n$4\n\e[0;37m\n\n"
+
+}
+
+trap 'error "${BASH_SOURCE}" "${LINENO}" "$?" "${BASH_COMMAND}"' ERR
+
+error_check () {
+
+if [ $1 -eq 1 ]; then
+   set -Eeuo pipefail
+else
+   set +e 
+fi
+
+}
+
+# Used to temporarily disable at certain points in script (eg., as in the mount_disk function)
+error_check 1
 
 
 mnt=/mnt
@@ -64,6 +90,9 @@ unmount_disk () {
 
 if [[ "$(mount | grep $mnt)" ]]; then
 
+   # Turn off as there is often a mount error that can be solved, so no need to exit
+   error_check 0 
+
    echo "Unmounting $mnt..."
 
    # Shouldn't be in directory we're unmounting   
@@ -99,6 +128,8 @@ if [[ "$(mount | grep $mnt)" ]]; then
 else
    echo -e "\nDisk already unmounted!\n"
 fi
+
+error_check 1
 
 }
 
@@ -191,13 +222,13 @@ done
 mkdir -p $mnt/{etc,tmp}
 
 unmount_disk
-mount_mount
+mount_disk
 
 }
 
 
 
-mount_mount () {
+mount_disk () {
 
 check_on_root
 
@@ -222,7 +253,7 @@ fi
 
 install_base () {
 
-mount_mount
+mount_disk
 
 check_on_root
 
@@ -255,7 +286,7 @@ EOF
 
 setup_fstab () {
 
-mount_mount
+mount_disk
 
 genfstab -U $mnt > $mnt/etc/fstab
 
@@ -295,7 +326,7 @@ echo "TODO."
 
 exit
 
-mount_mount
+mount_disk
 
 SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
@@ -338,7 +369,7 @@ echo "TODO."
 
 exit
 
-mount_mount
+mount_disk
 
 SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
@@ -390,7 +421,7 @@ arch-chroot $mnt systemctl enable systemd-boot-update.service
 
 install_REFIND () {
 
-mount_mount
+mount_disk
 
 [ ! -f $mnt/usr/bin/refind-install ] && pacstrap -K $mnt refind
 
@@ -406,13 +437,15 @@ sed -i 's/#enable_touch/enable_touch/g; s/#textonly/textonly/g; s/timeout .*/tim
 
 rm -rf /boot/grub
 
+echo -e "\nYou should have a fully bootable system now. Feel free to test it.\n"
+
 }
 
 
 
 install_GRUB () {
 
-mount_mount
+mount_disk
 
 pacstrap -K $mnt grub grub-btrfs os-prober efibootmgr inotify-tools lz4
 
@@ -463,13 +496,15 @@ grub-mkconfig -o /boot/grub/grub.cfg
 
 EOF
 
+echo -e "\nYou should have a fully bootable system now. Feel free to test it.\n"
+
 }
 
 
 
 general_setup () {
 
-mount_mount
+mount_disk
 copy_script
 
 # Setup sudo
@@ -491,51 +526,46 @@ fi
 
 [ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/user/.cache')" ] && echo "tmpfs    /home/user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> $mnt/etc/fstab
 
+echo -e 'en_US.UTF-8 UTF-8\nen_US ISO-8859-1' > $mnt/etc/locale.gen  
+echo 'LANG=en_US.UTF-8' > $mnt/etc/locale.conf
+echo 'Arch-Linux' > $mnt/etc/hostname
+echo 'KEYMAP=us' > $mnt/etc/vconsole.conf
+
+echo "127.0.0.1   localhost
+::1         localhost
+127.0.1.1   $hostname.localdomain   $hostname" > $mnt/etc/hosts
+
+###  Install necessary applications with proper permissions
+mkdir -p -m 750 $mnt/etc/sudoers.d
+
+
+# Autologin to tty1
+mkdir -p $mnt/etc/systemd/system/getty@tty1.service.d
+echo "[Service]
+Type=simple
+ExecStart=
+ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin $user --noclear %I 38400 linux
+" > $mnt/etc/systemd/system/getty@tty1.service.d/autologin.conf
+
+echo '[[ $- != *i* ]] && return
+alias ls="ls --color=auto"
+alias grep="grep --color=auto"
+alias vi="vim"
+PS1="# "' > $mnt/root/.bashrc
+
+
 arch-chroot $mnt /bin/bash -e << EOF
 
 hwclock --systohc
 ln -sf /usr/share/zoneinfo/Canada/Eastern /etc/localtime
 
-echo -e 'en_US.UTF-8 UTF-8\nen_US ISO-8859-1' > /etc/locale.gen  
-echo 'LANG=en_US.UTF-8' > /etc/locale.conf
-echo 'Arch-Linux' > /etc/hostname
-echo 'KEYMAP=us' > /etc/vconsole.conf
-
-cat > /etc/hosts <<EOF2
-127.0.0.1   localhost
-::1         localhost
-127.0.1.1   $hostname.localdomain   $hostname
-EOF2
-
 locale-gen
-
-###  Install necessary applications with proper permissions
-mkdir -p -m 750 /etc/sudoers.d
-
-
-
-# Autologin to tty1
-
-mkdir -p /etc/systemd/system/getty@tty1.service.d
-cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf << EOF2
-[Service]
-Type=simple
-ExecStart=
-ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin $user --noclear %I 38400 linux
-EOF2
-
 
 printf "$password\n$password\n" | passwd root
 printf "$password\n$password\n" | passwd user
 
 # Disable login by root
 #passwd --lock root
-
-echo '[[ $- != *i* ]] && return
-alias ls="ls --color=auto"
-alias grep="grep --color=auto"
-alias vi="vim"
-PS1="# "' > /root/.bashrc
 
 EOF
 
@@ -598,7 +628,7 @@ cp $mnt/home/$user/.vimrc $mnt/root/
 
 setup_network_iwd () {
 
-mount_mount
+mount_disk
 
 ###  Setup network  ###
 
@@ -632,7 +662,7 @@ arch-chroot $mnt systemctl enable iwd.service dhcpcd.service
 
 setup_network_wpa () {
 
-mount_mount
+mount_disk
 
 arch-chroot $mnt pacman -S iw wpa_supplicant dhcpcd
 
@@ -648,7 +678,7 @@ arch-chroot $mnt wpa_passphrase "$wifi_ssid" "$wifi_pass" > $mnt/etc/wpa_supplic
 
 setup_snapper () {
 
-mount_mount
+mount_disk
 
 # Snapshot script
 echo '#!/bin/bash
@@ -700,7 +730,7 @@ EOF
 
 install_aur () {
 
-mount_mount
+mount_disk
 
 #pacstrap -K $mnt base-devel git less
 [ "$aurApp" = "paru" ] && [ ! -f /usr/bin/cargo ] && pacstrap -K $mnt cargo
@@ -731,7 +761,7 @@ EOF
 
 install_tweaks () {
 
-mount_mount
+mount_disk
 
 
 [ ! -f $mnt/usr/bin/ncdu ] && pacstrap -K $mnt terminus-font ncdu dosfstools parted arch-install-scripts tar man gptfdisk
@@ -789,9 +819,9 @@ fi
 
 
 
-install_hooks () {
+install_liveroot () {
 
-mount_mount
+mount_disk
 
 [ ! -f $mnt/bin/rsync ] && pacstrap -K $mnt rsync squashfs-tools
 
@@ -1016,7 +1046,7 @@ arch-chroot $mnt systemctl mask systemd-remount-fs.service
 
 setup_snapshots () {
 
-mount_mount
+mount_disk
 
 rm -rf $mnt/.snapshots/
 mkdir -p $mnt/.snapshots
@@ -1052,7 +1082,9 @@ copy_script () {
 do_chroot () {
 
 check_on_root
-mount_mount
+mount_disk
+
+# arch-chroot has a bug that causes it to load in the background when running in interactive mode, so I'll be using regular chroot for this
 
 echo -e "\nEntering chroot. Type 'exit' to leave.\n"
 
@@ -1196,7 +1228,7 @@ ls -la root.squashfs
 
 CONFIG_FILES=".config/baloofilerc
 .config/dolphinrc
-.config/epy/configuration.json
+/.config/epy/configuration.json
 .config/fontconfig/fonts.conf
 .config/gtkrc
 .config/gtkrc-2.0
@@ -1235,12 +1267,7 @@ CONFIG_FILES=".config/baloofilerc
 mount-readonly.sh"
 
 
-if [[ ! "$1" = "" ]]; then
-   disk=$1
-else
-   choose_disk
-fi
-
+choose_disk
 check_viable_disk
 loadkeys en
 
@@ -1257,7 +1284,7 @@ choices=("Choose disk"
 "Setup network"
 "Install aur"
 "Install tweaks"
-"Install hooks"
+"Install liveroot"
 "Setup snapshots"
 "Setup snapper"
 "Copy script"
@@ -1318,11 +1345,11 @@ do
 				done ;;
         "Install aur")		install_aur ;;
         "Install tweaks")	install_tweaks ;;
-        "Install hooks")	install_hooks ;;
+        "Install liveroot")	install_liveroot ;;
 	"Setup snapshots")	setup_snapshots ;;
 	"Setup snapper")	setup_snapper ;;
         "Chroot")		do_chroot ;;
-        "Mount $mnt")		mount_mount  ;;
+        "Mount $mnt")		mount_disk  ;;
         "Unmount $mnt")		unmount_disk  ;;
 	"Create squashfs image") create_archive ;;
 	"Clone disk")		clone_disk ;;
