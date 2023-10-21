@@ -63,7 +63,7 @@ check_viable_disk () {
 
 	if [[ "$disk" == "" ]]; then
    	echo -e "\nMissing disk parameter. Exiting.\n"
-  	 exit
+  		exit
 	fi
 
 	if [[ ! "$(lsblk --output=PATH -d -n | grep $disk)" ]]; then
@@ -238,11 +238,12 @@ mount_disk () {
 
 		for subvol in '' "${subvols[@]}"; do
    		mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
-   		echo "mount -o $mountopts,subvol=@$subvol $disk$rootPart /mnt/${subvol//_//}"
 		done
 
 		# mount efi partition
 		mount --mkdir $disk$espPart $mnt$efi_path
+
+      mount | grep $disk
 
 	fi
 
@@ -252,9 +253,9 @@ mount_disk () {
 
 install_base () {
 
+	check_on_root
 	mount_disk
 
-	check_on_root
 
 	source /etc/profile
 	pacstrap -K $mnt base linux linux-firmware btrfs-progs vim vi libarchive $ucode gptfdisk
@@ -285,6 +286,7 @@ EOF
 
 setup_fstab () {
 
+	check_on_root
 	mount_disk
 
 	genfstab -U $mnt > $mnt/etc/fstab
@@ -417,6 +419,7 @@ install_SYSTEMDBOOT () {
 
 install_REFIND () {
 
+	check_on_root
 	mount_disk
 
 	[ ! -f $mnt/usr/bin/refind-install ] && pacstrap -K $mnt refind
@@ -442,6 +445,7 @@ install_REFIND () {
 
 install_GRUB () {
 
+	check_on_root
 	mount_disk
 
 	pacstrap -K $mnt grub grub-btrfs os-prober efibootmgr inotify-tools lz4
@@ -501,6 +505,7 @@ EOF
 
 general_setup () {
 
+	check_on_root
 	mount_disk
 	copy_script
 
@@ -627,6 +632,7 @@ EOF
 
 setup_network_iwd () {
 
+	check_on_root
 	mount_disk
 
 	###  Setup network  ###
@@ -639,14 +645,19 @@ setup_network_iwd () {
 ExecStart=
 ExecStart=/usr/bin/dhcpcd -b -q %I' > $mnt/etc/systemd/system/dhcpcd@.service.d/no-wait.conf
 
+   [ "$(cat $mnt/etc/dhcpcd.conf | grep noarp)" ] && echo noarp >> $mnt/etc/dhcpcd.conf
+
 	mkdir -p $mnt/etc/iwd
 	echo '[General]
-EnableNetworkConfiguration=true' > $mnt/etc/iwd/main.conf
+EnableNetworkConfiguration=true
+
+[Scan]
+DisablePeriodicScan=true' > $mnt/etc/iwd/main.conf
 
 	# So iwd can automatically connect without any further interaction
 	mkdir -p $mnt/var/lib/iwd
 	echo "[Security]
-Passphrase=\"$wifi_pass\"" > $mnt/var/lib/iwd/"$wifi_ssid".psk
+Passphrase='$wifi_pass'" > $mnt/var/lib/iwd/"$wifi_ssid".psk
 
 	echo "Enabling network services..."
 	arch-chroot $mnt systemctl enable iwd.service dhcpcd.service
@@ -657,6 +668,7 @@ Passphrase=\"$wifi_pass\"" > $mnt/var/lib/iwd/"$wifi_ssid".psk
 
 setup_network_wpa () {
 
+	check_on_root
 	mount_disk
 
 	arch-chroot $mnt pacman -S iw wpa_supplicant dhcpcd
@@ -672,6 +684,7 @@ setup_network_wpa () {
 
 setup_snapper () {
 
+	check_on_root
 	mount_disk
 
 	# Snapshot script
@@ -726,6 +739,7 @@ EOF
 
 install_aur () {
 
+	check_on_root
 	mount_disk
 
 	pacstrap -K $mnt base-devel git less
@@ -757,6 +771,7 @@ EOF
 
 install_tweaks () {
 
+	check_on_root
 	mount_disk
 
 
@@ -816,6 +831,7 @@ EOF
 
 install_liveroot () {
 
+	check_on_root
 	mount_disk
 
 	[ ! -f $mnt/bin/rsync ] && pacstrap -K $mnt rsync squashfs-tools
@@ -1040,6 +1056,7 @@ default_image="/boot/initramfs-linux.img"' > $mnt/etc/mkinitcpio.d/linux.preset
 
 setup_snapshots () {
 
+	check_on_root
 	mount_disk
 
 	rm -rf $mnt/.snapshots/
@@ -1192,6 +1209,7 @@ download_apps () {
 
 clone_disk () {
 
+	check_on_root
 	echo -e "\nCloning disk. Please be patient...\n"
 
 	rsync -a --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ --exclude=/mnt/ / $mnt/
@@ -1208,9 +1226,6 @@ create_archive () {
 	echo "Creating archive file..."
 
 	cd / 
-
-	#tar --exclude=rootfs.tar.gz --exclude=./dev/* --exclude=./proc/* --exclude=./sys/* --exclude=./tmp/* --exclude=./run/* --exclude=./mnt/* --exclude=./.snapshots/* --exclude=./var/tmp/* --exclude=./var/cache/* --exclude=./var/log/* --exclude=./etc/pacman.d/gnupg/* -czf rootfs.tar.gz .
-
 	rm -rf /root.squashfs
 
 	time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e rootfs.tar.gz -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/cache/ -e /var/log/ -e /etc/pacman.d/gnupg/
@@ -1263,7 +1278,13 @@ CONFIG_FILES=".config/baloofilerc
 mount-readonly.sh"
 
 
-choose_disk
+
+if [ "$1" ]; then
+	disk="$1"
+else
+	choose_disk
+fi
+
 check_viable_disk
 loadkeys en
 
@@ -1297,7 +1318,9 @@ choices=("Quit"
 "Download script"
 "Download apps"
 "Post setup"
-"Reset pacman keys")
+"Reset pacman keys"
+"Change mount to /"
+"Change mount to /mnt")
 
 
 
@@ -1351,8 +1374,8 @@ do
 		"Chroot")					do_chroot ;;
       "Mount $mnt")				mount_disk  ;;
       "Unmount $mnt")			unmount_disk  ;;
-		"Create squashfs image")	create_archive ;;
 		"Clone disk")				clone_disk ;;
+		"Create squashfs image")	create_archive ;;
 
 		"Configuration")			echo -e "\nPlease choose an option:\n"
 		
@@ -1376,6 +1399,8 @@ do
       "Download apps")			download_apps    ;;
       "Post setup")				post_setup ;;
       "Reset pacman keys")    reset_keys ;;
+		"Change mount to /")		mnt='' ;;
+		"Change mount to /mnt")	mnt=/mnt ;;
       '')							echo -e "\nInvalid option!\n"; ;;
 	esac
 done
