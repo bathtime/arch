@@ -13,7 +13,7 @@ espPart=1
 swapPart=2
 rootPart=3
 subvols=()
-efi_path=/boot/efi
+efi_path=/efi
 
 ucode=intel-ucode
 aurApp=paru
