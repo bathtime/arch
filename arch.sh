@@ -22,11 +22,11 @@ trap 'error "${BASH_SOURCE}" "${LINENO}" "$?" "${BASH_COMMAND}"' ERR
 
 error_check () {
 
-if [ $1 -eq 1 ]; then
-   set -Eeuo pipefail
-else
-   set +e 
-fi
+	if [ $1 -eq 1 ]; then
+   	set -Eeo pipefail
+	else
+   	set +e 
+	fi
 
 }
 
@@ -61,15 +61,15 @@ autostartapp="startplasma-wayland"
 
 check_viable_disk () {
 
-if [[ "$disk" == "" ]]; then
-   echo -e "\nMissing disk parameter. Exiting.\n"
-   exit
-fi
+	if [[ "$disk" == "" ]]; then
+   	echo -e "\nMissing disk parameter. Exiting.\n"
+  	 exit
+	fi
 
-if [[ ! "$(lsblk --output=PATH -d -n | grep $disk)" ]]; then
-   echo -e "\nNo such disk found ($disk). Exiting.\n"
-   exit
-fi
+	if [[ ! "$(lsblk --output=PATH -d -n | grep $disk)" ]]; then
+   	echo -e "\nNo such disk found ($disk). Exiting.\n"
+  		exit
+	fi
 
 }
 
@@ -77,10 +77,10 @@ fi
 
 check_on_root () {
   
-if [[ $(mount | grep -G "$disk.*on / type") ]]; then 
-   echo -e "\nDevice mounted on root. Will not run. Exiting.\n"
-   exit
-fi
+	if [[ $(mount | grep -G "$disk.*on / type") ]]; then 
+   	echo -e "\nDevice mounted on root. Will not run. Exiting.\n"
+   	exit
+	fi
 
 }
 
@@ -88,48 +88,48 @@ fi
 
 unmount_disk () {
 
-if [[ "$(mount | grep $mnt)" ]]; then
+	if [[ "$(mount | grep $mnt)" ]]; then
 
-   # Turn off as there is often a mount error that can be solved, so no need to exit
-   error_check 0 
+   	# Turn off as there is often a mount error that can be solved, so no need to exit
+   	error_check 0 
 
-   echo "Unmounting $mnt..."
+   	echo "Unmounting $mnt..."
 
-   # Shouldn't be in directory we're unmounting   
-   [[ "$(pwd | grep $mnt)" ]] && cd ..
+   	# Shouldn't be in directory we're unmounting   
+   	[[ "$(pwd | grep $mnt)" ]] && cd ..
 
-   sync
-   umount -n -R $mnt
+   	sync
+   	umount -n -R $mnt
 
-   if [[ "$(mount | grep 'on '$mnt)" ]]; then
+   	if [[ "$(mount | grep 'on '$mnt)" ]]; then
 
-      echo -e "\nCouldn't unmount. Trying alternative method. Please be patient...\n" 
+      	echo -e "\nCouldn't unmount. Trying alternative method. Please be patient...\n" 
 
-      #findmnt -R $mnt
+      	#findmnt -R $mnt
 
-      sync
-      umount -R -f $mnt
-      sleep 1
+      	sync
+      	umount -R -f $mnt
+      	sleep 1
 
-      if [[ "$(mount | grep 'on '$mnt)" ]]; then
-         echo -e "\nCouldn't unmount. Using lazy method...\n" 
-         sleep 1
-         umount -R -l $mnt
-      fi
-   fi 
+      	if [[ "$(mount | grep 'on '$mnt)" ]]; then
+         	echo -e "\nCouldn't unmount. Using lazy method...\n" 
+         	sleep 1
+         	umount -R -l $mnt
+      	fi
+   	fi 
 
-   if [[ "$?" -eq 0 ]]; then
-      echo -e "\nUnmount successful.\n"
-   else
-      echo -e "\nERROR ($?): could not unmount!\n"
-      exit
-   fi 
+   	if [[ "$?" -eq 0 ]]; then
+      	echo -e "\nUnmount successful.\n"
+   	else
+      	echo -e "\nERROR ($?): could not unmount!\n"
+      	exit
+   	fi 
 
-else
-   echo -e "\nDisk already unmounted!\n"
-fi
+	else
+   	echo -e "\nDisk already unmounted!\n"
+	fi
 
-error_check 1
+	error_check 1
 
 }
 
@@ -137,34 +137,32 @@ error_check 1
 
 choose_disk () {
 
-search_disks=1
+	search_disks=1
 
-while [ $search_disks -eq 1 ]; do
+	while [ $search_disks -eq 1 ]; do
 
-echo -e "\nDrives found:\n"
+		echo -e "\nDrives found:\n"
 
-lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd"
-disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-disks+=$(echo -e "\nunmount\nrefresh\nquit")
+		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd"
+		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
+		disks+=$(echo -e "\nunmount\nrefresh\nquit")
 
-echo -e "\nWhich drive?\n"
+		echo -e "\nWhich drive?\n"
 
-select disk in $disks
-do
-   case $disk in
-        unmount) unmount_disk; exit; ;;
-	refresh) 
+		select disk in $disks
+		do
+   		case $disk in
+        		unmount) unmount_disk; exit; ;;
+				refresh) break;	;;
+        		quit) 	echo -e "\nQuitting!"; exit; ;;
+        		'')   	echo -e "\nInvalid option!\n" ; break ;;
+        		*)    	search_disks=0; break; ;;
+    		esac
+		done
 
-	break;	;;
-        quit) echo -e "\nQuitting!"; exit; ;;
-        '')   echo -e "\nInvalid option!\n" ; break ;;
-        *)    search_disks=0; break; ;;
-    esac
-done
+	done
 
-done
-
-echo -e "\nSetup config:\n\ndisk: $disk, mounted on $mnt\nuser: $user\n"
+	echo -e "\nSetup config:\n\ndisk: $disk, mounted on $mnt\nuser: $user\n"
 
 }
 
@@ -172,20 +170,20 @@ echo -e "\nSetup config:\n\ndisk: $disk, mounted on $mnt\nuser: $user\n"
 
 delete_partitions () {
 
-check_on_root
-unmount_disk
+	check_on_root
+	unmount_disk
 
-echo -e "\nWiping disk...\n"
+	echo -e "\nWiping disk...\n"
 
-wipefs -af $disk 
+	wipefs -af $disk 
 
-[ ! -f /usr/bin/sgdisk ] && pacman -S gptfdisk 
+	[ ! -f /usr/bin/sgdisk ] && pacman -S gptfdisk 
 
-sgdisk -Zo $disk
+	sgdisk -Zo $disk
 
-# Not sure if this is required but can't hurt
-#echo "Wiping first 25mb of disk. Please be patient..."
-#dd if=/dev/zero of=$disk bs=1M count=25
+	# Not sure if this is required but can't hurt
+	#echo "Wiping first 25mb of disk. Please be patient..."
+	#dd if=/dev/zero of=$disk bs=1M count=25
 
 }
 
@@ -193,36 +191,36 @@ sgdisk -Zo $disk
 
 create_partitions () {
 
-check_on_root
-delete_partitions
+	check_on_root
+	delete_partitions
 
-parted -s $disk mklabel gpt
-parted -s --align=optimal $disk mkpart ESP fat32 1Mib 512Mib 
-parted -s $disk set $espPart esp on
-parted -s --align=optimal $disk mkpart SWAP linux-swap 512Mib 8512Mib
-parted -s $disk set $swapPart swap on
-parted -s --align=optimal $disk mkpart ROOT btrfs 8512Mib 100%
+	parted -s $disk mklabel gpt
+	parted -s --align=optimal $disk mkpart ESP fat32 1Mib 512Mib 
+	parted -s $disk set $espPart esp on
+	parted -s --align=optimal $disk mkpart SWAP linux-swap 512Mib 8512Mib
+	parted -s $disk set $swapPart swap on
+	parted -s --align=optimal $disk mkpart ROOT btrfs 8512Mib 100%
 
-mkfs.fat -F 32 -n EFI $disk$espPart 
-mkswap $disk$swapPart
-mkfs.btrfs -f -L ROOT $disk$rootPart
+	mkfs.fat -F 32 -n EFI $disk$espPart 
+	mkswap $disk$swapPart
+	mkfs.btrfs -f -L ROOT $disk$rootPart
 
-parted -s $disk print
+	parted -s $disk print
 
 
-echo -e "\nMounting $mnt..."
-mount --mkdir $disk$rootPart $mnt
+	echo -e "\nMounting $mnt..."
+	mount --mkdir $disk$rootPart $mnt
 
-cd $mnt
+	cd $mnt
 
-for subvol in '' "${subvols[@]}"; do
-    btrfs su cr /mnt/@"$subvol"
-done
+	for subvol in '' "${subvols[@]}"; do
+   	btrfs su cr /mnt/@"$subvol"
+	done
 
-mkdir -p $mnt/{etc,tmp}
+	mkdir -p $mnt/{etc,tmp}
 
-unmount_disk
-mount_disk
+	unmount_disk
+	mount_disk
 
 }
 
@@ -230,22 +228,23 @@ mount_disk
 
 mount_disk () {
 
-check_on_root
+	check_on_root
 
-if [[ ! $(mount | grep -E "on /mnt") ]]; then
+	if [[ ! $(mount | grep -E "on /mnt") ]]; then
 
-mountopts="noatime,compress-force=zstd:1,discard=async"
+		mountopts="noatime,compress-force=zstd:1,discard=async"
 
-echo -e "\nMounting...\n"
-for subvol in '' "${subvols[@]}"; do
-    mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
-    echo "mount -o $mountopts,subvol=@$subvol $disk$rootPart /mnt/${subvol//_//}"
-done
+		echo -e "\nMounting...\n"
 
-# mount efi partition
-mount --mkdir $disk$espPart $mnt$efi_path
+		for subvol in '' "${subvols[@]}"; do
+   		mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
+   		echo "mount -o $mountopts,subvol=@$subvol $disk$rootPart /mnt/${subvol//_//}"
+		done
 
-fi
+		# mount efi partition
+		mount --mkdir $disk$espPart $mnt$efi_path
+
+	fi
 
 }
 
@@ -253,27 +252,27 @@ fi
 
 install_base () {
 
-mount_disk
+	mount_disk
 
-check_on_root
+	check_on_root
 
-source /etc/profile
-pacstrap -K $mnt base linux linux-firmware btrfs-progs vim vi libarchive $ucode gptfdisk
+	source /etc/profile
+	pacstrap -K $mnt base linux linux-firmware btrfs-progs vim vi libarchive $ucode gptfdisk
 
 
-###  Prepare auto-login  ###
+	###  Prepare auto-login  ###
 
-# Does a user already exist?
-if [ ! "$(grep user /etc/passwd)" ]; then
-   login_user=root
-else
-   login_user=$user
-fi
+	# Does a user already exist?
+	if [ ! "$(grep user /etc/passwd)" ]; then
+   	login_user=root
+	else
+   	login_user=$user
+	fi
 
-echo -e "\nCreating auto-login for $login_user.\n"
+	echo -e "\nCreating auto-login for $login_user.\n"
 
-mkdir -p $mnt/etc/systemd/system/getty@tty1.service.d
-cat > $mnt/etc/systemd/system/getty@tty1.service.d/autologin.conf << EOF
+	mkdir -p $mnt/etc/systemd/system/getty@tty1.service.d
+	cat > $mnt/etc/systemd/system/getty@tty1.service.d/autologin.conf << EOF
 [Service]
 Type=simple
 ExecStart=
@@ -286,35 +285,35 @@ EOF
 
 setup_fstab () {
 
-mount_disk
+	mount_disk
 
-genfstab -U $mnt > $mnt/etc/fstab
+	genfstab -U $mnt > $mnt/etc/fstab
 
 
-###  Tweak the resulting /etc/fstab generated  ###
+	###  Tweak the resulting /etc/fstab generated  ###
 
-SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
+	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 
-# Changing compression
-sed -i 's/zstd:3/zstd:1/' $mnt/etc/fstab
+	# Changing compression
+	sed -i 's/zstd:3/zstd:1/' $mnt/etc/fstab
 
-# Bad idea to use subids when rolling back 
-sed -i 's/subvolid=.*,//g' $mnt/etc/fstab
+	# Bad idea to use subids when rolling back 
+	sed -i 's/subvolid=.*,//g' $mnt/etc/fstab
 
-# genfstab will generate a swap drive. we're using a swap file instead
-sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
+	# genfstab will generate a swap drive. we're using a swap file instead
+	sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
 
-# Make /efi read-only
-#sed -i 's/\/efi.*vfat.*rw/\/efi     vfat     ro/' $mnt/etc/fstab
+	# Make /efi read-only
+	#sed -i 's/\/efi.*vfat.*rw/\/efi     vfat     ro/' $mnt/etc/fstab
 
-[ ! "$(cat $mnt/etc/fstab | grep 'none swap defaults 0 0')" ] && echo -e "UUID=$SWAP_UUID none swap defaults 0 0\n" >> $mnt/etc/fstab
-[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/cache')" ] && echo "tmpfs    /var/cache  tmpfs   rw,nodev,nosuid,mode=1755,size=2G   0 0" >> $mnt/etc/fstab
-[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/log')" ]   && echo "tmpfs    /var/log    tmpfs   rw,nodev,nosuid,mode=1775,size=2G   0 0" >> $mnt/etc/fstab
-[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/tmp')" ]   && echo "tmpfs    /var/tmp    tmpfs   rw,nodev,nosuid,mode=1777,size=2G   0 0" >> $mnt/etc/fstab
+	[ ! "$(cat $mnt/etc/fstab | grep 'none swap defaults 0 0')" ] && echo -e "UUID=$SWAP_UUID none swap defaults 0 0\n" >> $mnt/etc/fstab
+	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/cache')" ] && echo "tmpfs    /var/cache  tmpfs   rw,nodev,nosuid,mode=1755,size=2G   0 0" >> $mnt/etc/fstab
+	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/log')" ]   && echo "tmpfs    /var/log    tmpfs   rw,nodev,nosuid,mode=1775,size=2G   0 0" >> $mnt/etc/fstab
+	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/tmp')" ]   && echo "tmpfs    /var/tmp    tmpfs   rw,nodev,nosuid,mode=1777,size=2G   0 0" >> $mnt/etc/fstab
 
-systemctl daemon-reload
+	systemctl daemon-reload
 
-cat $mnt/etc/fstab
+	cat $mnt/etc/fstab
 
 }
 
@@ -322,17 +321,17 @@ cat $mnt/etc/fstab
 
 install_EFISTUB () {
 
-echo "TODO."
+	echo "TODO."
 
-exit
+	exit
 
-mount_disk
+	mount_disk
 
-SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
-ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
+	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
+	ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
 
 
-echo 'ALL_config="/etc/mkinitcpio.conf"
+	echo 'ALL_config="/etc/mkinitcpio.conf"
 ALL_kver="/boot/vmlinuz-linux"
 ALL_microcode=(/boot/*-ucode.img)
 
@@ -341,20 +340,19 @@ PRESETS=("default")
 default_image="/efi/EFI/boot/initramfs-linux.img"
 #default_image="/boot/initramfs-linux.img"
 #default_image="/boot/efi/boot/bootx64.efi"
-#default_uki="/efi/EFI/Linux/arch-linux.efi"
-' > $mnt/etc/mkinitcpio.d/linux.preset
+#default_uki="/efi/EFI/Linux/arch-linux.efi"' > $mnt/etc/mkinitcpio.d/linux.preset
 
-[ ! -f $mnt/usr/bin/efibootmgr ] && pacstrap -K $mnt efibootmgr
+	[ ! -f $mnt/usr/bin/efibootmgr ] && pacstrap -K $mnt efibootmgr
 
-arch-chroot $mnt /bin/bash -e << EOF
+	arch-chroot $mnt /bin/bash -e << EOF
 
-mkinitcpio -p linux
+	mkinitcpio -p linux
 
-efibootmgr --create --disk $disk --part $espPart --label "Arch Linux" --loader "/vmlinuz-linux" --unicode "root=$ROOT_UUID rootflags=subvol=@ resume=$SWAP_UUID rw initrd=\EFI\boot\initramfs-linux.img"
+	efibootmgr --create --disk $disk --part $espPart --label "Arch Linux" --loader "/vmlinuz-linux" --unicode "root=$ROOT_UUID rootflags=subvol=@ resume=$SWAP_UUID rw initrd=\EFI\boot\initramfs-linux.img"
 
-# An example of deleting entries:
-# efibootmgr -B 0001 -L 'Arch Linux 2'
-efibootmgr --unicode
+	# An example of deleting entries:
+	# efibootmgr -B 0001 -L 'Arch Linux 2'
+	efibootmgr --unicode
 
 
 EOF
@@ -365,19 +363,18 @@ EOF
 
 install_uki () {
 
-echo "TODO."
+	echo "TODO."
 
-exit
+	exit
 
-mount_disk
+	mount_disk
 
-SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
-ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
+	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
+	ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
 
-echo "layout=uki" > $mnt/etc/kernel/install.conf
+	echo "layout=uki" > $mnt/etc/kernel/install.conf
 
-echo "root=UUID=$ROOT_UUID rw resume=UUID=$SWAP_UUID
-" > $mnt/etc/kernel/cmdline
+	echo "root=UUID=$ROOT_UUID rw resume=UUID=$SWAP_UUID" > $mnt/etc/kernel/cmdline
 
 echo 'ALL_config="/etc/mkinitcpio.conf"
 ALL_kver="/boot/vmlinuz-linux"
@@ -387,12 +384,11 @@ PRESETS=("default")
 
 default_image="/efi/EFI/arch/initramfs-linux.img"
 #default_image="/boot/initramfs-linux.img"
-default_uki="/efi/EFI/Linux/arch-linux.efi"
-' > $mnt/etc/mkinitcpio.d/linux.preset
+default_uki="/efi/EFI/Linux/arch-linux.efi"' > $mnt/etc/mkinitcpio.d/linux.preset
 
-mkdir -p $mnt/efi/EFI/{Linux,arch}
+	mkdir -p $mnt/efi/EFI/{Linux,arch}
 
-arch-chroot $mnt /bin/bash -e << EOF
+	arch-chroot $mnt /bin/bash -e << EOF
 mkinitcpio -p linux
 
 efibootmgr --create --disk $disk --part $espPart --label "Arch Linux" --loader '\EFI\Linux\arch-linux.efi' --unicode -o 0007,0004,0003
@@ -405,15 +401,15 @@ EOF
 
 install_SYSTEMDBOOT () {
 
-echo "TODO"
+	echo "TODO"
 
-exit
+	exit
 
-#arch-chroot $mnt bootctl --esp-path=/efi --boot-path=/boot install
-#arch-chroot $mnt bootctl --esp-path=/efi install
-arch-chroot $mnt bootctl install
-arch-chroot $mnt bootctl update
-arch-chroot $mnt systemctl enable systemd-boot-update.service 
+	#arch-chroot $mnt bootctl --esp-path=/efi --boot-path=/boot install
+	#arch-chroot $mnt bootctl --esp-path=/efi install
+	arch-chroot $mnt bootctl install
+	arch-chroot $mnt bootctl update
+	arch-chroot $mnt systemctl enable systemd-boot-update.service 
 
 }
 
@@ -421,23 +417,24 @@ arch-chroot $mnt systemctl enable systemd-boot-update.service
 
 install_REFIND () {
 
-mount_disk
+	mount_disk
 
-[ ! -f $mnt/usr/bin/refind-install ] && pacstrap -K $mnt refind
+	[ ! -f $mnt/usr/bin/refind-install ] && pacstrap -K $mnt refind
 
-arch-chroot $mnt refind-install --usedefault $disk$espPart --alldrivers
+	arch-chroot $mnt refind-install --usedefault $disk$espPart --alldrivers
 
-SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
-ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
+	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
+	ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
 
-echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw rootflags=subvol=@ quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" > $mnt/boot/refind_linux.conf
-echo "\"Boot read only\"  \"root=UUID=$ROOT_UUID ro rootflags=subvol=@ quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" >> $mnt/boot/refind_linux.conf
+	echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw rootflags=subvol=@ quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" > $mnt/boot/refind_linux.conf
 
-sed -i 's/#enable_touch/enable_touch/g; s/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g' $mnt/boot/efi/EFI/BOOT/refind.conf
+	echo "\"Boot read only\"  \"root=UUID=$ROOT_UUID ro rootflags=subvol=@ quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" >> $mnt/boot/refind_linux.conf
 
-rm -rf /boot/grub
+	sed -i 's/#enable_touch/enable_touch/g; s/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g' $mnt$efi_path/EFI/BOOT/refind.conf
 
-echo -e "\nYou should have a fully bootable system now. Feel free to test it.\n"
+	rm -rf /boot/grub
+
+	echo -e "\nYou should have a fully bootable system now. Feel free to test it.\n"
 
 }
 
@@ -445,17 +442,17 @@ echo -e "\nYou should have a fully bootable system now. Feel free to test it.\n"
 
 install_GRUB () {
 
-mount_disk
+	mount_disk
 
-pacstrap -K $mnt grub grub-btrfs os-prober efibootmgr inotify-tools lz4
+	pacstrap -K $mnt grub grub-btrfs os-prober efibootmgr inotify-tools lz4
 
-SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
+	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 
-arch-chroot $mnt /bin/bash -e << EOF
+	arch-chroot $mnt /bin/bash -e << EOF
 
-grub-install --target=x86_64-efi --efi-directory=$efi_path --bootloader-id=GRUB --removable
+	grub-install --target=x86_64-efi --efi-directory=$efi_path --bootloader-id=GRUB --removable
 
-cat > /etc/default/grub << EOF2
+	cat > /etc/default/grub << EOF2
 
 GRUB_TIMEOUT=0
 GRUB_DISTRIBUTOR=""
@@ -474,29 +471,29 @@ GRUB_TIMEOUT=0
 EOF2
 
 
-# Allows grub to run snapshots
-systemctl enable grub-btrfsd.service
-/etc/grub.d/41_snapshots-btrfs
+	# Allows grub to run snapshots
+	systemctl enable grub-btrfsd.service
+	/etc/grub.d/41_snapshots-btrfs
 
-# Remove grub os-prober message
-sed -i 's/grub_warn/#grub_warn/g' /etc/grub.d/30_os-prober
+	# Remove grub os-prober message
+	sed -i 's/grub_warn/#grub_warn/g' /etc/grub.d/30_os-prober
 
 
 
-###  Offer readonly grub booting option  ###
+	###  Offer readonly grub booting option  ###
 
-cp $mnt/etc/grub.d/10_linux /etc/grub.d/10_linux-readonly
-sed -i 's/\"\$title\"/\"\$title \(readonly\)\"/g' $mnt/etc/grub.d/10_linux-readonly
-sed -i 's/ rw / ro /g' $mnt/etc/grub.d/10_linux-readonly
+	cp $mnt/etc/grub.d/10_linux /etc/grub.d/10_linux-readonly
+	sed -i 's/\"\$title\"/\"\$title \(readonly\)\"/g' $mnt/etc/grub.d/10_linux-readonly
+	sed -i 's/ rw / ro /g' $mnt/etc/grub.d/10_linux-readonly
 
-# So systemd won't remount as 'rw'
-arch-chroot $mnt systemctl mask systemd-remount-fs.service
+	# So systemd won't remount as 'rw'
+	arch-chroot $mnt systemctl mask systemd-remount-fs.service
 
-grub-mkconfig -o /boot/grub/grub.cfg
+	grub-mkconfig -o /boot/grub/grub.cfg
 
 EOF
 
-echo -e "\nYou should have a fully bootable system now. Feel free to test it.\n"
+	echo -e "\nYou should have a fully bootable system now. Feel free to test it.\n"
 
 }
 
@@ -504,83 +501,81 @@ echo -e "\nYou should have a fully bootable system now. Feel free to test it.\n"
 
 general_setup () {
 
-mount_disk
-copy_script
+	mount_disk
+	copy_script
 
-# Setup sudo
-[ ! -f $mnt/usr/bin/sudo ] && pacstrap -K $mnt sudo
+	# Setup sudo
+	[ ! -f $mnt/usr/bin/sudo ] && pacstrap -K $mnt sudo
 
-mkdir -p $mnt/etc/sudoers.d
-echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/wheel
+	mkdir -p $mnt/etc/sudoers.d
+	echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/wheel
 
-rm -rf $mnt/home/$user
-arch-chroot $mnt userdel user 
+	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
+   	arch-chroot $mnt useradd -m user -G wheel
+	fi
 
-arch-chroot $mnt useradd -m user -G wheel
-
-if [ ! "$(grep user /etc/passwd)" ]; then
-   echo -e "\nUser was not created. Exiting.\n"
-   exit
-fi
+	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
+   	echo -e "\nUser was not created. Exiting.\n"
+	   exit
+	fi
 
 
-[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/user/.cache')" ] && echo "tmpfs    /home/user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> $mnt/etc/fstab
+	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/user/.cache')" ] && echo "tmpfs    /home/user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> $mnt/etc/fstab
 
-echo -e 'en_US.UTF-8 UTF-8\nen_US ISO-8859-1' > $mnt/etc/locale.gen  
-echo 'LANG=en_US.UTF-8' > $mnt/etc/locale.conf
-echo 'Arch-Linux' > $mnt/etc/hostname
-echo 'KEYMAP=us' > $mnt/etc/vconsole.conf
+	echo -e 'en_US.UTF-8 UTF-8\nen_US ISO-8859-1' > $mnt/etc/locale.gen  
+	echo 'LANG=en_US.UTF-8' > $mnt/etc/locale.conf
+	echo 'Arch-Linux' > $mnt/etc/hostname
+	echo 'KEYMAP=us' > $mnt/etc/vconsole.conf
 
-echo "127.0.0.1   localhost
+	echo "127.0.0.1   localhost
 ::1         localhost
 127.0.1.1   $hostname.localdomain   $hostname" > $mnt/etc/hosts
 
-###  Install necessary applications with proper permissions
-mkdir -p -m 750 $mnt/etc/sudoers.d
+	###  Install necessary applications with proper permissions
+	mkdir -p -m 750 $mnt/etc/sudoers.d
 
 
-# Autologin to tty1
-mkdir -p $mnt/etc/systemd/system/getty@tty1.service.d
-echo "[Service]
+	# Autologin to tty1
+	mkdir -p $mnt/etc/systemd/system/getty@tty1.service.d
+	echo "[Service]
 Type=simple
 ExecStart=
-ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin $user --noclear %I 38400 linux
-" > $mnt/etc/systemd/system/getty@tty1.service.d/autologin.conf
+ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin $user --noclear %I 38400 linux" > $mnt/etc/systemd/system/getty@tty1.service.d/autologin.conf
 
-echo '[[ $- != *i* ]] && return
+	echo '[[ $- != *i* ]] && return
 alias ls="ls --color=auto"
 alias grep="grep --color=auto"
 alias vi="vim"
 PS1="# "' > $mnt/root/.bashrc
 
 
-arch-chroot $mnt /bin/bash -e << EOF
+	arch-chroot $mnt /bin/bash -e << EOF
 
-hwclock --systohc
-ln -sf /usr/share/zoneinfo/Canada/Eastern /etc/localtime
+	hwclock --systohc
+	ln -sf /usr/share/zoneinfo/Canada/Eastern /etc/localtime
 
-locale-gen
+	locale-gen
 
-printf "$password\n$password\n" | passwd root
-printf "$password\n$password\n" | passwd user
+	printf "$password\n$password\n" | passwd root
+	printf "$password\n$password\n" | passwd user
 
-# Disable login by root
-#passwd --lock root
+	# Disable login by root
+	#passwd --lock root
 
 EOF
 
 
-###  Set up user files  ###
+	###  Set up user files  ###
 
-arch-chroot $mnt sudo -u $user mkdir -p /home/$user/.local/bin
+	arch-chroot $mnt sudo -u $user mkdir -p /home/$user/.local/bin
 
-echo '# If running bash
+	echo '# If running bash
 if [ -n "$BASH_VERSION" ]; then
 
-    # include .bashrc if it exists
-    if [ -f "$HOME/.bashrc" ]; then
-        . "$HOME/.bashrc"
-    fi
+	# include .bashrc if it exists
+   if [ -f "$HOME/.bashrc" ]; then
+   	. "$HOME/.bashrc"
+   fi
 fi
 
 PATH="$HOME/.local/bin:$PATH"
@@ -591,22 +586,21 @@ export QT_IM_MODULE=Maliit
 export MOZ_ENABLE_WAYLAND=1
 export XDG_RUNTIME_DIR=/run/$USER/1000
 export RUNLEVEL=3
-export QT_LOGGING_RULES="*=false"
-' > $mnt/home/$user/.bash_profile
-chown user:user $mnt/home/$user/.bash_profile
+export QT_LOGGING_RULES="*=false"' > $mnt/home/$user/.bash_profile
+	chown user:user $mnt/home/$user/.bash_profile
 
-touch $mnt/home/$user/.hushlogin
-chown user:user $mnt/home/$user/.hushlogin
+	touch $mnt/home/$user/.hushlogin
+	chown user:user $mnt/home/$user/.hushlogin
 
-echo '[[ $- != *i* ]] && return
+	echo '[[ $- != *i* ]] && return
 alias ls="ls --color=auto"
 alias grep="grep --color=auto"
 alias vi="vim"
 PS1="$ "' > $mnt/home/$user/.bashrc
-chown user:user $mnt/home/$user/.bashrc
+	chown user:user $mnt/home/$user/.bashrc
 
 
-cat > $mnt/home/$user/.vimrc << EOF
+	cat > $mnt/home/$user/.vimrc << EOF
 
 au BufReadPost *
     \ if line("'\"") > 0 && line("'\"") <= line("$") && &filetype != "gitcommit" | 
@@ -617,10 +611,15 @@ set mouse=c
 
 syntax on
 
+set tabstop=3
+set shiftwidth=3
+set autoindent
+set smartindent
+
 EOF
 
-chown user:user $mnt/home/$user/.vimrc
-cp $mnt/home/$user/.vimrc $mnt/root/
+	chown user:user $mnt/home/$user/.vimrc
+	cp $mnt/home/$user/.vimrc $mnt/root/
 
 }
 
@@ -628,33 +627,29 @@ cp $mnt/home/$user/.vimrc $mnt/root/
 
 setup_network_iwd () {
 
-mount_disk
+	mount_disk
 
-###  Setup network  ###
+	###  Setup network  ###
 
-arch-chroot $mnt pacman -S iw iwd dhcpcd
+	arch-chroot $mnt pacman -S iw iwd dhcpcd
 
-# Helps with slow booting caused by waiting for a connection
-mkdir -p $mnt/etc/systemd/system/dhcpcd@.service.d/
-echo '[Service]
+	# Helps with slow booting caused by waiting for a connection
+	mkdir -p $mnt/etc/systemd/system/dhcpcd@.service.d/
+	echo '[Service]
 ExecStart=
-ExecStart=/usr/bin/dhcpcd -b -q %I
-' > $mnt/etc/systemd/system/dhcpcd@.service.d/no-wait.conf
+ExecStart=/usr/bin/dhcpcd -b -q %I' > $mnt/etc/systemd/system/dhcpcd@.service.d/no-wait.conf
 
-mkdir -p $mnt/etc/iwd
-echo '[General]
-EnableNetworkConfiguration=true
-' > $mnt/etc/iwd/main.conf
+	mkdir -p $mnt/etc/iwd
+	echo '[General]
+EnableNetworkConfiguration=true' > $mnt/etc/iwd/main.conf
 
-# So iwd can automatically connect without any further interaction
-mkdir -p $mnt/var/lib/iwd
-echo "[Security]
-Passphrase="$wifi_pass"
-" > $mnt/var/lib/iwd/"$wifi_ssid".psk
+	# So iwd can automatically connect without any further interaction
+	mkdir -p $mnt/var/lib/iwd
+	echo "[Security]
+Passphrase=\"$wifi_pass\"" > $mnt/var/lib/iwd/"$wifi_ssid".psk
 
-echo "Enabling network services..."
-arch-chroot $mnt systemctl disable wpa_supplicant.service
-arch-chroot $mnt systemctl enable iwd.service dhcpcd.service
+	echo "Enabling network services..."
+	arch-chroot $mnt systemctl enable iwd.service dhcpcd.service
 
 }
 
@@ -662,15 +657,14 @@ arch-chroot $mnt systemctl enable iwd.service dhcpcd.service
 
 setup_network_wpa () {
 
-mount_disk
+	mount_disk
 
-arch-chroot $mnt pacman -S iw wpa_supplicant dhcpcd
+	arch-chroot $mnt pacman -S iw wpa_supplicant dhcpcd
 
-arch-chroot $mnt systemctl disable iwd.service
-arch-chroot $mnt systemctl enable wpa_supplicant.service
+	arch-chroot $mnt systemctl enable wpa_supplicant.service
 
-mkdir -p $mnt/etc/wpa_supplicant
-arch-chroot $mnt wpa_passphrase "$wifi_ssid" "$wifi_pass" > $mnt/etc/wpa_supplicant/"$wifi_ssid".conf
+	mkdir -p $mnt/etc/wpa_supplicant
+	arch-chroot $mnt wpa_passphrase "$wifi_ssid" "$wifi_pass" > $mnt/etc/wpa_supplicant/"$wifi_ssid".conf
 
 }
 
@@ -678,49 +672,51 @@ arch-chroot $mnt wpa_passphrase "$wifi_ssid" "$wifi_pass" > $mnt/etc/wpa_supplic
 
 setup_snapper () {
 
-mount_disk
+	mount_disk
 
-# Snapshot script
-echo '#!/bin/bash
+	# Snapshot script
+	echo '#!/bin/bash
 
 snapper --no-dbus create --read-write
 snapper --no-dbus list
 
 # Needs to be updated for grub-btrfs list
 grub-mkconfig -o /boot/grub/grub.cfg' > $mnt/usr/local/bin/snapshot.sh
-chmod +x $mnt/usr/local/bin/snapshot.sh
+
+	chmod +x $mnt/usr/local/bin/snapshot.sh
 
 
-arch-chroot $mnt /bin/bash -e << EOF
+	arch-chroot $mnt /bin/bash -e << EOF
 
-snapper --no-dbus -c root create-config /
-snapper --no-dbus list-configs
+	snapper --no-dbus -c root create-config /
+	snapper --no-dbus list-configs
 
-# Automate snapper and btrfs services  ###
-systemctl enable snapper-timeline.timer
-systemctl enable snapper-cleanup.timer
-#systemctl enable snapper-boot.timer
+	# Automate snapper and btrfs services  ###
+	systemctl enable snapper-timeline.timer
+	systemctl enable snapper-cleanup.timer
+	#systemctl enable snapper-boot.timer
  
-#systemctl enable btrfs-balance.timer
-#systemctl enable btrfs-scrub@-.timer
-#systemctl enable btrfs-trim.timer
+	#systemctl enable btrfs-balance.timer
+	#systemctl enable btrfs-scrub@-.timer
+	#systemctl enable btrfs-trim.timer
  
-# Have snapper take a snapshot every 120 mins (default is every 1hr)
-mkdir -p /etc/systemd/system/snapper-timeline.timer.d/
-cat > /etc/systemd/system/snapper-timeline.timer.d/frequency.conf << EOF2
+	# Have snapper take a snapshot every 120 mins (default is every 1hr)
+	mkdir -p /etc/systemd/system/snapper-timeline.timer.d/
+
+	cat > /etc/systemd/system/snapper-timeline.timer.d/frequency.conf << EOF2
 [Timer]
 OnCalendar=
 OnCalendar=*:0/120
 EOF2
 
-echo "To edit snapper config, run: vi /etc/snapper/configs/root"
+	echo "To edit snapper config, run: vi /etc/snapper/configs/root"
 
-# Needs to be run on inital snapshot
-/etc/grub.d/41_snapshots-btrfs
+	# Needs to be run on inital snapshot
+	/etc/grub.d/41_snapshots-btrfs
 
-systemctl enable grub-btrfsd
+	systemctl enable grub-btrfsd
 
-snapshot.sh
+	snapshot.sh
 
 EOF
 
@@ -730,13 +726,13 @@ EOF
 
 install_aur () {
 
-mount_disk
+	mount_disk
 
-#pacstrap -K $mnt base-devel git less
-[ "$aurApp" = "paru" ] && [ ! -f /usr/bin/cargo ] && pacstrap -K $mnt cargo
+	pacstrap -K $mnt base-devel git less
+	[ "$aurApp" = "paru" ] && [ ! -f /usr/bin/cargo ] && pacstrap -K $mnt cargo
 
 
-arch-chroot $mnt /bin/bash << EOF
+	arch-chroot $mnt /bin/bash << EOF
 
 cd /home/$user/
 
@@ -750,10 +746,10 @@ sudo -u $user $aurApp --gendb
 EOF
 
 
-#[ "$aurApp" = "paru" ] && arch-chroot $mnt pacman -R rust
-#[ "$aurApp" = "yay" ] && arch-chroot $mnt pacman -R rust
+	#[ "$aurApp" = "paru" ] && arch-chroot $mnt pacman -R rust
+	#[ "$aurApp" = "yay" ] && arch-chroot $mnt pacman -R rust
 
-#rm -rf $mnt/home/$user/{.cargo,$aurApp/*} $mnt/usr/lib/{go,rustlib}
+	#rm -rf $mnt/home/$user/{.cargo,$aurApp/*} $mnt/usr/lib/{go,rustlib}
 
 }
 
@@ -761,40 +757,39 @@ EOF
 
 install_tweaks () {
 
-mount_disk
+	mount_disk
 
 
-[ ! -f $mnt/usr/bin/ncdu ] && pacstrap -K $mnt terminus-font ncdu dosfstools parted arch-install-scripts tar man gptfdisk
+	[ ! -f $mnt/usr/bin/ncdu ] && pacstrap -K $mnt terminus-font ncdu dosfstools parted arch-install-scripts tar man gptfdisk
 
-echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
-echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
-echo 'vm.vfs_cache_pressure=50' > $mnt/etc/sysctl.d/99-cache-pressure.conf
-sed -Ei 's/^#(Color)$/\1\nILoveCandy/;s/^#(ParallelDownloads).*/\1 = 10/' $mnt/etc/pacman.conf
+	echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
+	echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
+	echo 'vm.vfs_cache_pressure=50' > $mnt/etc/sysctl.d/99-cache-pressure.conf
+	sed -Ei 's/^#(Color)$/\1\nILoveCandy/;s/^#(ParallelDownloads).*/\1 = 10/' $mnt/etc/pacman.conf
 
-arch-chroot $mnt systemctl enable systemd-oomd
+	arch-chroot $mnt systemctl enable systemd-oomd
 
 
-###  Setup mksh  ###
+	###  Setup mksh  ###
 
-if [ ! -f $mnt/usr/bin/mksh ]; then
+	if [ ! -f $mnt/usr/bin/mksh ]; then
 
-arch-chroot $mnt sudo -u $user $aurApp -S --noconfirm mksh
+		arch-chroot $mnt sudo -u $user $aurApp -S --noconfirm mksh
 
-echo 'HISTFILE=/root/.mksh_history
+		echo 'HISTFILE=/root/.mksh_history
 HISTSIZE=5000
 export VISUAL="emacs"
 export EDITOR="/usr/bin/vim"
 set -o emacs' > $mnt/root/.mkshrc
 
-echo 'HISTFILE=/home/$USER/.mksh_history
+		echo 'HISTFILE=/home/$USER/.mksh_history
 HISTSIZE=5000
 export VISUAL="emacs"
 export EDITOR="/usr/bin/vim"
 set -o emacs' > $mnt/home/$user/.mkshrc
-chown user:user $mnt/home/$user/.mkshrc
+		chown user:user $mnt/home/$user/.mkshrc
 
-echo -e 'PATH="$HOME/.local/bin:$PATH"
- 
+		echo -e 'PATH="$HOME/.local/bin:$PATH"
 export EDITOR=/usr/bin/vim
 export ENV="/home/$USER/.mkshrc"
 export QT_QPA_PLATFORM=wayland
@@ -806,14 +801,14 @@ export RUNLEVEL=3
 export QT_LOGGING_RULES="*=false"
 
 ' > $mnt/home/$user/.profile
-chown user:user $mnt/home/$user/.profile 
+		chown user:user $mnt/home/$user/.profile 
 
-arch-chroot $mnt /bin/bash << EOF
+		arch-chroot $mnt /bin/bash << EOF
 chsh -s /usr/bin/mksh                          # root shell
 echo 123456 | sudo -u $user chsh -s /bin/mksh  # user shell
 EOF
 
-fi
+	fi
 
 }
 
@@ -821,14 +816,14 @@ fi
 
 install_liveroot () {
 
-mount_disk
+	mount_disk
 
-[ ! -f $mnt/bin/rsync ] && pacstrap -K $mnt rsync squashfs-tools
+	[ ! -f $mnt/bin/rsync ] && pacstrap -K $mnt rsync squashfs-tools
 
 
-###  Add tmpfs/overlay hook options  ###
+	###  Add tmpfs/overlay hook options  ###
 
-echo '
+	echo '
 #!/usr/bin/bash
 
 
@@ -995,7 +990,7 @@ run_latehook() {
 ' > $mnt/usr/lib/initcpio/hooks/liveroot
 
 
-echo '#!/bin/sh
+	echo '#!/bin/sh
 
 build() {
   add_binary rsync
@@ -1017,7 +1012,7 @@ HELPEOF
 }' > $mnt/usr/lib/initcpio/install/liveroot
 
 
-echo 'MODULES=(lz4)
+	echo 'MODULES=(lz4)
 BINARIES=()
 FILES=()
 HOOKS=(base udev keyboard autodetect kms modconf sd-vconsole block filesystems liveroot resume)
@@ -1025,20 +1020,19 @@ COMPRESSION="lz4"
 #COMPRESSION_OPTIONS=()
 MODULES_DECOMPRESS="yes"' > $mnt/etc/mkinitcpio.conf
 
-echo 'ALL_config="/etc/mkinitcpio.conf"
+	echo 'ALL_config="/etc/mkinitcpio.conf"
 ALL_kver="/boot/vmlinuz-linux"
 ALL_microcode=(/boot/*-ucode.img)
 
 PRESETS=("default")
 
 #default_config="/etc/mkinitcpio.conf"
-default_image="/boot/initramfs-linux.img"
-' > $mnt/etc/mkinitcpio.d/linux.preset
+default_image="/boot/initramfs-linux.img"' > $mnt/etc/mkinitcpio.d/linux.preset
 
-arch-chroot $mnt mkinitcpio -P 
+	arch-chroot $mnt mkinitcpio -P 
 
-# So systemd won't remount as 'rw'
-arch-chroot $mnt systemctl mask systemd-remount-fs.service
+	# So systemd won't remount as 'rw'
+	arch-chroot $mnt systemctl mask systemd-remount-fs.service
 
 }
 
@@ -1046,14 +1040,15 @@ arch-chroot $mnt systemctl mask systemd-remount-fs.service
 
 setup_snapshots () {
 
-mount_disk
+	mount_disk
 
-rm -rf $mnt/.snapshots/
-mkdir -p $mnt/.snapshots
+	rm -rf $mnt/.snapshots/
+	mkdir -p $mnt/.snapshots
 
-touch /snapshot
-arch-chroot $mnt btrfs subvolume snapshot / /.snapshots/first
-rm /snapshot
+	rm -rf $mnt/snapshot
+	touch $mnt/snapshot
+	arch-chroot $mnt btrfs subvolume snapshot / /.snapshots/first
+	rm $mnt/snapshot
 
 }
 
@@ -1061,9 +1056,9 @@ rm /snapshot
 
 reset_keys () {
 
-rm -rf /etc/pacman.d/gnupg
-pacman-key --init
-pacman-key --populate
+	rm -rf /etc/pacman.d/gnupg
+	pacman-key --init
+	pacman-key --populate
 
 }
 
@@ -1071,9 +1066,9 @@ pacman-key --populate
 
 copy_script () {
 
-[ -d /home/$user ] && cp arch.sh $mnt/home/$user || cp arch.sh $mnt/
+	[ -d /home/$user ] && cp arch.sh $mnt/home/$user || cp arch.sh $mnt/
 
-[ "$?" -eq 0 ] && echo -e "\nScript copied!" || echo -e "\nScript not copied."
+	[ "$?" -eq 0 ] && echo -e "\nScript copied!" || echo -e "\nScript not copied."
 
 }
 
@@ -1081,29 +1076,29 @@ copy_script () {
 
 do_chroot () {
 
-check_on_root
-mount_disk
+	check_on_root
+	mount_disk
 
-# arch-chroot has a bug that causes it to load in the background when running in interactive mode, so I'll be using regular chroot for this
+	# arch-chroot has a bug that causes it to load in the background when running in interactive mode, so I'll be using regular chroot for this
 
-echo -e "\nEntering chroot. Type 'exit' to leave.\n"
+	echo -e "\nEntering chroot. Type 'exit' to leave.\n"
 
-cd $mnt
+	cd $mnt
 
-mount -t proc /proc proc/
-mount -t sysfs /sys sys/
-mount --rbind /dev dev/
-mount --rbind /run run/
-mount --rbind /sys/firmware/efi/efivars sys/firmware/efi/efivars/
-cp /etc/resolv.conf etc/resolv.conf
+	mount -t proc /proc proc/
+	mount -t sysfs /sys sys/
+	mount --rbind /dev dev/
+	mount --rbind /run run/
+	mount --rbind /sys/firmware/efi/efivars sys/firmware/efi/efivars/
+	cp /etc/resolv.conf etc/resolv.conf
 
-chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
+	chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
 
-echo -e "\nExiting chroot...\n"
+	echo -e "\nExiting chroot...\n"
 
-cd /
+	cd /
 
-unmount_disk
+	unmount_disk
 
 }
 
@@ -1111,14 +1106,14 @@ unmount_disk
 
 connect_wireless () {
 
-echo -e "\nAttempting to connect to wireless...\n"
-iwctl --passphrase $wifi_pass station wlan0 connect $wifi_ssid
+	echo -e "\nAttempting to connect to wireless...\n"
+	iwctl --passphrase $wifi_pass station wlan0 connect $wifi_ssid
 
-if [[ "$?" -eq 0 ]]; then
-   echo "Connection successful!"
-else
-   echo "Connection unsuccessful."
-fi
+	if [[ "$?" -eq 0 ]]; then
+   	echo "Connection successful!"
+	else
+   	echo "Connection unsuccessful."
+	fi
 
 }
 
@@ -1126,34 +1121,35 @@ fi
 
 post_setup () {
 
-pacman -S "$post_install_apps"
+	pacman -S "$post_install_apps"
 
-echo 'if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
-   #autostartapp
+	echo 'if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
+  	#autostartapp
 fi' >> /home/$user/.bash_profile
 
-echo 'if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
+	echo 'if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
    #autostartapp
 fi' >> /home/$user/.profile
-chown user:user /home/$user/{.profile,bash_profile}
+	chown user:user /home/$user/{.profile,bash_profile}
 
-sed -i "s/#autostartapp/$autostartapp/" $mnt/home/$user/{.profile,bash_profile}
+	sed -i "s/#autostartapp/$autostartapp/" $mnt/home/$user/{.profile,bash_profile}
+
 }
 
 
 
 backup_config () {
 
-cd /home/$user
+	cd /home/$user
 
-print_config
+	print_config
 
-sudo -u $user tar cvf setup.tar $CONFIG_FILES
+	sudo -u $user tar cvf setup.tar $CONFIG_FILES
 
-ls -la setup.tar
-#gpg -c setup.tar
+	ls -la setup.tar
+	#gpg -c setup.tar
 
-exit
+	exit
 
 }
 
@@ -1161,9 +1157,9 @@ exit
 
 restore_config () {
 
-cd /home/$user
+	cd /home/$user
 
-sudo -u $user tar xvf setup.tar
+	sudo -u $user tar xvf setup.tar
 
 }
 
@@ -1171,16 +1167,16 @@ sudo -u $user tar xvf setup.tar
 
 download_script () {
 
-echo -e "\nDowloading scripts from Github..."
+	echo -e "\nDowloading scripts from Github..."
 
-curl -s https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > arch.sh
+	curl -s https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > arch.sh
 
-if [[ "$?" -eq 0 ]]; then
-   echo "Download successful!"
-   chmod +x arch.sh
-else
-   echo "Download unsuccessful."
-fi
+	if [[ "$?" -eq 0 ]]; then
+   	echo "Download successful!"
+  		chmod +x arch.sh
+	else
+   	echo "Download unsuccessful."
+	fi
 
 }
 
@@ -1188,7 +1184,7 @@ fi
 
 download_apps () {
 
-pacman -S arch-install-scripts gptfdisk terminus-font squashfs-tools
+	pacman -S arch-install-scripts gptfdisk terminus-font squashfs-tools
 
 }
 
@@ -1196,30 +1192,30 @@ pacman -S arch-install-scripts gptfdisk terminus-font squashfs-tools
 
 clone_disk () {
 
-echo -e "\nCloning disk. Please be patient...\n"
+	echo -e "\nCloning disk. Please be patient...\n"
 
-rsync -a --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ --exclude=/mnt/ / $mnt/
+	rsync -a --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ --exclude=/mnt/ / $mnt/
 
-mkdir $mnt/{dev,proc,run,sys}
+	mkdir $mnt/{dev,proc,run,sys}
 
-echo -e"\n*** Remember to update fstab and install a boot manager! ***\n"
+	echo -e"\n*** Remember to update fstab and install a boot manager! ***\n"
 
 }
 
 
 create_archive () {
 
-echo "Creating archive file..."
+	echo "Creating archive file..."
 
-cd / 
+	cd / 
 
-#tar --exclude=rootfs.tar.gz --exclude=./dev/* --exclude=./proc/* --exclude=./sys/* --exclude=./tmp/* --exclude=./run/* --exclude=./mnt/* --exclude=./.snapshots/* --exclude=./var/tmp/* --exclude=./var/cache/* --exclude=./var/log/* --exclude=./etc/pacman.d/gnupg/* -czf rootfs.tar.gz .
+	#tar --exclude=rootfs.tar.gz --exclude=./dev/* --exclude=./proc/* --exclude=./sys/* --exclude=./tmp/* --exclude=./run/* --exclude=./mnt/* --exclude=./.snapshots/* --exclude=./var/tmp/* --exclude=./var/cache/* --exclude=./var/log/* --exclude=./etc/pacman.d/gnupg/* -czf rootfs.tar.gz .
 
-rm -rf /root.squashfs
+	rm -rf /root.squashfs
 
-time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e rootfs.tar.gz -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/cache/ -e /var/log/ -e /etc/pacman.d/gnupg/
+	time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e rootfs.tar.gz -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/cache/ -e /var/log/ -e /etc/pacman.d/gnupg/
 
-ls -la root.squashfs
+	ls -la root.squashfs
 
 }
 
@@ -1275,7 +1271,9 @@ loadkeys en
 setfont ter-132b
 
 
-choices=("Choose disk"
+choices=("Quit"
+"Chroot"
+"Choose disk"
 "Partition disk"
 "Install base"
 "Setup fstab"
@@ -1288,7 +1286,6 @@ choices=("Choose disk"
 "Setup snapshots"
 "Setup snapper"
 "Copy script"
-"Chroot"
 "Mount $mnt"
 "Unmount $mnt"
 "Create squashfs image"
@@ -1300,83 +1297,87 @@ choices=("Choose disk"
 "Download script"
 "Download apps"
 "Post setup"
-"Reset pacman keys"
-"Quit")
+"Reset pacman keys")
 
 
 
 select choice in "${choices[@]}" 
 do
-   case $choice in
-        "Choose disk")		choose_disk ;;
-        "Partition disk")	create_partitions ;;
-        "Install base")		install_base ;;
-        "Setup fstab")		setup_fstab ;;
-	"Install boot manager") echo -e "\nWhich boot manager would you like to install?\n"
+	case $choice in
+		"Quit")						echo -e "\nQuitting!"; break; ;;
+      "Choose disk")				choose_disk ;;
+      "Partition disk")			create_partitions ;;
+      "Install base")			install_base ;;
+      "Setup fstab")				setup_fstab ;;
+		"Install boot manager") echo -e "\nWhich boot manager would you like to install?\n"
 
-				choiceBoot=(grub EFISTUB rEFInd systemD quit) 
+										choiceBoot=(grub EFISTUB rEFInd systemD quit) 
 
 				
-				select choiceBoot in "${choiceBoot[@]}"
-				do
-					case $choiceBoot in
-						"EFISTUB")	install_EFISTUB; break ;;
-						"uki")	        install_uki; break ;;
-						"grub")		install_GRUB; break ;;
-						"rEFInd")	install_REFIND; break ;;
-						"systemD")	install_SYSTEMDBOOT; break ;;
-						"quit")		break ;;
-						'')		echo -e "\nInvalid option!\n" ;;
-					esac						
-				done ;;
-	"General setup")	general_setup ;;
-       	"Setup network") echo -e "\nWhich network manager would you like to install?\n"
-		
-				choices=(iwd wpa_supplicant quit) 
+										select choiceBoot in "${choiceBoot[@]}"
+										do
+											case $choiceBoot in
+												"EFISTUB")	install_EFISTUB; break ;;
+												"uki")	   install_uki; break ;;
+												"grub")		install_GRUB; break ;;
+												"rEFInd")	install_REFIND; break ;;
+												"systemD")	install_SYSTEMDBOOT; break ;;
+												"quit")		break ;;
+												'')			echo -e "\nInvalid option!\n" ;;
+											esac						
+										done ;;
 
-				select choice in "${choices[@]}"
-				do
-					case $choice in
-						"iwd")			setup_network_iwd; break ;;
-						"wpa_supplicant")	setup_network_wpa; break ;;
-						"quit")		break ;;
-						'')		echo -e "\nInvalid option!\n" ;;
-					esac						
-				done ;;
-        "Install aur")		install_aur ;;
-        "Install tweaks")	install_tweaks ;;
-        "Install liveroot")	install_liveroot ;;
-	"Setup snapshots")	setup_snapshots ;;
-	"Setup snapper")	setup_snapper ;;
-        "Chroot")		do_chroot ;;
-        "Mount $mnt")		mount_disk  ;;
-        "Unmount $mnt")		unmount_disk  ;;
-	"Create squashfs image") create_archive ;;
-	"Clone disk")		clone_disk ;;
-	"Configuration") echo -e "\nPlease choose an option:\n"
-		
-				choiceConfig=(backup restore print delete quit) 
+		"General setup")			general_setup ;;
 
-				select choiceConfig in "${choiceConfig[@]}"
-				do
-					case $choiceConfig in
-						"backup")	backup_config ;;
-						"restore")	restore_config ;;
-						"quit")		break ;;
-						'')		echo -e "\nInvalid option!\n" ;;
-					esac						
-				done ;;
-        "Delete partitions")	delete_partitions ;;
-	"Clean system")		clean_system ;;
-        "Copy script")		copy_script ;;
-        "Connect wireless")	connect_wireless ;;
-        "Download script")	download_script ;;
-        "Download apps")	download_apps    ;;
-        "Post setup")		post_setup ;;
-        "Reset pacman keys")    reset_keys ;;
-	"Quit")			echo -e "\nQuitting!"; break; ;;
-        '')			echo -e "\nInvalid option!\n"; ;;
-    esac
+      "Setup network") 			echo -e "\nWhich network manager would you like to install?\n"
+		
+										choices=(iwd wpa_supplicant quit) 
+
+										select choice in "${choices[@]}"
+										do
+											case $choice in
+												"iwd")				setup_network_iwd; break ;;
+												"wpa_supplicant")	setup_network_wpa; break ;;
+												"quit")				break ;;
+												'')					echo -e "\nInvalid option!\n" ;;
+											esac						
+										done ;;
+
+		"Install aur")				install_aur ;;
+      "Install tweaks")			install_tweaks ;;
+		"Install liveroot")		install_liveroot ;;
+		"Setup snapshots")		setup_snapshots ;;
+		"Setup snapper")			setup_snapper ;;
+		"Chroot")					do_chroot ;;
+      "Mount $mnt")				mount_disk  ;;
+      "Unmount $mnt")			unmount_disk  ;;
+		"Create squashfs image")	create_archive ;;
+		"Clone disk")				clone_disk ;;
+
+		"Configuration")			echo -e "\nPlease choose an option:\n"
+		
+										choiceConfig=(backup restore print delete quit) 
+
+										select choiceConfig in "${choiceConfig[@]}"
+										do
+											case $choiceConfig in
+												"backup")	backup_config ;;
+												"restore")	restore_config ;;
+												"quit")		break ;;
+												'')			echo -e "\nInvalid option!\n" ;;
+											esac						
+										done ;;
+
+		"Delete partitions")		delete_partitions ;;
+		"Clean system")			clean_system ;;
+      "Copy script")				copy_script ;;
+      "Connect wireless")		connect_wireless ;;
+      "Download script")		download_script ;;
+      "Download apps")			download_apps    ;;
+      "Post setup")				post_setup ;;
+      "Reset pacman keys")    reset_keys ;;
+      '')							echo -e "\nInvalid option!\n"; ;;
+	esac
 done
 
 unmount_disk
