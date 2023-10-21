@@ -76,7 +76,7 @@ if [[ "$(mount | grep $mnt)" ]]; then
 
       echo -e "\nCouldn't unmount. Trying alternative method. Please be patient...\n" 
 
-      findmnt -R $mnt
+      #findmnt -R $mnt
 
       sync
       umount -R -f $mnt
@@ -402,7 +402,7 @@ ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
 echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw rootflags=subvol=@ quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" > $mnt/boot/refind_linux.conf
 echo "\"Boot read only\"  \"root=UUID=$ROOT_UUID ro rootflags=subvol=@ quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" >> $mnt/boot/refind_linux.conf
 
-sed -i 's/#enable_touch/enable_touch/g; s/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g' $mnt/boot/efi/boot/refind.conf
+sed -i 's/#enable_touch/enable_touch/g; s/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g' $mnt/boot/efi/EFI/BOOT/refind.conf
 
 rm -rf /boot/grub
 
@@ -702,27 +702,28 @@ install_aur () {
 
 mount_mount
 
-pacstrap -K $mnt base-devel git less
+#pacstrap -K $mnt base-devel git less
+[ "$aurApp" = "paru" ] && [ ! -f /usr/bin/cargo ] && pacstrap -K $mnt cargo
+
 
 arch-chroot $mnt /bin/bash << EOF
 
-cd /home/$user
+cd /home/$user/
 
 sudo -u $user git clone https://aur.archlinux.org/$aurApp.git
-
-[ "$aurApp" = "paru" ] && pacman -Sy --noconfirm cargo
 
 cd $aurApp
 sudo -u $user makepkg -si
 
 sudo -u $user $aurApp --gendb
 
-[ "$aurApp" = "paru" ] && pacman -R rust
-[ "$aurApp" = "yay" ] && pacman -R rust
-
-rm -rf /home/$user/{.cargo,$aurApp/*} /usr/lib/{go,rustlib}
-
 EOF
+
+
+#[ "$aurApp" = "paru" ] && arch-chroot $mnt pacman -R rust
+#[ "$aurApp" = "yay" ] && arch-chroot $mnt pacman -R rust
+
+#rm -rf $mnt/home/$user/{.cargo,$aurApp/*} $mnt/usr/lib/{go,rustlib}
 
 }
 
@@ -1015,10 +1016,14 @@ arch-chroot $mnt systemctl mask systemd-remount-fs.service
 
 setup_snapshots () {
 
+mount_mount
+
 rm -rf $mnt/.snapshots/
 mkdir -p $mnt/.snapshots
 
+touch /snapshot
 arch-chroot $mnt btrfs subvolume snapshot / /.snapshots/first
+rm /snapshot
 
 }
 
@@ -1281,17 +1286,19 @@ do
         "Install base")		install_base ;;
         "Setup fstab")		setup_fstab ;;
 	"Install boot manager") echo -e "\nWhich boot manager would you like to install?\n"
-		
+
+				choiceBoot=(grub EFISTUB rEFInd systemD quit) 
+
 				
 				select choiceBoot in "${choiceBoot[@]}"
 				do
 					case $choiceBoot in
-						"EFISTUB")	install_EFISTUB; exit ;;
-						"uki")	        install_uki; exit ;;
-						"grub")		install_GRUB; exit ;;
-						"rEFInd")	install_REFIND; exit ;;
-						"systemD")	install_SYSTEMDBOOT; exit ;;
-						"quit")		exit ;;
+						"EFISTUB")	install_EFISTUB; break ;;
+						"uki")	        install_uki; break ;;
+						"grub")		install_GRUB; break ;;
+						"rEFInd")	install_REFIND; break ;;
+						"systemD")	install_SYSTEMDBOOT; break ;;
+						"quit")		break ;;
 						'')		echo -e "\nInvalid option!\n" ;;
 					esac						
 				done ;;
@@ -1303,9 +1310,9 @@ do
 				select choice in "${choices[@]}"
 				do
 					case $choice in
-						"iwd")			setup_network_iwd ;;
-						"wpa_supplicant")	setup_network_wpa ;;
-						"quit")		exit ;;
+						"iwd")			setup_network_iwd; break ;;
+						"wpa_supplicant")	setup_network_wpa; break ;;
+						"quit")		break ;;
 						'')		echo -e "\nInvalid option!\n" ;;
 					esac						
 				done ;;
@@ -1340,8 +1347,11 @@ do
         "Download apps")	download_apps    ;;
         "Post setup")		post_setup ;;
         "Reset pacman keys")    reset_keys ;;
-	"Quit")			echo -e "\nQuitting!"; exit; ;;
+	"Quit")			echo -e "\nQuitting!"; break; ;;
         '')			echo -e "\nInvalid option!\n"; ;;
     esac
 done
+
+unmount_disk
+
 
