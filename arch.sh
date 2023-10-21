@@ -14,7 +14,7 @@ error() {
    local errornum=$3
    local command=$4
 
-   echo -e "\e[0;41m\n\n$1: Error $3 on line $2: \n\n$4\n\e[0;37m\n\n"
+   echo -e "\e[0;41m\n\n$1: Error $3 on line $2: \n\n$4\n\e[0;29m\n\n"
 
 }
 
@@ -162,7 +162,7 @@ choose_disk () {
 
 	done
 
-	echo -e "\nSetup config:\n\ndisk: $disk, mounted on $mnt\nuser: $user\n"
+	echo -e "\nSetup config:\n\ndisk: $disk\nuser: $user\n"
 
 }
 
@@ -235,15 +235,12 @@ mount_disk () {
 		mountopts="noatime,compress-force=zstd:1,discard=async"
 
 		echo -e "\nMounting...\n"
-
 		for subvol in '' "${subvols[@]}"; do
    		mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
 		done
 
 		# mount efi partition
 		mount --mkdir $disk$espPart $mnt$efi_path
-
-      mount | grep $disk
 
 	fi
 
@@ -512,10 +509,15 @@ general_setup () {
 	# Setup sudo
 	[ ! -f $mnt/usr/bin/sudo ] && pacstrap -K $mnt sudo
 
+
 	mkdir -p $mnt/etc/sudoers.d
 	echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/wheel
 
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
+   	arch-chroot $mnt useradd -m user -G wheel
+	else
+		rm -rf $mnt/home/$user
+   	arch-chroot $mnt userdel user
    	arch-chroot $mnt useradd -m user -G wheel
 	fi
 
@@ -657,7 +659,10 @@ DisablePeriodicScan=true' > $mnt/etc/iwd/main.conf
 	# So iwd can automatically connect without any further interaction
 	mkdir -p $mnt/var/lib/iwd
 	echo "[Security]
-Passphrase='$wifi_pass'" > $mnt/var/lib/iwd/"$wifi_ssid".psk
+PreSharedKey=14ad650cdc57e587a5198d3be78cb4ef4dc2574a580949d3b9803774858c5abd
+Passphrase=13FDC4A93E3C
+SAE-PT-Group19=f5614183429496736ed0da01f20d14b3415e201531b6fc24987eb128c2090897dcb358dc0eac4716994f6dee52bd7cb642bc67f43106478fded1236655418a7a
+SAE-PT-Group20=eb986ca0245dcd12c86bf779e36d4434973059133f10e12326cf319db32b98fed48e248f69e015bed36813f716581e13d56a21dbbda4fe3541e355afe49446458e8d8e47777b9866f720197effd6273b6e89cbdc140e58920cf269abe6ea0bf7'$wifi_pass'" > $mnt/var/lib/iwd/"$wifi_ssid".psk
 
 	echo "Enabling network services..."
 	arch-chroot $mnt systemctl enable iwd.service dhcpcd.service
@@ -1096,27 +1101,13 @@ do_chroot () {
 	check_on_root
 	mount_disk
 
-	# arch-chroot has a bug that causes it to load in the background when running in interactive mode, so I'll be using regular chroot for this
-
 	echo -e "\nEntering chroot. Type 'exit' to leave.\n"
 
-	cd $mnt
-
-	mount -t proc /proc proc/
-	mount -t sysfs /sys sys/
-	mount --rbind /dev dev/
-	mount --rbind /run run/
-	mount --rbind /sys/firmware/efi/efivars sys/firmware/efi/efivars/
-	cp /etc/resolv.conf etc/resolv.conf
-
-	chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
+   arch-chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
 
 	echo -e "\nExiting chroot...\n"
 
-	cd /
-
-	unmount_disk
-
+   unmount_disk
 }
 
 
@@ -1124,6 +1115,9 @@ do_chroot () {
 connect_wireless () {
 
 	echo -e "\nAttempting to connect to wireless...\n"
+
+	iwctl station wlan0 scan
+
 	iwctl --passphrase $wifi_pass station wlan0 connect $wifi_ssid
 
 	if [[ "$?" -eq 0 ]]; then
