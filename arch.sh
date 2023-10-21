@@ -4,7 +4,7 @@
 # Download and run with:
 # bash <(curl -sL bit.ly/a-install)
 
-#set -e
+set -e
 
 
 
@@ -1335,7 +1335,7 @@ do
 					case $choiceConfig in
 						"backup")	backup_config ;;
 						"restore")	restore_config ;;
-						"quit")		exit ;;
+						"quit")		break ;;
 						'')		echo -e "\nInvalid option!\n" ;;
 					esac						
 				done ;;
