@@ -1279,6 +1279,8 @@ else
 	choose_disk
 fi
 
+check_viable_disk
+
 
 
 ###  Install required packages  ###
@@ -1292,7 +1294,6 @@ done
 
 [ -d /home/$user ] && cp arch.sh $mnt/home/$user || cp arch.sh $mnt/
 
-check_viable_disk
 loadkeys en
 
 # Make font big and readable
@@ -1333,22 +1334,22 @@ select choice in "${choices[@]}"
 do
 	case $choice in
 		"Quit")						echo -e "\nQuitting!"; break; ;;
+		"Chroot")					do_chroot ;;
       "Choose disk")				choose_disk ;;
       "Partition disk")			create_partitions ;;
       "Install base")			install_base ;;
       "Setup fstab")				setup_fstab ;;
 		"Install boot manager") echo -e "\nWhich boot manager would you like to install?\n"
 
-										choiceBoot=(grub EFISTUB rEFInd systemD quit) 
-
+										choiceBoot=(rEFInd grub EFISTUB uki systemD quit) 
 				
 										select choiceBoot in "${choiceBoot[@]}"
 										do
 											case $choiceBoot in
+												"rEFInd")	install_REFIND; break ;;
+												"grub")		install_GRUB; break ;;
 												"EFISTUB")	install_EFISTUB; break ;;
 												"uki")	   install_uki; break ;;
-												"grub")		install_GRUB; break ;;
-												"rEFInd")	install_REFIND; break ;;
 												"systemD")	install_SYSTEMDBOOT; break ;;
 												"quit")		break ;;
 												'')			echo -e "\nInvalid option!\n" ;;
@@ -1376,7 +1377,6 @@ do
 		"Install liveroot")		install_liveroot ;;
 		"Setup snapshots")		setup_snapshots ;;
 		"Setup snapper")			setup_snapper ;;
-		"Chroot")					do_chroot ;;
       "Mount $mnt")				mount_disk  ;;
       "Unmount $mnt")			unmount_disk  ;;
 		"Clone disk")				clone_disk ;;
