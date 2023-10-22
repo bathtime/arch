@@ -90,8 +90,8 @@ unmount_disk () {
 
 	if [[ "$(mount | grep $mnt)" ]]; then
 
-   	# Turn off as there is often a mount error that can be solved, so no need to exit
-   	error_check 0 
+   	# Might need to turn error checking off here
+   	error_check 1 
 
    	echo "Unmounting $mnt..."
 
@@ -145,14 +145,13 @@ choose_disk () {
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd"
 		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-		disks+=$(echo -e "\nunmount\nrefresh\nquit")
+		disks+=$(echo -e "\nrefresh\nquit")
 
 		echo -e "\nWhich drive?\n"
 
 		select disk in $disks
 		do
    		case $disk in
-        		unmount) unmount_disk; exit; ;;
 				refresh) break;	;;
         		quit) 	echo -e "\nQuitting!"; exit; ;;
         		'')   	echo -e "\nInvalid option!\n" ; break ;;
@@ -830,6 +829,15 @@ EOF
 
 	fi
 
+	echo 'kernel.core_pattern=/dev/null' > $mnt/etc/sysctl.d/50-coredump.conf
+
+	mkdir -p $mnt/etc/systemd/coredump.conf.d/
+	echo '[Coredump]
+Storage=none
+ProcessSizeMax=0' > $mnt/etc/systemd/coredump.conf.d/custom.conf
+
+	echo '* hard core 0' > $mnt/etc/security/limits.conf
+
 }
 
 
@@ -1086,16 +1094,6 @@ reset_keys () {
 
 
 
-copy_script () {
-
-	[ -d /home/$user ] && cp arch.sh $mnt/home/$user || cp arch.sh $mnt/
-
-	[ "$?" -eq 0 ] && echo -e "\nScript copied!" || echo -e "\nScript not copied."
-
-}
-
-
-
 do_chroot () {
 
 	check_on_root
@@ -1109,11 +1107,12 @@ do_chroot () {
 
 	cp /etc/resolv.conf $mnt/etc/resolv.conf
 
-	echo -e "\n\e[0;42mEntering chroot. Type 'exit' to leave.\e[0;29m\n"
+	echo -e "\e[0;42m\n \nEntering chroot. Type 'exit' to leave.\n\e[0;29m\n"
 
+   #chroot $mnt /bin/bash -ic 'exec env PS1="\e[1;33m(chroot) # \e[0;29m" bash --norc'
    chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
 
-	echo -e "\n\e[0;42mExiting chroot.\e[0;29m\n"
+	echo -e "\e[0;42m\n \nExiting chroot.\n\e[0;29m\n"
 
    unmount_disk
 
@@ -1202,14 +1201,6 @@ download_script () {
 
 
 
-download_apps () {
-
-	pacman -S arch-install-scripts gptfdisk terminus-font squashfs-tools
-
-}
-
-
-
 clone_disk () {
 
 	check_on_root
@@ -1289,6 +1280,20 @@ else
 fi
 
 check_viable_disk
+
+
+
+###  Install required packages  ###
+
+packages=("arch-install-scripts" "gptfdisk" "squashfs-tools" "less" "terminus-font")
+
+for package in "${packages[@]}"; do
+   [ ! "$(pacman -Qs $package)" ] && pacman -Sy --noconfirm $package
+done
+
+
+[ -d /home/$user ] && cp arch.sh $mnt/home/$user || cp arch.sh $mnt/
+
 loadkeys en
 
 # Make font big and readable
@@ -1309,7 +1314,6 @@ choices=("Quit"
 "Install liveroot"
 "Setup snapshots"
 "Setup snapper"
-"Copy script"
 "Mount $mnt"
 "Unmount $mnt"
 "Create squashfs image"
@@ -1319,7 +1323,6 @@ choices=("Quit"
 "Clean system"
 "Connect wireless"
 "Download script"
-"Download apps"
 "Post setup"
 "Reset pacman keys"
 "Change mount to /"
@@ -1331,22 +1334,22 @@ select choice in "${choices[@]}"
 do
 	case $choice in
 		"Quit")						echo -e "\nQuitting!"; break; ;;
+		"Chroot")					do_chroot ;;
       "Choose disk")				choose_disk ;;
       "Partition disk")			create_partitions ;;
       "Install base")			install_base ;;
       "Setup fstab")				setup_fstab ;;
 		"Install boot manager") echo -e "\nWhich boot manager would you like to install?\n"
 
-										choiceBoot=(grub EFISTUB rEFInd systemD quit) 
-
+										choiceBoot=(rEFInd grub EFISTUB uki systemD quit) 
 				
 										select choiceBoot in "${choiceBoot[@]}"
 										do
 											case $choiceBoot in
+												"rEFInd")	install_REFIND; break ;;
+												"grub")		install_GRUB; break ;;
 												"EFISTUB")	install_EFISTUB; break ;;
 												"uki")	   install_uki; break ;;
-												"grub")		install_GRUB; break ;;
-												"rEFInd")	install_REFIND; break ;;
 												"systemD")	install_SYSTEMDBOOT; break ;;
 												"quit")		break ;;
 												'')			echo -e "\nInvalid option!\n" ;;
@@ -1374,7 +1377,6 @@ do
 		"Install liveroot")		install_liveroot ;;
 		"Setup snapshots")		setup_snapshots ;;
 		"Setup snapper")			setup_snapper ;;
-		"Chroot")					do_chroot ;;
       "Mount $mnt")				mount_disk  ;;
       "Unmount $mnt")			unmount_disk  ;;
 		"Clone disk")				clone_disk ;;
@@ -1396,10 +1398,8 @@ do
 
 		"Delete partitions")		delete_partitions ;;
 		"Clean system")			clean_system ;;
-      "Copy script")				copy_script ;;
       "Connect wireless")		connect_wireless ;;
       "Download script")		download_script ;;
-      "Download apps")			download_apps    ;;
       "Post setup")				post_setup ;;
       "Reset pacman keys")    reset_keys ;;
 		"Change mount to /")		mnt='' ;;
