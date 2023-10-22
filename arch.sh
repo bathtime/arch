@@ -90,8 +90,8 @@ unmount_disk () {
 
 	if [[ "$(mount | grep $mnt)" ]]; then
 
-   	# Turn off as there is often a mount error that can be solved, so no need to exit
-   	error_check 0 
+   	# Might need to turn error checking off here
+   	error_check 1 
 
    	echo "Unmounting $mnt..."
 
@@ -145,7 +145,7 @@ choose_disk () {
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd"
 		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-		disks+=$(echo -e "\nunmount\nquit")
+		disks+=$(echo -e "\nrefresh\nquit")
 
 		echo -e "\nWhich drive?\n"
 
@@ -829,6 +829,15 @@ EOF
 
 	fi
 
+	echo 'kernel.core_pattern=/dev/null' > $mnt/etc/sysctl.d/50-coredump.conf
+
+	mkdir -p $mnt/etc/systemd/coredump.conf.d/
+	echo '[Coredump]
+Storage=none
+ProcessSizeMax=0' > $mnt/etc/systemd/coredump.conf.d/custom.conf
+
+	echo '* hard core 0' > $mnt/etc/security/limits.conf
+
 }
 
 
@@ -1085,13 +1094,7 @@ reset_keys () {
 
 
 
-copy_script () {
 
-	[ -d /home/$user ] && cp arch.sh $mnt/home/$user || cp arch.sh $mnt/
-
-	[ "$?" -eq 0 ] && echo -e "\nScript copied!" || echo -e "\nScript not copied."
-
-}
 
 
 
@@ -1202,14 +1205,6 @@ download_script () {
 
 
 
-download_apps () {
-
-	pacman -S arch-install-scripts gptfdisk terminus-font squashfs-tools
-
-}
-
-
-
 clone_disk () {
 
 	check_on_root
@@ -1288,6 +1283,24 @@ else
 	choose_disk
 fi
 
+
+
+###  Copy script to disk  ###
+
+[ -d /home/$user ] && cp arch.sh $mnt/home/$user || cp arch.sh $mnt/
+[ "$?" -eq 0 ] && echo -e "\nScript copied!\n" || echo -e "\nScript not copied.\n"
+
+
+
+###  Install required packages  ###
+
+packages=("arch-install-scripts" "gptfdisk" "squashfs-tools" "less" "terminus-font")
+
+for package in "${packages[@]}"; do
+   [ ! "$(pacman -Qs $package)" ] && pacman -Sy --noconfirm $package
+done
+
+
 check_viable_disk
 loadkeys en
 
@@ -1309,7 +1322,6 @@ choices=("Quit"
 "Install liveroot"
 "Setup snapshots"
 "Setup snapper"
-"Copy script"
 "Mount $mnt"
 "Unmount $mnt"
 "Create squashfs image"
@@ -1319,7 +1331,6 @@ choices=("Quit"
 "Clean system"
 "Connect wireless"
 "Download script"
-"Download apps"
 "Post setup"
 "Reset pacman keys"
 "Change mount to /"
@@ -1396,10 +1407,8 @@ do
 
 		"Delete partitions")		delete_partitions ;;
 		"Clean system")			clean_system ;;
-      "Copy script")				copy_script ;;
       "Connect wireless")		connect_wireless ;;
       "Download script")		download_script ;;
-      "Download apps")			download_apps    ;;
       "Post setup")				post_setup ;;
       "Reset pacman keys")    reset_keys ;;
 		"Change mount to /")		mnt='' ;;
