@@ -145,14 +145,13 @@ choose_disk () {
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd"
 		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-		disks+=$(echo -e "\nunmount\nrefresh\nquit")
+		disks+=$(echo -e "\nunmount\nquit")
 
 		echo -e "\nWhich drive?\n"
 
 		select disk in $disks
 		do
    		case $disk in
-        		unmount) unmount_disk; exit; ;;
 				refresh) break;	;;
         		quit) 	echo -e "\nQuitting!"; exit; ;;
         		'')   	echo -e "\nInvalid option!\n" ; break ;;
@@ -1109,11 +1108,12 @@ do_chroot () {
 
 	cp /etc/resolv.conf $mnt/etc/resolv.conf
 
-	echo -e "\n\e[0;42mEntering chroot. Type 'exit' to leave.\e[0;29m\n"
+	echo -e "\e[0;42m\n \nEntering chroot. Type 'exit' to leave.\n\e[0;29m\n"
 
+   #chroot $mnt /bin/bash -ic 'exec env PS1="\e[1;33m(chroot) # \e[0;29m" bash --norc'
    chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
 
-	echo -e "\n\e[0;42mExiting chroot.\e[0;29m\n"
+	echo -e "\e[0;42m\n \nExiting chroot.\n\e[0;29m\n"
 
    unmount_disk
 
