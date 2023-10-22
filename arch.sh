@@ -1094,10 +1094,6 @@ reset_keys () {
 
 
 
-
-
-
-
 do_chroot () {
 
 	check_on_root
@@ -1285,13 +1281,6 @@ fi
 
 
 
-###  Copy script to disk  ###
-
-[ -d /home/$user ] && cp arch.sh $mnt/home/$user || cp arch.sh $mnt/
-[ "$?" -eq 0 ] && echo -e "\nScript copied!\n" || echo -e "\nScript not copied.\n"
-
-
-
 ###  Install required packages  ###
 
 packages=("arch-install-scripts" "gptfdisk" "squashfs-tools" "less" "terminus-font")
@@ -1300,6 +1289,8 @@ for package in "${packages[@]}"; do
    [ ! "$(pacman -Qs $package)" ] && pacman -Sy --noconfirm $package
 done
 
+
+[ -d /home/$user ] && cp arch.sh $mnt/home/$user || cp arch.sh $mnt/
 
 check_viable_disk
 loadkeys en
