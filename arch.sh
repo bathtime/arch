@@ -1101,13 +1101,22 @@ do_chroot () {
 	check_on_root
 	mount_disk
 
-	echo -e "\nEntering chroot. Type 'exit' to leave.\n"
+	mount -t proc /proc $mnt/proc/
+	mount -t sysfs /sys $mnt/sys/
+	mount -o bind /dev $mnt/dev/
+	mount -o bind /run $mnt/run/
+	mount -o bind /sys/firmware/efi/efivars $mnt/sys/firmware/efi/efivars/
 
-   arch-chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
+	cp /etc/resolv.conf $mnt/etc/resolv.conf
 
-	echo -e "\nExiting chroot...\n"
+	echo -e "\n\e[0;42mEntering chroot. Type 'exit' to leave.\e[0;29m\n"
+
+   chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
+
+	echo -e "\n\e[0;42mExiting chroot.\e[0;29m\n"
 
    unmount_disk
+
 }
 
 
