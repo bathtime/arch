@@ -38,11 +38,13 @@ mnt=/mnt
 espPart=1
 swapPart=2
 rootPart=3
+rootfs=btrfs
 subvols=()
 efi_path=/efi
 
 ucode=intel-ucode
 aurApp=paru
+reinstall=0
 
 user=user
 hostname=Arch
@@ -176,7 +178,7 @@ delete_partitions () {
 
 	wipefs -af $disk 
 
-	[ ! -f /usr/bin/sgdisk ] && pacman -S gptfdisk 
+	[ ! "$(pacman -Qs $package)" ] && pacman -S gptfdisk
 
 	sgdisk -Zo $disk
 
@@ -198,11 +200,16 @@ create_partitions () {
 	parted -s $disk set $espPart esp on
 	parted -s --align=optimal $disk mkpart SWAP linux-swap 512Mib 8512Mib
 	parted -s $disk set $swapPart swap on
-	parted -s --align=optimal $disk mkpart ROOT btrfs 8512Mib 100%
+	parted -s --align=optimal $disk mkpart ROOT $rootfs 8512Mib 100%
 
 	mkfs.fat -F 32 -n EFI $disk$espPart 
-	mkswap $disk$swapPart
-	mkfs.btrfs -f -L ROOT $disk$rootPart
+	mkswap -L SWAP $disk$swapPart
+
+	if [ "$rootfs" = "btrfs" ]; then
+		mkfs.btrfs -f -L ROOT $disk$rootPart
+	else
+		mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart
+	fi
 
 	parted -s $disk print
 
@@ -212,9 +219,13 @@ create_partitions () {
 
 	cd $mnt
 
-	for subvol in '' "${subvols[@]}"; do
-   	btrfs su cr /mnt/@"$subvol"
-	done
+	if [ "$rootfs" = "btrfs" ]; then
+
+		for subvol in '' "${subvols[@]}"; do
+   		btrfs su cr /mnt/@"$subvol"
+		done
+
+	fi
 
 	mkdir -p $mnt/{etc,tmp}
 
@@ -231,12 +242,22 @@ mount_disk () {
 
 	if [[ ! $(mount | grep -E "on /mnt") ]]; then
 
-		mountopts="noatime,compress-force=zstd:1,discard=async"
 
-		echo -e "\nMounting...\n"
-		for subvol in '' "${subvols[@]}"; do
-   		mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
-		done
+		if [ "$rootfs" = "btrfs" ]; then
+
+			echo -e "\nMounting...\n"
+
+			mountopts="noatime,compress-force=zstd:1,discard=async"
+
+			for subvol in '' "${subvols[@]}"; do
+   			mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
+			done
+
+		else
+
+  			mount --mkdir $disk$rootPart $mnt
+
+		fi
 
 		# mount efi partition
 		mount --mkdir $disk$espPart $mnt$efi_path
@@ -252,15 +273,21 @@ install_base () {
 	check_on_root
 	mount_disk
 
+   copy_script
 
 	source /etc/profile
-	pacstrap -K $mnt base linux linux-firmware btrfs-progs vim vi libarchive $ucode gptfdisk
 
+   check_and_install base linux linux-firmware vim vi libarchive $ucode gptfdisk 
+
+	#pacstrap -K $mnt base linux linux-firmware vim vi libarchive $ucode gptfdisk
+
+   #[ "$rootfs" = "btrfs" ] && pacstrap -K $mnt btrfs-progs || pacstrap -K $mnt e2fsprogs
+   [ "$rootfs" = "btrfs" ] && check_and_install btrfs-progs || check_and_install e2fsprogs
 
 	###  Prepare auto-login  ###
 
 	# Does a user already exist?
-	if [ ! "$(grep user /etc/passwd)" ]; then
+	if [ ! "$(grep ^$user $mnt/etc/passwd)" ]; then
    	login_user=root
 	else
    	login_user=$user
@@ -317,6 +344,102 @@ setup_fstab () {
 
 
 
+install_REFIND () {
+
+	check_on_root
+	mount_disk
+
+
+	check_and_install refind 
+
+
+	arch-chroot $mnt refind-install --usedefault $disk$espPart --alldrivers
+
+	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
+	ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
+
+   if [ "$rootfs" = "btrfs" ]; then
+		rootflags='subvol=@'
+	else
+		rootflags=/
+	fi
+
+	echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw rootflags=$rootflags quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" > $mnt/boot/refind_linux.conf
+
+	echo "\"Boot read only\"  \"root=UUID=$ROOT_UUID ro rootflags=$rootflags quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" >> $mnt/boot/refind_linux.conf
+
+	sed -i 's/#enable_touch/enable_touch/g; s/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g' $mnt$efi_path/EFI/BOOT/refind.conf
+
+	rm -rf /boot/grub
+
+	echo -e "\nYou should have a fully bootable system now. Feel free to test it.\n"
+
+}
+
+
+
+install_GRUB () {
+
+	check_on_root
+	mount_disk
+
+	#pacstrap -K $mnt grub grub-btrfs os-prober efibootmgr inotify-tools lz4
+
+   check_and_install grub grub-btrfs os-prober efibootmgr inotify-tools lz4
+
+
+	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
+
+	arch-chroot $mnt /bin/bash -e << EOF
+
+	grub-install --target=x86_64-efi --efi-directory=$efi_path --bootloader-id=GRUB --removable
+
+	cat > /etc/default/grub << EOF2
+
+GRUB_TIMEOUT=0
+GRUB_DISTRIBUTOR=""
+GRUB_DEFAULT=saved
+GRUB_DISABLE_SUBMENU=true
+GRUB_TERMINAL_OUTPUT="console"
+GRUB_CMDLINE_LINUX="nowatchdog loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
+GRUB_DISABLE_RECOVERY="true"
+GRUB_HIDDEN_TIMEOUT=2
+GRUB_RECORDFAIL_TIMEOUT=1
+GRUB_TIMEOUT=0
+ 
+# Update grub with:
+# grub-mkconfig -o /boot/grub/grub.cfg
+
+EOF2
+
+
+	# Allows grub to run snapshots
+	systemctl enable grub-btrfsd.service
+	/etc/grub.d/41_snapshots-btrfs
+
+	# Remove grub os-prober message
+	sed -i 's/grub_warn/#grub_warn/g' /etc/grub.d/30_os-prober
+
+
+
+	###  Offer readonly grub booting option  ###
+
+	cp $mnt/etc/grub.d/10_linux /etc/grub.d/10_linux-readonly
+	sed -i 's/\"\$title\"/\"\$title \(readonly\)\"/g' $mnt/etc/grub.d/10_linux-readonly
+	sed -i 's/ rw / ro /g' $mnt/etc/grub.d/10_linux-readonly
+
+	# So systemd won't remount as 'rw'
+	arch-chroot $mnt systemctl mask systemd-remount-fs.service
+
+	grub-mkconfig -o /boot/grub/grub.cfg
+
+EOF
+
+	echo -e "\nYou should have a fully bootable system now. Feel free to test it.\n"
+
+}
+
+
 install_EFISTUB () {
 
 	echo "TODO."
@@ -340,7 +463,8 @@ default_image="/efi/EFI/boot/initramfs-linux.img"
 #default_image="/boot/efi/boot/bootx64.efi"
 #default_uki="/efi/EFI/Linux/arch-linux.efi"' > $mnt/etc/mkinitcpio.d/linux.preset
 
-	[ ! -f $mnt/usr/bin/efibootmgr ] && pacstrap -K $mnt efibootmgr
+	#[ ! -f $mnt/usr/bin/efibootmgr ] && pacstrap -K $mnt efibootmgr
+   check_and_install efibootmgr
 
 	arch-chroot $mnt /bin/bash -e << EOF
 
@@ -413,90 +537,6 @@ install_SYSTEMDBOOT () {
 
 
 
-install_REFIND () {
-
-	check_on_root
-	mount_disk
-
-	[ ! -f $mnt/usr/bin/refind-install ] && pacstrap -K $mnt refind
-
-	arch-chroot $mnt refind-install --usedefault $disk$espPart --alldrivers
-
-	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
-	ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
-
-	echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw rootflags=subvol=@ quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" > $mnt/boot/refind_linux.conf
-
-	echo "\"Boot read only\"  \"root=UUID=$ROOT_UUID ro rootflags=subvol=@ quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" >> $mnt/boot/refind_linux.conf
-
-	sed -i 's/#enable_touch/enable_touch/g; s/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g' $mnt$efi_path/EFI/BOOT/refind.conf
-
-	rm -rf /boot/grub
-
-	echo -e "\nYou should have a fully bootable system now. Feel free to test it.\n"
-
-}
-
-
-
-install_GRUB () {
-
-	check_on_root
-	mount_disk
-
-	pacstrap -K $mnt grub grub-btrfs os-prober efibootmgr inotify-tools lz4
-
-	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
-
-	arch-chroot $mnt /bin/bash -e << EOF
-
-	grub-install --target=x86_64-efi --efi-directory=$efi_path --bootloader-id=GRUB --removable
-
-	cat > /etc/default/grub << EOF2
-
-GRUB_TIMEOUT=0
-GRUB_DISTRIBUTOR=""
-GRUB_DEFAULT=saved
-GRUB_DISABLE_SUBMENU=true
-GRUB_TERMINAL_OUTPUT="console"
-GRUB_CMDLINE_LINUX="nowatchdog loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
-GRUB_DISABLE_RECOVERY="true"
-GRUB_HIDDEN_TIMEOUT=2
-GRUB_RECORDFAIL_TIMEOUT=1
-GRUB_TIMEOUT=0
- 
-# Update grub with:
-# grub-mkconfig -o /boot/grub/grub.cfg
-
-EOF2
-
-
-	# Allows grub to run snapshots
-	systemctl enable grub-btrfsd.service
-	/etc/grub.d/41_snapshots-btrfs
-
-	# Remove grub os-prober message
-	sed -i 's/grub_warn/#grub_warn/g' /etc/grub.d/30_os-prober
-
-
-
-	###  Offer readonly grub booting option  ###
-
-	cp $mnt/etc/grub.d/10_linux /etc/grub.d/10_linux-readonly
-	sed -i 's/\"\$title\"/\"\$title \(readonly\)\"/g' $mnt/etc/grub.d/10_linux-readonly
-	sed -i 's/ rw / ro /g' $mnt/etc/grub.d/10_linux-readonly
-
-	# So systemd won't remount as 'rw'
-	arch-chroot $mnt systemctl mask systemd-remount-fs.service
-
-	grub-mkconfig -o /boot/grub/grub.cfg
-
-EOF
-
-	echo -e "\nYou should have a fully bootable system now. Feel free to test it.\n"
-
-}
-
 
 
 general_setup () {
@@ -506,8 +546,10 @@ general_setup () {
 	copy_script
 
 	# Setup sudo
-	[ ! -f $mnt/usr/bin/sudo ] && pacstrap -K $mnt sudo
+	#[ ! -f $mnt/usr/bin/sudo ] && pacstrap -K $mnt sudo
+   #pacman --root $mnt -Qi sudo &>/dev/null || pacstrap -K $mnt sudo
 
+	check_and_install sudo
 
 	mkdir -p $mnt/etc/sudoers.d
 	echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/wheel
@@ -638,7 +680,8 @@ setup_network_iwd () {
 
 	###  Setup network  ###
 
-	arch-chroot $mnt pacman -S iw iwd dhcpcd
+	#arch-chroot $mnt pacman -S iw iwd dhcpcd
+	check_and_install iw iwd dhcpcd
 
 	# Helps with slow booting caused by waiting for a connection
 	mkdir -p $mnt/etc/systemd/system/dhcpcd@.service.d/
@@ -675,7 +718,8 @@ setup_network_wpa () {
 	check_on_root
 	mount_disk
 
-	arch-chroot $mnt pacman -S iw wpa_supplicant dhcpcd
+	#arch-chroot $mnt pacman -S iw wpa_supplicant dhcpcd
+	check_and_install iw wpa_supplicant dhcpcd
 
 	arch-chroot $mnt systemctl enable wpa_supplicant.service
 
@@ -746,8 +790,12 @@ install_aur () {
 	check_on_root
 	mount_disk
 
-	pacstrap -K $mnt base-devel git less
-	[ "$aurApp" = "paru" ] && [ ! -f /usr/bin/cargo ] && pacstrap -K $mnt cargo
+	#pacstrap -K $mnt base-devel git less
+	check_and_install git less
+
+	#[ "$aurApp" = "paru" ] && [ ! -f /usr/bin/cargo ] && pacstrap -K $mnt cargo
+
+	[ "$aurApp" = "paru" ] && check_and_install cargo
 
 
 	arch-chroot $mnt /bin/bash << EOF
@@ -779,7 +827,10 @@ install_tweaks () {
 	mount_disk
 
 
-	[ ! -f $mnt/usr/bin/ncdu ] && pacstrap -K $mnt terminus-font ncdu dosfstools parted arch-install-scripts tar man gptfdisk
+	#[ ! -f $mnt/usr/bin/ncdu ] && pacstrap -K $mnt terminus-font ncdu dosfstools parted arch-install-scripts tar man gptfdisk
+
+	check_and_install terminus-font ncdu dosfstools parted arch-install-scripts tar man gptfdisk
+
 
 	echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
 	echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
@@ -847,8 +898,9 @@ install_liveroot () {
 	check_on_root
 	mount_disk
 
-	[ ! -f $mnt/bin/rsync ] && pacstrap -K $mnt rsync squashfs-tools
+	#[ ! -f $mnt/bin/rsync ] && pacstrap -K $mnt rsync squashfs-tools
 
+	check_and_install rsync squashfs-tools
 
 	###  Add tmpfs/overlay hook options  ###
 
@@ -969,7 +1021,7 @@ run_latehook() {
 
             echo "Copying root filesystem to RAM. Please be patient..."
 
-            rsync -a --exclude=rootfs.tar.gz --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ --exclude=/mnt/ /real_root/@/ $new_root
+            rsync -a --exclude=root.squashfs --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ /real_root/@/ $new_root
 
          fi
 
@@ -1109,7 +1161,6 @@ do_chroot () {
 
 	echo -e "\e[0;42m\n \nEntering chroot. Type 'exit' to leave.\n\e[0;29m\n"
 
-   #chroot $mnt /bin/bash -ic 'exec env PS1="\e[1;33m(chroot) # \e[0;29m" bash --norc'
    chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
 
 	echo -e "\e[0;42m\n \nExiting chroot.\n\e[0;29m\n"
@@ -1140,7 +1191,9 @@ connect_wireless () {
 
 post_setup () {
 
-	pacman -S "$post_install_apps"
+	#pacman -S "$post_install_apps"
+
+	check_and_install "$post_install_apps"
 
 	echo 'if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
   	#autostartapp
@@ -1203,7 +1256,10 @@ download_script () {
 
 clone_disk () {
 
+
 	check_on_root
+	check_and_install rsync
+
 	echo -e "\nCloning disk. Please be patient...\n"
 
 	rsync -a --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ --exclude=/mnt/ / $mnt/
@@ -1217,6 +1273,8 @@ clone_disk () {
 
 create_archive () {
 
+	check_and_install squashfs-tools
+
 	echo "Creating archive file..."
 
 	cd / 
@@ -1228,7 +1286,29 @@ create_archive () {
 
 }
 
+copy_script () {
 
+	[ -d $mnt/home/$user ] && cp arch.sh $mnt/home/$user || cp arch.sh $mnt/
+
+}
+
+
+
+check_and_install () {
+
+   packages="$@"
+
+	for package in $packages; do
+
+		if [ "$reinstall" -eq 1 ]; then
+			pacstrap -K $mnt $package
+		else
+	   	pacman --root $mnt -Qi $package &> /dev/null && echo "$package already installed." || pacstrap -K $mnt $package
+		fi
+
+	done
+
+}
 
 
 CONFIG_FILES=".config/baloofilerc
@@ -1285,14 +1365,18 @@ check_viable_disk
 
 ###  Install required packages  ###
 
-packages=("arch-install-scripts" "gptfdisk" "squashfs-tools" "less" "terminus-font")
+packages=("arch-install-scripts
+gptfdisk
+squashfs-tools
+less
+terminus-font")
 
-for package in "${packages[@]}"; do
-   [ ! "$(pacman -Qs $package)" ] && pacman -Sy --noconfirm $package
+for package in $packages; do
+
+	pacman -Qi $package &> /dev/null && echo "$package already installed." || pacstrap -K $mnt $package
+
 done
 
-
-[ -d /home/$user ] && cp arch.sh $mnt/home/$user || cp arch.sh $mnt/
 
 loadkeys en
 
@@ -1329,6 +1413,7 @@ choices=("Quit"
 "Change mount to /mnt")
 
 
+echo -e "\nPlease choose:\n"
 
 select choice in "${choices[@]}" 
 do
