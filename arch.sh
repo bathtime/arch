@@ -368,7 +368,7 @@ install_REFIND () {
 
 	echo "\"Boot read only\"  \"root=UUID=$ROOT_UUID ro rootflags=$rootflags quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" >> $mnt/boot/refind_linux.conf
 
-	sed -i 's/#enable_touch/enable_touch/g; s/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g' $mnt$efi_path/EFI/BOOT/refind.conf
+	sed -i 's/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g' $mnt$efi_path/EFI/BOOT/refind.conf
 
 	rm -rf /boot/grub
 
@@ -1021,7 +1021,7 @@ run_latehook() {
 
             echo "Copying root filesystem to RAM. Please be patient..."
 
-            rsync -a --exclude=root.squashfs --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ /real_root/@/ $new_root
+            rsync -a --exclude=root.squashfs --exclude=/efi/ --exclude=/boot/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ /real_root/@/ $new_root
 
          fi
 
