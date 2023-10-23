@@ -1150,6 +1150,8 @@ connect_wireless () {
 
 	iwctl station wlan0 scan
 
+	sleep 1
+
 	iwctl --passphrase $wifi_pass station wlan0 connect $wifi_ssid
 
 	if [[ "$?" -eq 0 ]]; then
