@@ -9,12 +9,12 @@
  
 error() {
 
-   local sourcefile=$1
-   local lineno=$2
-   local errornum=$3
-   local command=$4
+	local sourcefile=$1
+	local lineno=$2
+	local errornum=$3
+	local command=$4
 
-   echo -e "\e[0;41m\n\n$1: Error $3 on line $2: \n\n$4\n\e[0;29m\n\n"
+	echo -e "\e[0;41m\n\n$1: Error $3 on line $2: \n\n$4\n\e[0;29m\n\n"
 
 }
 
@@ -57,7 +57,7 @@ wifi_pass="13FDC4A93E3C"
 # Post setup
 
 post_install_apps="plasma-desktop plasma-wayland-session plasma-pa kscreen dolphin konsole firefox"
-autostartapp="startplasma-wayland"
+auto_start_app="startplasma-wayland"
 
 
 
@@ -276,7 +276,7 @@ install_base () {
 	pacstrap_install base linux linux-firmware
 
 
-   [ "$rootfs" = "btrfs" ] && pacstrap_install btrfs-progs || pacstrap_install e2fsprogs
+   [ "$rootfs" = "btrfs" ] && pacstrap_install btrfs-progs
 
 
 	###  Prepare auto-login  ###
@@ -327,7 +327,7 @@ setup_fstab () {
 	#sed -i 's/\/efi.*vfat.*rw/\/efi     vfat     ro/' $mnt/etc/fstab
 
 	[ ! "$(cat $mnt/etc/fstab | grep 'none swap defaults 0 0')" ] && echo -e "UUID=$SWAP_UUID none swap defaults 0 0\n" >> $mnt/etc/fstab
-	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/cache')" ] && echo "tmpfs    /var/cache  tmpfs   rw,nodev,nosuid,mode=1755,size=2G   0 0" >> $mnt/etc/fstab
+#	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/cache')" ] && echo "tmpfs    /var/cache  tmpfs   rw,nodev,nosuid,mode=1755,size=2G   0 0" >> $mnt/etc/fstab
 	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/log')" ]   && echo "tmpfs    /var/log    tmpfs   rw,nodev,nosuid,mode=1775,size=2G   0 0" >> $mnt/etc/fstab
 	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/tmp')" ]   && echo "tmpfs    /var/tmp    tmpfs   rw,nodev,nosuid,mode=1777,size=2G   0 0" >> $mnt/etc/fstab
 
@@ -1170,15 +1170,16 @@ post_setup () {
 
 
 	echo 'if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
-	#autostartapp
+	#auto_start_app
 fi' >> /home/$user/.bash_profile
 
 	echo 'if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
-	#autostartapp
+	#auto_start_app
 fi' >> /home/$user/.profile
+
 	chown user:user /home/$user/{.profile,bash_profile}
 
-	sed -i "s/#autostartapp/$autostartapp/" $mnt/home/$user/{.profile,bash_profile}
+	sed -i "s/#auto_start_app/$auto_start_app/" $mnt/home/$user/{.profile,bash_profile}
 
 }
 
@@ -1283,9 +1284,11 @@ pacstrap_install () {
 	for package in $packages; do
 
 		if [ "$reinstall" -eq 1 ]; then
-			pacstrap -K $mnt $package
+			pacstrap -c -K $mnt $package
 		else
-			pacman --root $mnt -Qi $package &> /dev/null && echo "$package already installed." || pacstrap -K $mnt $package
+
+			pacman --sysroot $mnt --noconfirm -Qi $package &> /dev/null && echo "$package already installed." || pacstrap -c -K $mnt $package
+
 		fi
 
 	done
