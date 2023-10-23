@@ -529,7 +529,8 @@ install_SYSTEMDBOOT () {
 	#arch-chroot $mnt bootctl --esp-path=/efi install
 	arch-chroot $mnt bootctl install
 	arch-chroot $mnt bootctl update
-	arch-chroot $mnt systemctl enable systemd-boot-update.service 
+	#arch-chroot $mnt systemctl enable systemd-boot-update.service 
+ 	systemctl enable systemd-boot-update.service --root=/$mnt
 
 }
 
@@ -704,7 +705,8 @@ SAE-PT-Group19=f5614183429496736ed0da01f20d14b3415e201531b6fc24987eb128c2090897d
 SAE-PT-Group20=eb986ca0245dcd12c86bf779e36d4434973059133f10e12326cf319db32b98fed48e248f69e015bed36813f716581e13d56a21dbbda4fe3541e355afe49446458e8d8e47777b9866f720197effd6273b6e89cbdc140e58920cf269abe6ea0bf7" > $mnt/var/lib/iwd/"$wifi_ssid".psk
 
 	echo "Enabling network services..."
-	arch-chroot $mnt systemctl enable iwd.service dhcpcd.service
+	#arch-chroot $mnt systemctl enable iwd.service dhcpcd.service
+	systemctl enable iwd.service dhcpcd.service --root=$mnt
 
 }
 
@@ -719,7 +721,8 @@ setup_network_wpa () {
 	pacstrap_install iw wpa_supplicant dhcpcd
 
 
-	arch-chroot $mnt systemctl enable wpa_supplicant.service
+	#arch-chroot $mnt systemctl enable wpa_supplicant.service
+	systemctl enable wpa_supplicant.service --root=$mnt
 
 	mkdir -p $mnt/etc/wpa_supplicant
 	arch-chroot $mnt wpa_passphrase "$wifi_ssid" "$wifi_pass" > $mnt/etc/wpa_supplicant/"$wifi_ssid".conf
@@ -1092,8 +1095,8 @@ default_image="/boot/initramfs-linux.img"' > $mnt/etc/mkinitcpio.d/linux.preset
 	arch-chroot $mnt mkinitcpio -P 
 
 	# So systemd won't remount as 'rw'
-	arch-chroot $mnt systemctl mask systemd-remount-fs.service
-
+	#arch-chroot $mnt systemctl mask systemd-remount-fs.service
+	systemctl mask systemd-remount-fs.service --root=$mnt
 }
 
 
