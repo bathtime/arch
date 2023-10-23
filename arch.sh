@@ -197,12 +197,12 @@ create_partitions () {
 	check_on_root
 	delete_partitions
 
-	parted -s $disk mklabel gpt
-	parted -s --align=optimal $disk mkpart ESP fat32 1Mib 512Mib 
-	parted -s $disk set $espPart esp on
-	parted -s --align=optimal $disk mkpart SWAP linux-swap 512Mib 8512Mib
-	parted -s $disk set $swapPart swap on
-	parted -s --align=optimal $disk mkpart ROOT $rootfs 8512Mib 100%
+	parted -s $disk mklabel gpt \
+			mkpart ESP fat32 1Mib 512Mib \
+			set $espPart esp on \
+			mkpart SWAP linux-swap 512Mib 8512Mib \
+			set $swapPart swap on \
+			mkpart ROOT $rootfs 8512Mib 100% \
 
 	mkfs.fat -F 32 -n EFI $disk$espPart 
 	mkswap -L SWAP $disk$swapPart
@@ -303,6 +303,33 @@ Type=simple
 ExecStart=
 ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin $login_user --noclear %I 38400 linux
 EOF
+
+}
+
+
+
+hypervisor_setup () {
+
+    hypervisor=$(systemd-detect-virt)
+
+    case $hypervisor in
+
+        kvm )       pacstrap_install qemu-guest-agent
+              	    systemctl enable qemu-guest-agent --root=$mnt
+                    ;;
+        vmware  )   pacstrap_install open-vm-tools
+                    systemctl enable vmtoolsd --root=$mnt
+                    systemctl enable vmware-vmblock-fuse --root=$mnt
+                    ;;
+        oracle )    pacstrap_install virtualbox-guest-utils
+                    systemctl enable vboxservice --root=$mnt
+                    ;;
+        microsoft ) pacstrap_install hyperv
+                    systemctl enable hv_fcopy_daemon --root=$mnt
+                    systemctl enable hv_kvp_daemon --root=$mnt
+                    systemctl enable hv_vss_daemon --root=$mnt
+                    ;;
+	esac
 
 }
 
@@ -1388,6 +1415,7 @@ choices=("Quit"
 "Choose disk"
 "Partition disk"
 "Install base"
+"Hypervisor setup"
 "Setup fstab"
 "Install boot manager"
 "General setup"
@@ -1424,7 +1452,8 @@ do
 		"Chroot")					do_chroot ;;
 		"Choose disk")				choose_disk ;;
 		"Partition disk")			create_partitions ;;
-		"Install base")			install_base ;;
+		"Install base")				install_base ;;
+		"Hypervisor setup")			hypervisor_setup ;;
 		"Setup fstab")				setup_fstab ;;
 		"Install boot manager") echo -e "\nWhich boot manager would you like to install?\n"
 
