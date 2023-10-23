@@ -23,9 +23,9 @@ trap 'error "${BASH_SOURCE}" "${LINENO}" "$?" "${BASH_COMMAND}"' ERR
 error_check () {
 
 	if [ $1 -eq 1 ]; then
-   	set -Eeo pipefail
+		set -Eeo pipefail
 	else
-   	set +e 
+		set +e 
 	fi
 
 }
@@ -64,13 +64,13 @@ autostartapp="startplasma-wayland"
 check_viable_disk () {
 
 	if [[ "$disk" == "" ]]; then
-   	echo -e "\nMissing disk parameter. Exiting.\n"
+		echo -e "\nMissing disk parameter. Exiting.\n"
   		exit
 	fi
 
 	if [[ ! "$(lsblk --output=PATH -d -n | grep $disk)" ]]; then
-   	echo -e "\nNo such disk found ($disk). Exiting.\n"
-  		exit
+		echo -e "\nNo such disk found ($disk). Exiting.\n"
+		exit
 	fi
 
 }
@@ -80,8 +80,8 @@ check_viable_disk () {
 check_on_root () {
   
 	if [[ $(mount | grep -G "$disk.*on / type") ]]; then 
-   	echo -e "\nDevice mounted on root. Will not run. Exiting.\n"
-   	exit
+		echo -e "\nDevice mounted on root. Will not run. Exiting.\n"
+		exit
 	fi
 
 }
@@ -92,43 +92,43 @@ unmount_disk () {
 
 	if [[ "$(mount | grep $mnt)" ]]; then
 
-   	# Might need to turn error checking off here
-   	error_check 1 
+		# Might need to turn error checking off here
+		error_check 1 
 
-   	echo "Unmounting $mnt..."
+		echo "Unmounting $mnt..."
 
-   	# Shouldn't be in directory we're unmounting   
-   	[[ "$(pwd | grep $mnt)" ]] && cd ..
+		# Shouldn't be in directory we're unmounting   
+		[[ "$(pwd | grep $mnt)" ]] && cd ..
 
-   	sync
-   	umount -n -R $mnt
+		sync
+		umount -n -R $mnt
 
    	if [[ "$(mount | grep 'on '$mnt)" ]]; then
 
-      	echo -e "\nCouldn't unmount. Trying alternative method. Please be patient...\n" 
+			echo -e "\nCouldn't unmount. Trying alternative method. Please be patient...\n" 
 
-      	#findmnt -R $mnt
+			#findmnt -R $mnt
 
-      	sync
-      	umount -R -f $mnt
-      	sleep 1
+			sync
+			umount -R -f $mnt
+			sleep 1
 
-      	if [[ "$(mount | grep 'on '$mnt)" ]]; then
-         	echo -e "\nCouldn't unmount. Using lazy method...\n" 
-         	sleep 1
-         	umount -R -l $mnt
-      	fi
-   	fi 
+			if [[ "$(mount | grep 'on '$mnt)" ]]; then
+				echo -e "\nCouldn't unmount. Using lazy method...\n" 
+				sleep 1
+				umount -R -l $mnt
+			fi
+		fi 
 
-   	if [[ "$?" -eq 0 ]]; then
-      	echo -e "\nUnmount successful.\n"
-   	else
-      	echo -e "\nERROR ($?): could not unmount!\n"
-      	exit
-   	fi 
+		if [[ "$?" -eq 0 ]]; then
+			echo -e "\nUnmount successful.\n"
+		else
+			echo -e "\nERROR ($?): could not unmount!\n"
+			exit
+		fi 
 
 	else
-   	echo -e "\nDisk already unmounted!\n"
+		echo -e "\nDisk already unmounted!\n"
 	fi
 
 	error_check 1
@@ -153,12 +153,12 @@ choose_disk () {
 
 		select disk in $disks
 		do
-   		case $disk in
+			case $disk in
 				refresh) break;	;;
-        		quit) 	echo -e "\nQuitting!"; exit; ;;
-        		'')   	echo -e "\nInvalid option!\n" ; break ;;
-        		*)    	search_disks=0; break; ;;
-    		esac
+				quit) 	echo -e "\nQuitting!"; exit; ;;
+				'')   	echo -e "\nInvalid option!\n" ; break ;;
+				*)    	search_disks=0; break; ;;
+			esac
 		done
 
 	done
@@ -181,10 +181,6 @@ delete_partitions () {
 	[ ! "$(pacman -Qs $package)" ] && pacman -S gptfdisk
 
 	sgdisk -Zo $disk
-
-	# Not sure if this is required but can't hurt
-	#echo "Wiping first 25mb of disk. Please be patient..."
-	#dd if=/dev/zero of=$disk bs=1M count=25
 
 }
 
@@ -222,7 +218,7 @@ create_partitions () {
 	if [ "$rootfs" = "btrfs" ]; then
 
 		for subvol in '' "${subvols[@]}"; do
-   		btrfs su cr /mnt/@"$subvol"
+			btrfs su cr /mnt/@"$subvol"
 		done
 
 	fi
@@ -250,12 +246,12 @@ mount_disk () {
 			mountopts="noatime,compress-force=zstd:1,discard=async"
 
 			for subvol in '' "${subvols[@]}"; do
-   			mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
+				mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
 			done
 
 		else
 
-  			mount --mkdir $disk$rootPart $mnt
+			mount --mkdir $disk$rootPart $mnt
 
 		fi
 
@@ -287,9 +283,9 @@ install_base () {
 
 	# Does a user already exist?
 	if [ ! "$(grep ^$user $mnt/etc/passwd)" ]; then
-   	login_user=root
+		login_user=root
 	else
-   	login_user=$user
+		login_user=$user
 	fi
 
 	echo -e "\nCreating auto-login for $login_user.\n"
@@ -357,7 +353,7 @@ install_REFIND () {
 	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 	ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
 
-   if [ "$rootfs" = "btrfs" ]; then
+	if [ "$rootfs" = "btrfs" ]; then
 		rootflags='subvol=@'
 	else
 		rootflags=/
@@ -383,7 +379,7 @@ install_GRUB () {
 	mount_disk
 
 
-   pacstrap_install grub grub-btrfs os-prober efibootmgr inotify-tools lz4
+	pacstrap_install grub grub-btrfs os-prober efibootmgr inotify-tools lz4
 
 
 	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
@@ -462,7 +458,7 @@ default_image="/efi/EFI/boot/initramfs-linux.img"
 #default_uki="/efi/EFI/Linux/arch-linux.efi"' > $mnt/etc/mkinitcpio.d/linux.preset
 
 	#[ ! -f $mnt/usr/bin/efibootmgr ] && pacstrap -K $mnt efibootmgr
-   pacstrap_install efibootmgr
+	pacstrap_install efibootmgr
 
 	arch-chroot $mnt /bin/bash -e << EOF
 
@@ -496,7 +492,7 @@ install_uki () {
 
 	echo "root=UUID=$ROOT_UUID rw resume=UUID=$SWAP_UUID" > $mnt/etc/kernel/cmdline
 
-echo 'ALL_config="/etc/mkinitcpio.conf"
+	echo 'ALL_config="/etc/mkinitcpio.conf"
 ALL_kver="/boot/vmlinuz-linux"
 ALL_microcode=(/boot/*-ucode.img)
 
@@ -605,16 +601,16 @@ setup_user () {
 	echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/wheel
 
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
-   	arch-chroot $mnt useradd -m user -G wheel
+		arch-chroot $mnt useradd -m user -G wheel
 	else
 		rm -rf $mnt/home/$user
-   	arch-chroot $mnt userdel user
-   	arch-chroot $mnt useradd -m user -G wheel
+		arch-chroot $mnt userdel user
+		arch-chroot $mnt useradd -m user -G wheel
 	fi
 
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
-   	echo -e "\nUser was not created. Exiting.\n"
-	   exit
+		echo -e "\nUser was not created. Exiting.\n"
+		exit
 	fi
 
 	arch-chroot $mnt printf "$password\n$password\n" | passwd user
@@ -634,8 +630,8 @@ ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin $user --n
 if [ -n "$BASH_VERSION" ]; then
 
 	# include .bashrc if it exists
-   if [ -f "$HOME/.bashrc" ]; then
-   	. "$HOME/.bashrc"
+	if [ -f "$HOME/.bashrc" ]; then
+		. "$HOME/.bashrc"
    fi
 fi
 
@@ -682,7 +678,7 @@ setup_network_iwd () {
 ExecStart=
 ExecStart=/usr/bin/dhcpcd -b -q %I' > $mnt/etc/systemd/system/dhcpcd@.service.d/no-wait.conf
 
-   [ "$(cat $mnt/etc/dhcpcd.conf | grep noarp)" ] && echo noarp >> $mnt/etc/dhcpcd.conf
+	[ "$(cat $mnt/etc/dhcpcd.conf | grep noarp)" ] && echo noarp >> $mnt/etc/dhcpcd.conf
 
 	mkdir -p $mnt/etc/iwd
 	echo '[General]
@@ -847,7 +843,7 @@ ProcessSizeMax=0' > $mnt/etc/systemd/coredump.conf.d/custom.conf
 
 install_mksh () {
 
-   ### TODO: Check that aur_app is installed!!!
+	### TODO: Check that aur_app is installed!!!
 
 
 	#arch-chroot $mnt sudo -u $user $aur_app -S mksh
@@ -910,26 +906,26 @@ install_liveroot () {
 
 create_archive() {
             
-   echo -e "Creating archive file...\n"
+	echo -e "Creating archive file...\n"
 
-   cd $real_root/@/
+	cd $real_root/@/
 
-   mksquashfs . $real_root/@/root.squashfs -noappend -no-recovery -mem-percent 50 -e root.squashfs -e boot/* -e efi/* -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/ -e .snapshots/ -e var/tmp/* -e var/cache/* -e var/log/* -e etc/pacman.d/gnupg/ -e var/lib/systemd/random-seed
+	mksquashfs . $real_root/@/root.squashfs -noappend -no-recovery -mem-percent 50 -e root.squashfs -e boot/* -e efi/* -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/ -e .snapshots/ -e var/tmp/* -e var/cache/* -e var/log/* -e etc/pacman.d/gnupg/ -e var/lib/systemd/random-seed
 
-   ls -la $real_root/@/root.squashfs
+	ls -la $real_root/@/root.squashfs
 
 }
 
 create_overlay() {
 
-   echo -e "\nCreating overlay...\n"
+	echo -e "\nCreating overlay...\n"
 
-   local lower_dir=$(mktemp -d -p /)
-   local ram_dir=$(mktemp -d -p /)
-   mount --move ${new_root} ${lower_dir}
-   mount -t tmpfs cowspace ${ram_dir}
-   mkdir -p ${ram_dir}/upper ${ram_dir}/work
-   mount -t overlay -o lowerdir=${lower_dir},upperdir=${ram_dir}/upper,workdir=${ram_dir}/work rootfs ${new_root}
+	local lower_dir=$(mktemp -d -p /)
+	local ram_dir=$(mktemp -d -p /)
+	mount --move ${new_root} ${lower_dir}
+	mount -t tmpfs cowspace ${ram_dir}
+	mkdir -p ${ram_dir}/upper ${ram_dir}/work
+	mount -t overlay -o lowerdir=${lower_dir},upperdir=${ram_dir}/upper,workdir=${ram_dir}/work rootfs ${new_root}
 
 }
 
@@ -937,20 +933,18 @@ create_overlay() {
 run_latehook() {
 
 
-   echo -e "\nPress any key for extra boot options.\n"
+	echo -e "\nPress any key for extra boot options.\n"
 
-   real_root=/real_root
-   mkdir $real_root
-   mount ${root} $real_root
-   new_root=/new_root
-   mkdir -p $new_root
-
-
+	real_root=/real_root
+	mkdir $real_root
+	mount ${root} $real_root
+	new_root=/new_root
+	mkdir -p $new_root
 
 
-   if read -t 2 -s -n 1; then
+	if read -t 2 -s -n 1; then
 
-      echo -e "\nPlease choose an option:\n\n\
+		echo -e "\nPlease choose an option:\n\n\
 <s> run snapshot\n\
 <w> run snapshot + overlay\n\
 <o> run in overlay mode\n\
@@ -960,92 +954,92 @@ run_latehook() {
 <d> emergency shell\n\n\
 <enter> continue boot\n"
 
-      read -n 1 -s key
+		read -n 1 -s key
 
 
 
-      if [[ "$key" = "s" ]] || [[ "$key" = "w" ]]; then
+		if [[ "$key" = "s" ]] || [[ "$key" = "w" ]]; then
 
-         mount --mkdir -o subvolid=256 ${root} $new_root
+			mount --mkdir -o subvolid=256 ${root} $new_root
       
-         btrfs subvolume list -ts $new_root | less
-	 read -n 3 -p "Enter snapshot number (or press <enter> for current subvolume (256)): " subvol 
+			btrfs subvolume list -ts $new_root | less
+			read -n 3 -p "Enter snapshot number (or press <enter> for current subvolume (256)): " subvol 
 
-	 if [ ! "$subvol" ]; then
-            echo -e "\nDefault subvolum chosen.\n"
-	    subvol=256
-         fi
+			if [ ! "$subvol" ]; then
+				echo -e "\nDefault subvolum chosen.\n"
+				subvol=256
+			fi
 
-         echo -e "\nPlease enter extra mount options (ex., ro ):"
-         read options 
-         [ "$options" ] && options=","$options
+			echo -e "\nPlease enter extra mount options (ex., ro ):"
+			read options 
+			[ "$options" ] && options=","$options
 
-         echo -e "\nWill proceed with the following mount:\n\nmount -o subvolid=$subvol$options ${root} /\n"
+			echo -e "\nWill proceed with the following mount:\n\nmount -o subvolid=$subvol$options ${root} /\n"
 
-         umount $new_root
-         mount --mkdir -o subvolid=$subvol$options ${root} $new_root
+			umount $new_root
+			mount --mkdir -o subvolid=$subvol$options ${root} $new_root
 
-         if [ "$?" -ne 0 ]; then
-            echo "Could not mount subvol ($subvol). Chosing default (256)."
-            sleep 2
-            mount --mkdir -o subvolid=256 ${root} $new_root 
-         fi
+			if [ "$?" -ne 0 ]; then
+				echo "Could not mount subvol ($subvol). Chosing default (256)."
+				sleep 2
+				mount --mkdir -o subvolid=256 ${root} $new_root 
+			fi
 
-         [[ "$key" = "w" ]] && create_overlay
+			[[ "$key" = "w" ]] && create_overlay
 
-      elif [[ "$key" = "o" ]]; then
+		elif [[ "$key" = "o" ]]; then
 
-         mount --mkdir -o subvolid=256 ${root} $new_root
+			mount --mkdir -o subvolid=256 ${root} $new_root
 
-         create_overlay
+			create_overlay
 
-      elif [[ "$key" = "e" ]] || [[ "$key" = "n" ]] || [[ "$key" = "c" ]]; then
+		elif [[ "$key" = "e" ]] || [[ "$key" = "n" ]] || [[ "$key" = "c" ]]; then
 
-         if [[ "$key" = "e" ]] || [[ "$key" = "n" ]]; then
+			if [[ "$key" = "e" ]] || [[ "$key" = "n" ]]; then
 
-            [[ ! -f "$real_root/@/root.squashfs" ]] || [[ "$key" = "n" ]] && create_archive
+				[[ ! -f "$real_root/@/root.squashfs" ]] || [[ "$key" = "n" ]] && create_archive
 
-            echo "Extracting archive to RAM. Please be patient..."
+				echo "Extracting archive to RAM. Please be patient..."
 
-            #unsquashfs -d /new_root -f $real_root/@/root.squashfs
+				#unsquashfs -d /new_root -f $real_root/@/root.squashfs
             
-            mount "$real_root/@/root.squashfs" $new_root -t squashfs -o loop
+				mount "$real_root/@/root.squashfs" $new_root -t squashfs -o loop
 
-            create_overlay
+				create_overlay
 
-            umount -l $real_root
+				umount -l $real_root
 
-         elif [[ "$key" = "c" ]]; then
+			elif [[ "$key" = "c" ]]; then
 
-            mount -t tmpfs -o size=80% none $new_root
+				mount -t tmpfs -o size=80% none $new_root
 
-            echo "Copying root filesystem to RAM. Please be patient..."
+				echo "Copying root filesystem to RAM. Please be patient..."
 
-            rsync -a --exclude=root.squashfs --exclude=/efi/ --exclude=/boot/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ /real_root/@/ $new_root
+				rsync -a --exclude=root.squashfs --exclude=/efi/ --exclude=/boot/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ /real_root/@/ $new_root
 
-         fi
+			fi
 
 
-      elif [[ "$key" = "d" ]]; then
+		elif [[ "$key" = "d" ]]; then
 
-         echo "Entering emergency shell."
+			echo "Entering emergency shell."
 
-         bash
+			bash
 
-      else
+		else
 
-         echo "Continuing boot..."
-         mount --mkdir -o subvolid=256 ${root} $new_root
+			echo "Continuing boot..."
+			mount --mkdir -o subvolid=256 ${root} $new_root
 
-      fi
+		fi
 
-   else
+	else
 
-         echo -e "Running default option..."
+		echo -e "Running default option..."
 
-         mount --mkdir -o subvolid=256 ${root} $new_root
+		mount --mkdir -o subvolid=256 ${root} $new_root
           
-   fi
+	fi
 
 
 }' > $mnt/usr/lib/initcpio/hooks/liveroot
@@ -1054,21 +1048,21 @@ run_latehook() {
 	echo '#!/bin/sh
 
 build() {
-  add_binary rsync
-  add_binary bash
-  add_binary btrfs
-  add_binary unsquashfs 
-  add_binary mksquashfs
-  #add_binary unionfs
-  add_module overlay
-  add_module loop
-  add_module squashfs
-  add_runscript
+	add_binary rsync
+	add_binary bash
+	add_binary btrfs
+	add_binary unsquashfs 
+	add_binary mksquashfs
+	#add_binary unionfs
+	add_module overlay
+	add_module loop
+	add_module squashfs
+	add_runscript
 }
 
 help() {
-  cat << HELPEOF
-Run Arch as tmpfs or overlay
+	cat << HELPEOF
+Run Arch as tmpfs, overlay, squashfs, or snapshot
 HELPEOF
 }' > $mnt/usr/lib/initcpio/install/liveroot
 
@@ -1141,11 +1135,11 @@ do_chroot () {
 
 	echo -e "\e[0;42m\n \nEntering chroot. Type 'exit' to leave.\n\e[0;29m\n"
 
-   chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
+	chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
 
 	echo -e "\e[0;42m\n \nExiting chroot.\n\e[0;29m\n"
 
-   unmount_disk
+	unmount_disk
 
 }
 
@@ -1160,9 +1154,9 @@ connect_wireless () {
 	iwctl --passphrase $wifi_pass station wlan0 connect $wifi_ssid
 
 	if [[ "$?" -eq 0 ]]; then
-   	echo "Connection successful!"
+		echo "Connection successful!"
 	else
-   	echo "Connection unsuccessful."
+		echo "Connection unsuccessful."
 	fi
 
 }
@@ -1176,11 +1170,11 @@ post_setup () {
 
 
 	echo 'if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
-  	#autostartapp
+	#autostartapp
 fi' >> /home/$user/.bash_profile
 
 	echo 'if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
-   #autostartapp
+	#autostartapp
 fi' >> /home/$user/.profile
 	chown user:user /home/$user/{.profile,bash_profile}
 
@@ -1224,10 +1218,10 @@ download_script () {
 	curl -s https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > arch.sh
 
 	if [[ "$?" -eq 0 ]]; then
-   	echo "Download successful!"
-  		chmod +x arch.sh
+		echo "Download successful!"
+		chmod +x arch.sh
 	else
-   	echo "Download unsuccessful."
+		echo "Download unsuccessful."
 	fi
 
 }
@@ -1284,14 +1278,14 @@ copy_script () {
 
 pacstrap_install () {
 
-   packages="$@"
+	packages="$@"
 
 	for package in $packages; do
 
 		if [ "$reinstall" -eq 1 ]; then
 			pacstrap -K $mnt $package
 		else
-	   	pacman --root $mnt -Qi $package &> /dev/null && echo "$package already installed." || pacstrap -K $mnt $package
+			pacman --root $mnt -Qi $package &> /dev/null && echo "$package already installed." || pacstrap -K $mnt $package
 		fi
 
 	done
@@ -1408,10 +1402,10 @@ do
 	case $choice in
 		"Quit")						break; ;;
 		"Chroot")					do_chroot ;;
-      "Choose disk")				choose_disk ;;
-      "Partition disk")			create_partitions ;;
-      "Install base")			install_base ;;
-      "Setup fstab")				setup_fstab ;;
+		"Choose disk")				choose_disk ;;
+		"Partition disk")			create_partitions ;;
+		"Install base")			install_base ;;
+		"Setup fstab")				setup_fstab ;;
 		"Install boot manager") echo -e "\nWhich boot manager would you like to install?\n"
 
 										choiceBoot=(rEFInd grub EFISTUB uki systemD quit) 
@@ -1422,16 +1416,16 @@ do
 												"rEFInd")	install_REFIND; break ;;
 												"grub")		install_GRUB; break ;;
 												"EFISTUB")	install_EFISTUB; break ;;
-												"uki")	   install_uki; break ;;
+												"uki")		install_uki; break ;;
 												"systemD")	install_SYSTEMDBOOT; break ;;
 												"quit")		break ;;
 												'')			echo -e "\nInvalid option!\n" ;;
-											esac						
+											esac
 										done ;;
 
 		"General setup")			general_setup ;;
 		"Setup user")				setup_user ;;
-      "Setup network") 			echo -e "\nWhich network manager would you like to install?\n"
+      "Setup network")			echo -e "\nWhich network manager would you like to install?\n"
 		
 										choices=(iwd wpa_supplicant quit) 
 
@@ -1442,11 +1436,11 @@ do
 												"wpa_supplicant")	setup_network_wpa; break ;;
 												"quit")				break ;;
 												'')					echo -e "\nInvalid option!\n" ;;
-											esac						
+											esac
 										done ;;
 
 		"Install aur")				install_aur ;;
-      "Install tweaks")			install_tweaks ;;
+		"Install tweaks")			install_tweaks ;;
       "Install mksh")			install_mksh ;;
 		"Install liveroot")		install_liveroot ;;
 		"Setup snapshots")		setup_snapshots ;;
@@ -1466,18 +1460,18 @@ do
 												"restore")	restore_config ;;
 												"quit")		break ;;
 												'')			echo -e "\nInvalid option!\n" ;;
-											esac						
+											esac
 										done ;;
 
 		"Delete partitions")		delete_partitions ;;
 		"Clean system")			clean_system ;;
-      "Connect wireless")		connect_wireless ;;
-      "Download script")		download_script ;;
-      "Post setup")				post_setup ;;
-      "Reset pacman keys")    reset_keys ;;
+		"Connect wireless")		connect_wireless ;;
+		"Download script")		download_script ;;
+		"Post setup")				post_setup ;;
+      "Reset pacman keys")		reset_keys ;;
 		"Change mount to /")		mnt='' ;;
 		"Change mount to /mnt")	mnt=/mnt ;;
-      '')							echo -e "\nInvalid option!\n"; ;;
+		'')							echo -e "\nInvalid option!\n"; ;;
 	esac
 done
 
