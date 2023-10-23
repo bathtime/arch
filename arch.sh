@@ -42,12 +42,12 @@ subvols=()
 efi_path=/efi
 
 user=user
-hostname=Arch
 password=123456
 aur_app=paru
 aur_path=/home/$user
 
 ucode=intel-ucode
+hostname=Arch
 reinstall=0
 
 wifi_ssid="BELL364"
@@ -275,7 +275,9 @@ install_base () {
 	copy_script
 
 
-	pacstrap_install base linux linux-firmware vim vi libarchive $ucode gptfdisk 
+	#pacstrap_install base linux linux-firmware vim vi libarchive $ucode
+
+	pacstrap_install base linux linux-firmware
 
 
    [ "$rootfs" = "btrfs" ] && pacstrap_install btrfs-progs || pacstrap_install e2fsprogs
@@ -380,7 +382,6 @@ install_GRUB () {
 	check_on_root
 	mount_disk
 
-	#pacstrap -K $mnt grub grub-btrfs os-prober efibootmgr inotify-tools lz4
 
    pacstrap_install grub grub-btrfs os-prober efibootmgr inotify-tools lz4
 
@@ -534,21 +535,73 @@ install_SYSTEMDBOOT () {
 
 
 
-
-
 general_setup () {
 
 	check_on_root
 	mount_disk
 	copy_script
 
-	# Setup sudo
-	#[ ! -f $mnt/usr/bin/sudo ] && pacstrap -K $mnt sudo
-   #pacman --root $mnt -Qi sudo &>/dev/null || pacstrap -K $mnt sudo
+
+	echo -e 'en_US.UTF-8 UTF-8\nen_US ISO-8859-1' > $mnt/etc/locale.gen  
+	echo 'LANG=en_US.UTF-8' > $mnt/etc/locale.conf
+	echo 'Arch-Linux' > $mnt/etc/hostname
+	echo 'KEYMAP=us' > $mnt/etc/vconsole.conf
+
+	echo "127.0.0.1   localhost
+::1         localhost
+127.0.1.1   $hostname.localdomain   $hostname" > $mnt/etc/hosts
+
+	echo '[[ $- != *i* ]] && return
+alias ls="ls --color=auto"
+alias grep="grep --color=auto"
+alias vi="vim"
+PS1="# "' > $mnt/root/.bashrc
+
+	arch-chroot $mnt /bin/bash -e << EOF
+
+	hwclock --systohc
+
+	ln -sf /usr/share/zoneinfo/Canada/Eastern /etc/localtime
+
+	locale-gen
+
+	printf "$password\n$password\n" | passwd root
+
+EOF
+
+	cat > $mnt/root/.vimrc << EOF
+
+au BufReadPost *
+    \ if line("'\"") > 0 && line("'\"") <= line("$") && &filetype != "gitcommit" | 
+    \ execute("normal \`\"") | 
+    \ endif
+
+set mouse=c
+
+syntax on
+
+set tabstop=3
+set shiftwidth=3
+set autoindent
+set smartindent
+
+EOF
+
+}
+
+
+
+setup_user () {
+
+	check_on_root
+	mount_disk
+	copy_script
+
 
 	pacstrap_install sudo
 
-	mkdir -p $mnt/etc/sudoers.d
+
+	mkdir -p -m 750 $mnt/etc/sudoers.d
 	echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/wheel
 
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
@@ -564,21 +617,7 @@ general_setup () {
 	   exit
 	fi
 
-
-	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/user/.cache')" ] && echo "tmpfs    /home/user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> $mnt/etc/fstab
-
-	echo -e 'en_US.UTF-8 UTF-8\nen_US ISO-8859-1' > $mnt/etc/locale.gen  
-	echo 'LANG=en_US.UTF-8' > $mnt/etc/locale.conf
-	echo 'Arch-Linux' > $mnt/etc/hostname
-	echo 'KEYMAP=us' > $mnt/etc/vconsole.conf
-
-	echo "127.0.0.1   localhost
-::1         localhost
-127.0.1.1   $hostname.localdomain   $hostname" > $mnt/etc/hosts
-
-	###  Install necessary applications with proper permissions
-	mkdir -p -m 750 $mnt/etc/sudoers.d
-
+	arch-chroot $mnt printf "$password\n$password\n" | passwd user
 
 	# Autologin to tty1
 	mkdir -p $mnt/etc/systemd/system/getty@tty1.service.d
@@ -587,30 +626,7 @@ Type=simple
 ExecStart=
 ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin $user --noclear %I 38400 linux" > $mnt/etc/systemd/system/getty@tty1.service.d/autologin.conf
 
-	echo '[[ $- != *i* ]] && return
-alias ls="ls --color=auto"
-alias grep="grep --color=auto"
-alias vi="vim"
-PS1="# "' > $mnt/root/.bashrc
-
-
-	arch-chroot $mnt /bin/bash -e << EOF
-
-	hwclock --systohc
-	ln -sf /usr/share/zoneinfo/Canada/Eastern /etc/localtime
-
-	locale-gen
-
-	printf "$password\n$password\n" | passwd root
-	printf "$password\n$password\n" | passwd user
-
-	# Disable login by root
-	#passwd --lock root
-
-EOF
-
-
-	###  Set up user files  ###
+	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/user/.cache')" ] && echo "tmpfs    /home/user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> $mnt/etc/fstab
 
 	arch-chroot $mnt sudo -u $user mkdir -p /home/$user/.local/bin
 
@@ -644,27 +660,8 @@ alias vi="vim"
 PS1="$ "' > $mnt/home/$user/.bashrc
 	chown user:user $mnt/home/$user/.bashrc
 
-
-	cat > $mnt/home/$user/.vimrc << EOF
-
-au BufReadPost *
-    \ if line("'\"") > 0 && line("'\"") <= line("$") && &filetype != "gitcommit" | 
-    \ execute("normal \`\"") | 
-    \ endif
-
-set mouse=c
-
-syntax on
-
-set tabstop=3
-set shiftwidth=3
-set autoindent
-set smartindent
-
-EOF
-
+	cp $mnt/root/.vimrc $mnt/home/$user/.vimrc
 	chown user:user $mnt/home/$user/.vimrc
-	cp $mnt/home/$user/.vimrc $mnt/root/
 
 }
 
@@ -675,10 +672,9 @@ setup_network_iwd () {
 	check_on_root
 	mount_disk
 
-	###  Setup network  ###
 
-	#arch-chroot $mnt pacman -S iw iwd dhcpcd
 	pacstrap_install iw iwd dhcpcd
+
 
 	# Helps with slow booting caused by waiting for a connection
 	mkdir -p $mnt/etc/systemd/system/dhcpcd@.service.d/
@@ -715,8 +711,9 @@ setup_network_wpa () {
 	check_on_root
 	mount_disk
 
-	#arch-chroot $mnt pacman -S iw wpa_supplicant dhcpcd
+
 	pacstrap_install iw wpa_supplicant dhcpcd
+
 
 	arch-chroot $mnt systemctl enable wpa_supplicant.service
 
@@ -787,6 +784,7 @@ install_aur () {
 	check_on_root
 	mount_disk
 
+
 	pacstrap_install git less fakeroot pkg-config
 
 
@@ -849,14 +847,19 @@ ProcessSizeMax=0' > $mnt/etc/systemd/coredump.conf.d/custom.conf
 
 install_mksh () {
 
+   ### TODO: Check that aur_app is installed!!!
+
+
 	#arch-chroot $mnt sudo -u $user $aur_app -S mksh
 
 
+exit
 
-	arch-chroot $mnt /bin/bash << EOF
-	sudo -u $user $aur_app --noconfirm -S mksh
-EOF
+	#arch-chroot $mnt /bin/bash << EOF
+	#sudo -u $user $aur_app --noconfirm -S mksh
+#EOF
 
+exit
 
 	echo 'HISTFILE=/root/.mksh_history
 HISTSIZE=5000
@@ -1357,9 +1360,7 @@ less
 terminus-font")
 
 for package in $packages; do
-
-	pacman -Qi $package &>/dev/null && echo "$package already installed." || pacstrap -K $mnt $package
-
+	pacman -Qi $package &>/dev/null || pacstrap -K $mnt $package
 done
 
 
@@ -1377,6 +1378,7 @@ choices=("Quit"
 "Setup fstab"
 "Install boot manager"
 "General setup"
+"Setup user"
 "Setup network"
 "Install aur"
 "Install tweaks"
@@ -1428,7 +1430,7 @@ do
 										done ;;
 
 		"General setup")			general_setup ;;
-
+		"Setup user")				setup_user ;;
       "Setup network") 			echo -e "\nWhich network manager would you like to install?\n"
 		
 										choices=(iwd wpa_supplicant quit) 
@@ -1453,7 +1455,6 @@ do
       "Unmount $mnt")			unmount_disk  ;;
 		"Clone disk")				clone_disk ;;
 		"Create squashfs image")	create_archive ;;
-
 		"Configuration")			echo -e "\nPlease choose an option:\n"
 		
 										choiceConfig=(backup restore print delete quit) 
