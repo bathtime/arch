@@ -229,8 +229,10 @@ create_partitions () {
 
 	fi
 
-	mkdir -p $mnt/{etc,tmp}
-
+	mkdir -p $mnt/{etc,tmp,root}
+	chmod 750 $mnt/root
+	chattr +C $mnt/var/log
+ 
 	unmount_disk
 	mount_disk
 
