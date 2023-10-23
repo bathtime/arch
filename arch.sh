@@ -33,7 +33,6 @@ error_check () {
 # Used to temporarily disable at certain points in script (eg., as in the mount_disk function)
 error_check 1
 
-
 mnt=/mnt
 espPart=1
 swapPart=2
@@ -42,13 +41,14 @@ rootfs=btrfs
 subvols=()
 efi_path=/efi
 
-ucode=intel-ucode
-aurApp=paru
-reinstall=0
-
 user=user
 hostname=Arch
 password=123456
+aur_app=paru
+aur_path=/home/$user
+
+ucode=intel-ucode
+reinstall=0
 
 wifi_ssid="BELL364"
 wifi_pass="13FDC4A93E3C"
@@ -272,17 +272,14 @@ install_base () {
 
 	check_on_root
 	mount_disk
+	copy_script
 
-   copy_script
 
-	source /etc/profile
+	pacstrap_install base linux linux-firmware vim vi libarchive $ucode gptfdisk 
 
-   check_and_install base linux linux-firmware vim vi libarchive $ucode gptfdisk 
 
-	#pacstrap -K $mnt base linux linux-firmware vim vi libarchive $ucode gptfdisk
+   [ "$rootfs" = "btrfs" ] && pacstrap_install btrfs-progs || pacstrap_install e2fsprogs
 
-   #[ "$rootfs" = "btrfs" ] && pacstrap -K $mnt btrfs-progs || pacstrap -K $mnt e2fsprogs
-   [ "$rootfs" = "btrfs" ] && check_and_install btrfs-progs || check_and_install e2fsprogs
 
 	###  Prepare auto-login  ###
 
@@ -350,7 +347,7 @@ install_REFIND () {
 	mount_disk
 
 
-	check_and_install refind 
+	pacstrap_install refind 
 
 
 	arch-chroot $mnt refind-install --usedefault $disk$espPart --alldrivers
@@ -385,7 +382,7 @@ install_GRUB () {
 
 	#pacstrap -K $mnt grub grub-btrfs os-prober efibootmgr inotify-tools lz4
 
-   check_and_install grub grub-btrfs os-prober efibootmgr inotify-tools lz4
+   pacstrap_install grub grub-btrfs os-prober efibootmgr inotify-tools lz4
 
 
 	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
@@ -464,7 +461,7 @@ default_image="/efi/EFI/boot/initramfs-linux.img"
 #default_uki="/efi/EFI/Linux/arch-linux.efi"' > $mnt/etc/mkinitcpio.d/linux.preset
 
 	#[ ! -f $mnt/usr/bin/efibootmgr ] && pacstrap -K $mnt efibootmgr
-   check_and_install efibootmgr
+   pacstrap_install efibootmgr
 
 	arch-chroot $mnt /bin/bash -e << EOF
 
@@ -549,7 +546,7 @@ general_setup () {
 	#[ ! -f $mnt/usr/bin/sudo ] && pacstrap -K $mnt sudo
    #pacman --root $mnt -Qi sudo &>/dev/null || pacstrap -K $mnt sudo
 
-	check_and_install sudo
+	pacstrap_install sudo
 
 	mkdir -p $mnt/etc/sudoers.d
 	echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/wheel
@@ -681,7 +678,7 @@ setup_network_iwd () {
 	###  Setup network  ###
 
 	#arch-chroot $mnt pacman -S iw iwd dhcpcd
-	check_and_install iw iwd dhcpcd
+	pacstrap_install iw iwd dhcpcd
 
 	# Helps with slow booting caused by waiting for a connection
 	mkdir -p $mnt/etc/systemd/system/dhcpcd@.service.d/
@@ -704,7 +701,7 @@ DisablePeriodicScan=true' > $mnt/etc/iwd/main.conf
 PreSharedKey=14ad650cdc57e587a5198d3be78cb4ef4dc2574a580949d3b9803774858c5abd
 Passphrase=13FDC4A93E3C
 SAE-PT-Group19=f5614183429496736ed0da01f20d14b3415e201531b6fc24987eb128c2090897dcb358dc0eac4716994f6dee52bd7cb642bc67f43106478fded1236655418a7a
-SAE-PT-Group20=eb986ca0245dcd12c86bf779e36d4434973059133f10e12326cf319db32b98fed48e248f69e015bed36813f716581e13d56a21dbbda4fe3541e355afe49446458e8d8e47777b9866f720197effd6273b6e89cbdc140e58920cf269abe6ea0bf7'$wifi_pass'" > $mnt/var/lib/iwd/"$wifi_ssid".psk
+SAE-PT-Group20=eb986ca0245dcd12c86bf779e36d4434973059133f10e12326cf319db32b98fed48e248f69e015bed36813f716581e13d56a21dbbda4fe3541e355afe49446458e8d8e47777b9866f720197effd6273b6e89cbdc140e58920cf269abe6ea0bf7" > $mnt/var/lib/iwd/"$wifi_ssid".psk
 
 	echo "Enabling network services..."
 	arch-chroot $mnt systemctl enable iwd.service dhcpcd.service
@@ -719,7 +716,7 @@ setup_network_wpa () {
 	mount_disk
 
 	#arch-chroot $mnt pacman -S iw wpa_supplicant dhcpcd
-	check_and_install iw wpa_supplicant dhcpcd
+	pacstrap_install iw wpa_supplicant dhcpcd
 
 	arch-chroot $mnt systemctl enable wpa_supplicant.service
 
@@ -790,32 +787,32 @@ install_aur () {
 	check_on_root
 	mount_disk
 
-	#pacstrap -K $mnt base-devel git less
-	check_and_install git less
+	pacstrap_install git less fakeroot pkg-config
 
-	#[ "$aurApp" = "paru" ] && [ ! -f /usr/bin/cargo ] && pacstrap -K $mnt cargo
 
-	[ "$aurApp" = "paru" ] && check_and_install cargo
+	[ "$aur_app" = "paru" ] && pacstrap_install cargo
 
 
 	arch-chroot $mnt /bin/bash << EOF
 
-cd /home/$user/
+		cd $aur_path
 
-sudo -u $user git clone https://aur.archlinux.org/$aurApp.git
+		sudo -u $user git clone https://aur.archlinux.org/$aur_app.git
 
-cd $aurApp
-sudo -u $user makepkg -si
+		cd $aur_app
+		sudo -u $user makepkg -si
 
-sudo -u $user $aurApp --gendb
+		sudo -u $user $aur_app --gendb
+
+		chown -R $user:$user /home/$user/$aur_app
 
 EOF
 
 
-	#[ "$aurApp" = "paru" ] && arch-chroot $mnt pacman -R rust
-	#[ "$aurApp" = "yay" ] && arch-chroot $mnt pacman -R rust
+	#[ "$aur_app" = "paru" ] && arch-chroot $mnt pacman -R rust
+	#[ "$aur_app" = "yay" ] && arch-chroot $mnt pacman -R rust
 
-	#rm -rf $mnt/home/$user/{.cargo,$aurApp/*} $mnt/usr/lib/{go,rustlib}
+	#rm -rf $mnt/home/$user/{.cargo,$aur_app/*} $mnt/usr/lib/{go,rustlib}
 
 }
 
@@ -827,9 +824,7 @@ install_tweaks () {
 	mount_disk
 
 
-	#[ ! -f $mnt/usr/bin/ncdu ] && pacstrap -K $mnt terminus-font ncdu dosfstools parted arch-install-scripts tar man gptfdisk
-
-	check_and_install terminus-font ncdu dosfstools parted arch-install-scripts tar man gptfdisk
+	pacstrap_install terminus-font ncdu dosfstools parted arch-install-scripts tar man gptfdisk
 
 
 	echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
@@ -838,47 +833,6 @@ install_tweaks () {
 	sed -Ei 's/^#(Color)$/\1\nILoveCandy/;s/^#(ParallelDownloads).*/\1 = 10/' $mnt/etc/pacman.conf
 
 	arch-chroot $mnt systemctl enable systemd-oomd
-
-
-	###  Setup mksh  ###
-
-	if [ ! -f $mnt/usr/bin/mksh ]; then
-
-		arch-chroot $mnt sudo -u $user $aurApp -S --noconfirm mksh
-
-		echo 'HISTFILE=/root/.mksh_history
-HISTSIZE=5000
-export VISUAL="emacs"
-export EDITOR="/usr/bin/vim"
-set -o emacs' > $mnt/root/.mkshrc
-
-		echo 'HISTFILE=/home/$USER/.mksh_history
-HISTSIZE=5000
-export VISUAL="emacs"
-export EDITOR="/usr/bin/vim"
-set -o emacs' > $mnt/home/$user/.mkshrc
-		chown user:user $mnt/home/$user/.mkshrc
-
-		echo -e 'PATH="$HOME/.local/bin:$PATH"
-export EDITOR=/usr/bin/vim
-export ENV="/home/$USER/.mkshrc"
-export QT_QPA_PLATFORM=wayland
-export QT_IM_MODULE=Maliit
-export MOZ_ENABLE_WAYLAND=1
-export XDG_RUNTIME_DIR=/tmp/runtime-user
-export XDG_RUNTIME_DIR=/run/$USER/1000
-export RUNLEVEL=3
-export QT_LOGGING_RULES="*=false"
-
-' > $mnt/home/$user/.profile
-		chown user:user $mnt/home/$user/.profile 
-
-		arch-chroot $mnt /bin/bash << EOF
-chsh -s /usr/bin/mksh                          # root shell
-echo 123456 | sudo -u $user chsh -s /bin/mksh  # user shell
-EOF
-
-	fi
 
 	echo 'kernel.core_pattern=/dev/null' > $mnt/etc/sysctl.d/50-coredump.conf
 
@@ -893,20 +847,63 @@ ProcessSizeMax=0' > $mnt/etc/systemd/coredump.conf.d/custom.conf
 
 
 
+install_mksh () {
+
+	#arch-chroot $mnt sudo -u $user $aur_app -S mksh
+
+
+
+	arch-chroot $mnt /bin/bash << EOF
+	sudo -u $user $aur_app --noconfirm -S mksh
+EOF
+
+
+	echo 'HISTFILE=/root/.mksh_history
+HISTSIZE=5000
+export VISUAL="emacs"
+export EDITOR="/usr/bin/vim"
+set -o emacs' > $mnt/root/.mkshrc
+
+	echo 'HISTFILE=/home/$USER/.mksh_history
+HISTSIZE=5000
+export VISUAL="emacs"
+export EDITOR="/usr/bin/vim"
+set -o emacs' > $mnt/home/$user/.mkshrc
+	chown user:user $mnt/home/$user/.mkshrc
+
+	echo -e 'PATH="$HOME/.local/bin:$PATH"
+export EDITOR=/usr/bin/vim
+export ENV="/home/$USER/.mkshrc"
+export QT_QPA_PLATFORM=wayland
+export QT_IM_MODULE=Maliit
+export MOZ_ENABLE_WAYLAND=1
+export XDG_RUNTIME_DIR=/tmp/runtime-user
+export XDG_RUNTIME_DIR=/run/$USER/1000
+export RUNLEVEL=3
+export QT_LOGGING_RULES="*=false"
+
+' > $mnt/home/$user/.profile
+	chown user:user $mnt/home/$user/.profile 
+
+	arch-chroot $mnt /bin/bash << EOF
+chsh -s /usr/bin/mksh                          # root shell
+echo 123456 | sudo -u $user chsh -s /bin/mksh  # user shell
+EOF
+
+}
+
+
+
 install_liveroot () {
 
 	check_on_root
 	mount_disk
 
-	#[ ! -f $mnt/bin/rsync ] && pacstrap -K $mnt rsync squashfs-tools
 
-	check_and_install rsync squashfs-tools
+	pacstrap_install rsync squashfs-tools
 
-	###  Add tmpfs/overlay hook options  ###
 
-	echo '
-#!/usr/bin/bash
-
+	echo '#!/usr/bin/bash
 
 create_archive() {
             
@@ -1048,27 +1045,7 @@ run_latehook() {
    fi
 
 
-}
-
-
-
-#         ROOT_MNT="/new_root"
-#         DIRS="/run/archroot"
-#         LOWER="${DIRS}/root_ro"
-#         COWSPACE="${DIRS}/cowspace"
-#         UPPER="${COWSPACE}/upper"
-#         WORK="${COWSPACE}/work"
-
-#         mkdir -p ${LOWER}
-#         mount --move ${ROOT_MNT} ${LOWER}
-
-#         mkdir -p ${COWSPACE}
-#         mount -t tmpfs cowspace ${COWSPACE}
-
-#         mkdir -p ${UPPER} ${WORK}
-
-#         mount -t overlay -o lowerdir=${LOWER},upperdir=${UPPER},workdir=${WORK} rootfs ${ROOT_MN}
-' > $mnt/usr/lib/initcpio/hooks/liveroot
+}' > $mnt/usr/lib/initcpio/hooks/liveroot
 
 
 	echo '#!/bin/sh
@@ -1191,9 +1168,9 @@ connect_wireless () {
 
 post_setup () {
 
-	#pacman -S "$post_install_apps"
 
-	check_and_install "$post_install_apps"
+	pacstrap_install "$post_install_apps"
+
 
 	echo 'if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
   	#autostartapp
@@ -1256,9 +1233,11 @@ download_script () {
 
 clone_disk () {
 
-
 	check_on_root
-	check_and_install rsync
+
+
+	pacstrap_install rsync
+
 
 	echo -e "\nCloning disk. Please be patient...\n"
 
@@ -1273,7 +1252,9 @@ clone_disk () {
 
 create_archive () {
 
-	check_and_install squashfs-tools
+
+	pacstrap_install squashfs-tools
+
 
 	echo "Creating archive file..."
 
@@ -1286,15 +1267,19 @@ create_archive () {
 
 }
 
+
+
 copy_script () {
 
 	[ -d $mnt/home/$user ] && cp arch.sh $mnt/home/$user || cp arch.sh $mnt/
+	
+	[ $? -eq 0 ] && echo -e "\nScripts copied.\n" || echo -e "\nScripts could not be copied!!!\n"
 
 }
 
 
 
-check_and_install () {
+pacstrap_install () {
 
    packages="$@"
 
@@ -1373,7 +1358,7 @@ terminus-font")
 
 for package in $packages; do
 
-	pacman -Qi $package &> /dev/null && echo "$package already installed." || pacstrap -K $mnt $package
+	pacman -Qi $package &>/dev/null && echo "$package already installed." || pacstrap -K $mnt $package
 
 done
 
@@ -1395,6 +1380,7 @@ choices=("Quit"
 "Setup network"
 "Install aur"
 "Install tweaks"
+"Install mksh"
 "Install liveroot"
 "Setup snapshots"
 "Setup snapper"
@@ -1418,7 +1404,7 @@ echo -e "\nPlease choose:\n"
 select choice in "${choices[@]}" 
 do
 	case $choice in
-		"Quit")						echo -e "\nQuitting!"; break; ;;
+		"Quit")						break; ;;
 		"Chroot")					do_chroot ;;
       "Choose disk")				choose_disk ;;
       "Partition disk")			create_partitions ;;
@@ -1459,6 +1445,7 @@ do
 
 		"Install aur")				install_aur ;;
       "Install tweaks")			install_tweaks ;;
+      "Install mksh")			install_mksh ;;
 		"Install liveroot")		install_liveroot ;;
 		"Setup snapshots")		setup_snapshots ;;
 		"Setup snapper")			setup_snapper ;;
@@ -1492,6 +1479,7 @@ do
       '')							echo -e "\nInvalid option!\n"; ;;
 	esac
 done
+
 
 unmount_disk
 
