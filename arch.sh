@@ -165,6 +165,12 @@ choose_disk () {
 
 	echo -e "\nSetup config:\n\ndisk: $disk\nuser: $user\n"
 
+        if [ "$(echo $disk | grep nvme)" ]; then
+                espPart="p$espPart"
+                swapPart="p$swapPart"
+                rootPart="p$rootPart"
+        fi
+
 }
 
 
