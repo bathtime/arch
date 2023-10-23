@@ -271,9 +271,7 @@ install_base () {
 	copy_script
 
 
-	#pacstrap_install base linux linux-firmware vim vi libarchive $ucode
-
-	pacstrap_install base linux linux-firmware
+	pacstrap_install base linux linux-firmware vim
 
 
    [ "$rootfs" = "btrfs" ] && pacstrap_install btrfs-progs
@@ -613,7 +611,9 @@ setup_user () {
 		exit
 	fi
 
-	arch-chroot $mnt printf "$password\n$password\n" | passwd user
+	arch-chroot $mnt /bin/bash -e << EOF
+		printf "$password\n$password\n" | passwd user
+EOF
 
 	# Autologin to tty1
 	mkdir -p $mnt/etc/systemd/system/getty@tty1.service.d
@@ -658,6 +658,8 @@ PS1="$ "' > $mnt/home/$user/.bashrc
 
 	cp $mnt/root/.vimrc $mnt/home/$user/.vimrc
 	chown user:user $mnt/home/$user/.vimrc
+
+	copy_script
 
 }
 
@@ -843,19 +845,16 @@ ProcessSizeMax=0' > $mnt/etc/systemd/coredump.conf.d/custom.conf
 
 install_mksh () {
 
-	### TODO: Check that aur_app is installed!!!
+	[ ! -f $mnt/usr/bin/$aur_app ] && install_aur
 
+	# TODO: fix issue of having to change directorie permissions
+	chown -R user:user /home/$user/
 
-	#arch-chroot $mnt sudo -u $user $aur_app -S mksh
-
-
-exit
-
-	#arch-chroot $mnt /bin/bash << EOF
-	#sudo -u $user $aur_app --noconfirm -S mksh
-#EOF
-
-exit
+	if [ ! -f $mnt/usr/bin/mksh ] || [ "$reinstall" = 1 ] ; then
+		arch-chroot $mnt /bin/bash << EOF
+		sudo -u $user $aur_app --noconfirm -S mksh
+EOF
+	fi
 
 	echo 'HISTFILE=/root/.mksh_history
 HISTSIZE=5000
@@ -1277,6 +1276,23 @@ copy_script () {
 
 
 
+install_host_packages () {
+
+packages=("arch-install-scripts
+gptfdisk
+less
+squashfs-tools
+terminus-font
+vim")
+
+for package in $packages; do
+	pacman -Qi $package &>/dev/null || pacstrap -K $mnt $package
+done
+
+}
+
+
+
 pacstrap_install () {
 
 	packages="$@"
@@ -1294,6 +1310,7 @@ pacstrap_install () {
 	done
 
 }
+
 
 
 CONFIG_FILES=".config/baloofilerc
@@ -1347,20 +1364,6 @@ fi
 check_viable_disk
 
 
-
-###  Install required packages  ###
-
-packages=("arch-install-scripts
-gptfdisk
-squashfs-tools
-less
-terminus-font")
-
-for package in $packages; do
-	pacman -Qi $package &>/dev/null || pacstrap -K $mnt $package
-done
-
-
 loadkeys en
 
 # Make font big and readable
@@ -1393,6 +1396,7 @@ choices=("Quit"
 "Connect wireless"
 "Download script"
 "Post setup"
+"Install host packages"
 "Reset pacman keys"
 "Change mount to /"
 "Change mount to /mnt")
@@ -1471,7 +1475,8 @@ do
 		"Connect wireless")		connect_wireless ;;
 		"Download script")		download_script ;;
 		"Post setup")				post_setup ;;
-      "Reset pacman keys")		reset_keys ;;
+		"Install host packages") install_host_packages ;;
+		"Reset pacman keys")		reset_keys ;;
 		"Change mount to /")		mnt='' ;;
 		"Change mount to /mnt")	mnt=/mnt ;;
 		'')							echo -e "\nInvalid option!\n"; ;;
