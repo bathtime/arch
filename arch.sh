@@ -64,12 +64,6 @@ wifi_ssid="BELL364"
 wifi_pass="13FDC4A93E3C"
 
 
-# Post setup
-
-post_install_apps="plasma-desktop plasma-wayland-session plasma-pa kscreen dolphin konsole firefox"
-auto_start_app="startplasma-wayland"
-
-
 
 check_viable_disk () {
 
@@ -157,13 +151,14 @@ choose_disk () {
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd"
 		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-		disks+=$(echo -e "\nrefresh\nquit")
+		disks+=$(echo -e "\nhost\nrefresh\nquit")
 
 		echo -e "\nWhich drive?\n"
 
 		select disk in $disks
 		do
 			case $disk in
+				host)		disk="$(mount | awk '/ on \/ / { print $1}' | sed 's/[0-9]$//g')"; search_disks=0 ; break ;;
 				refresh) break;	;;
 				quit) 	echo -e "\nQuitting!"; exit; ;;
 				'')   	echo -e "\nInvalid option!\n" ; break ;;
@@ -711,22 +706,17 @@ PS1="$ "' > $mnt/home/$user/.bashrc
 
 
 
-setup_network_iwd () {
+setup_iwd () {
 
 	check_on_root
 	mount_disk
 
 
-	pacstrap_install iw iwd dhcpcd
+   setup_dhcp
 
 
-	# Helps with slow booting caused by waiting for a connection
-	mkdir -p $mnt/etc/systemd/system/dhcpcd@.service.d/
-	echo '[Service]
-ExecStart=
-ExecStart=/usr/bin/dhcpcd -b -q %I' > $mnt/etc/systemd/system/dhcpcd@.service.d/no-wait.conf
+	pacstrap_install iw iwd
 
-	[ "$(cat $mnt/etc/dhcpcd.conf | grep noarp)" ] && echo noarp >> $mnt/etc/dhcpcd.conf
 
 	mkdir -p $mnt/etc/iwd
 	echo '[General]
@@ -744,20 +734,45 @@ SAE-PT-Group19=f5614183429496736ed0da01f20d14b3415e201531b6fc24987eb128c2090897d
 SAE-PT-Group20=eb986ca0245dcd12c86bf779e36d4434973059133f10e12326cf319db32b98fed48e248f69e015bed36813f716581e13d56a21dbbda4fe3541e355afe49446458e8d8e47777b9866f720197effd6273b6e89cbdc140e58920cf269abe6ea0bf7" > $mnt/var/lib/iwd/"$wifi_ssid".psk
 
 	echo "Enabling network services..."
-	#arch-chroot $mnt systemctl enable iwd.service dhcpcd.service
-	systemctl enable iwd.service dhcpcd.service --root=$mnt
+	systemctl enable iwd.service --root=$mnt
 
 }
 
 
 
-setup_network_wpa () {
+setup_dhcp () {
 
 	check_on_root
 	mount_disk
 
 
-	pacstrap_install iw wpa_supplicant dhcpcd
+	pacstrap_install dhcpcd
+
+
+	# Helps with slow booting caused by waiting for a connection
+	mkdir -p $mnt/etc/systemd/system/dhcpcd@.service.d/
+	echo '[Service]
+ExecStart=
+ExecStart=/usr/bin/dhcpcd -b -q %I' > $mnt/etc/systemd/system/dhcpcd@.service.d/no-wait.conf
+
+	[ "$(cat $mnt/etc/dhcpcd.conf | grep noarp)" ] && echo noarp >> $mnt/etc/dhcpcd.conf
+
+	echo "Enabling dhcp services..."
+	systemctl enable dhcpcd.service --root=$mnt
+
+}
+
+
+
+setup_wpa () {
+
+	check_on_root
+	mount_disk
+
+	setup_dhcp
+
+
+	pacstrap_install iw wpa_supplicant
 
 
 	#arch-chroot $mnt systemctl enable wpa_supplicant.service
@@ -1214,53 +1229,6 @@ connect_wireless () {
 
 
 
-post_setup () {
-
-
-	pacstrap_install "$post_install_apps"
-
-
-	echo 'if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
-	#auto_start_app
-fi' >> /home/$user/.bash_profile
-
-	!:gs/.bash_profile/.profile
-
-	chown user:user /home/$user/{.profile,bash_profile}
-
-	sed -i "s/#auto_start_app/$auto_start_app/" $mnt/home/$user/{.profile,bash_profile}
-
-}
-
-
-
-backup_config () {
-
-	cd /home/$user
-
-	print_config
-
-	sudo -u $user tar cvf setup.tar $CONFIG_FILES
-
-	ls -la setup.tar
-	#gpg -c setup.tar
-
-	exit
-
-}
-
-
-
-restore_config () {
-
-	cd /home/$user
-
-	sudo -u $user tar xvf setup.tar
-
-}
-
-
-
 download_script () {
 
 	echo -e "\nDowloading scripts from Github..."
@@ -1295,6 +1263,7 @@ clone_disk () {
 	echo -e"\n*** Remember to update fstab and install a boot manager! ***\n"
 
 }
+
 
 
 create_archive () {
@@ -1363,48 +1332,6 @@ pacstrap_install () {
 
 
 
-CONFIG_FILES=".config/baloofilerc
-.config/dolphinrc
-/.config/epy/configuration.json
-.config/fontconfig/fonts.conf
-.config/gtkrc
-.config/gtkrc-2.0
-.config/kactivitymanagerd-pluginsrc
-.config/kactivitymanagerdrc
-.config/kcminputrc
-.config/kded5rc
-.config/kdedefaults/package
-.config/kdeglobals
-.config/kfontinstuirc
-.config/kglobalshortcutsrc
-.config/konsolerc
-.config/konsolesshconfig
-.config/krunnerrc
-.config/kscreenlockerrc
-.config/ksplashrc
-.config/ksmserverrc
-.config/kwinrc
-.config/kwinrulesrc
-.config/plasma-org.kde.plasma.desktop-appletsrc
-.config/plasmashellrc
-.config/powermanagementprofilesrc
-.config/systemsettingsrc
-.config/Trolltech.conf
-.local/bin/*
-.local/share/color-schemes/*
-.local/share/dolphin/dolphinstaterc
-.local/share/konsole/*.profile
-.local/share/kxmlgui5/konsole/konsoleui.rc
-.local/share/kxmlgui5/konsole/sessionui.rc
-.local/share/plasma/plasmoids/*
-.local/share/user-places.xbel
-.mozilla/*
-.viminfo
-.vimrc
-mount-readonly.sh"
-
-
-
 if [ "$1" ]; then
 	disk="$1"
 else
@@ -1441,20 +1368,15 @@ choices=("1. Quit
 19. Unmount $mnt
 20. Create squashfs image
 21. Clone disk
-22. Configuration
-23. Delete partitions
-24. Clean system
-25. Connect wireless
-26. Download script
-27. Post setup
-28. Install host packages
-29. Reset pacman keys
-30. Change mount to /
-31. Change mount to /mnt")
+22. Connect wireless
+23. Download script
+24. Install host packages
+25. Reset pacman keys")
+
 
 while :; do
 
-echo -e "Please choose:\n"
+echo -e "\nPlease choose:\n"
 
 echo "${choices[@]}" | column   
 echo  
@@ -1493,8 +1415,9 @@ read choice
 									select net_choice in "${net_choices[@]}"
 									do
 										case $net_choice in
-											"iwd")				setup_network_iwd; break ;;
-											"wpa_supplicant")	setup_network_wpa; break ;;
+											"iwd")				setup_iwd; break ;;
+											"dhcp")				setup_dhcp; break ;;
+											"wpa_supplicant")	setup_wpa; break ;;
 											"quit")				break ;;
 											'')					echo -e "\nInvalid option!\n" ;;
 										esac
@@ -1510,28 +1433,10 @@ read choice
       unmount|19)				unmount_disk  ;;
 		squashfs|20)			create_archive ;;
 		clone|21)				clone_disk ;;
-		config|22)				echo -e "\nPlease choose an option:\n"
-		
-									choiceConfig=(backup restore print delete quit) 
-									select choiceConfig in "${choiceConfig[@]}"
-									do
-										case $choiceConfig in
-											"backup")	backup_config ;;
-											"restore")	restore_config ;;
-											"quit")		break ;;
-											'')			echo -e "\nInvalid option!\n" ;;
-										esac
-									done ;;
-
-		delete|23)				delete_partitions ;;
-		clean|24)				clean_system ;;
-		connect|iwd|25)		connect_wireless ;;
-		script|26)				download_script ;;
-		Post|post|27)			post_setup ;;
-		host|28)			 		install_host_packages ;;
-		reset|keys|29)			reset_keys ;;
-		/|30)						mnt='' ;;
-		/mnt|31)					mnt=/mnt ;;
+		connect|iwd|22)		connect_wireless ;;
+		script|23)				download_script ;;
+		host|24)			 		install_host_packages ;;
+		reset|keys|25)			reset_keys ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
