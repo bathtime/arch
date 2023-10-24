@@ -1,8 +1,18 @@
 #!/bin/bash
 
 
-# Download and run with:
-# bash <(curl -sL bit.ly/a-install)
+# Documentation
+
+: << DOCS
+
+To run on the fly:
+bash <(curl -sL bit.ly/a-install)
+
+
+
+
+DOCS
+
 
 
 ###  Set error detection  ###
@@ -857,6 +867,7 @@ install_tweaks () {
 	check_on_root
 	mount_disk
 
+#cmd || { printf "%b" "FAILED.\n" ; exit 1 ; }
 
 	pacstrap_install terminus-font ncdu dosfstools parted arch-install-scripts tar man gptfdisk
 
@@ -894,17 +905,18 @@ install_mksh () {
 EOF
 	fi
 
-	echo 'HISTFILE=/root/.mksh_history
+	echo "HISTFILE=/root/.mksh_history
 HISTSIZE=5000
-export VISUAL="emacs"
-export EDITOR="/usr/bin/vim"
-set -o emacs' > $mnt/root/.mkshrc
+export VISUAL=emacs
+export EDITOR=/usr/bin/vim
+set -o emacs" > $mnt/root/.mkshrc
 
-	echo 'HISTFILE=/home/$USER/.mksh_history
+   echo "HISTFILE=/home/$user/.mksh_history
 HISTSIZE=5000
-export VISUAL="emacs"
-export EDITOR="/usr/bin/vim"
-set -o emacs' > $mnt/home/$user/.mkshrc
+export VISUAL=emacs
+export EDITOR=/usr/bin/vim
+set -o emacs" > $mnt/home/$user/.mkshrc
+
 	chown user:user $mnt/home/$user/.mkshrc
 
 	echo -e 'PATH="$HOME/.local/bin:$PATH"
@@ -1212,9 +1224,7 @@ post_setup () {
 	#auto_start_app
 fi' >> /home/$user/.bash_profile
 
-	echo 'if [[ ! "${DISPLAY}" && "${XDG_VTNR}" == 1 ]]; then
-	#auto_start_app
-fi' >> /home/$user/.profile
+	!:gs/.bash_profile/.profile
 
 	chown user:user /home/$user/{.profile,bash_profile}
 
@@ -1410,119 +1420,121 @@ loadkeys en
 setfont ter-132b
 
 
-choices=("Quit"
-"Chroot"
-"Choose disk"
-"Partition disk"
-"Install base"
-"Hypervisor setup"
-"Setup fstab"
-"Install boot manager"
-"General setup"
-"Setup user"
-"Setup network"
-"Install aur"
-"Install tweaks"
-"Install mksh"
-"Install liveroot"
-"Setup snapshots"
-"Setup snapper"
-"Mount $mnt"
-"Unmount $mnt"
-"Create squashfs image"
-"Clone disk"
-"Configuration"
-"Delete partitions"
-"Clean system"
-"Connect wireless"
-"Download script"
-"Post setup"
-"Install host packages"
-"Reset pacman keys"
-"Change mount to /"
-"Change mount to /mnt")
+choices=("1. Quit
+2. Chroot
+3. Choose disk
+4. Partition disk
+5. Install base
+6. Hypervisor setup
+7. Setup fstab
+8. Install boot manager
+9. General setup
+10. Setup user
+11. Setup network
+12. Install aur
+13. Install tweaks
+14. Install mksh
+15. Install liveroot
+16. Setup snapshots
+17. Setup snapper
+18. Mount $mnt
+19. Unmount $mnt
+20. Create squashfs image
+21. Clone disk
+22. Configuration
+23. Delete partitions
+24. Clean system
+25. Connect wireless
+26. Download script
+27. Post setup
+28. Install host packages
+29. Reset pacman keys
+30. Change mount to /
+31. Change mount to /mnt")
 
+while :; do
 
-echo -e "\nPlease choose:\n"
+echo -e "Please choose:\n"
 
-select choice in "${choices[@]}" 
-do
+echo "${choices[@]}" | column   
+echo  
+
+read choice
+
 	case $choice in
-		"Quit")						break; ;;
-		"Chroot")					do_chroot ;;
-		"Choose disk")				choose_disk ;;
-		"Partition disk")			create_partitions ;;
-		"Install base")				install_base ;;
-		"Hypervisor setup")			hypervisor_setup ;;
-		"Setup fstab")				setup_fstab ;;
-		"Install boot manager") echo -e "\nWhich boot manager would you like to install?\n"
+		Quit|quit|q|exit|1)	break; ;;
+		Chroot|chroot|2)		do_chroot ;;
+		disk|3)					choose_disk ;;
+		partition|4)			create_partitions ;;
+		base|5)					install_base ;;
+		hypervisor|6)			hypervisor_setup ;;
+		fstab|7)					setup_fstab ;;
+		boot|8)					echo -e "\nWhich boot manager would you like to install?\n"
 
-										choiceBoot=(rEFInd grub EFISTUB uki systemD quit) 
+									choiceBoot=(rEFInd grub EFISTUB uki systemD quit) 
 				
-										select choiceBoot in "${choiceBoot[@]}"
-										do
-											case $choiceBoot in
-												"rEFInd")	install_REFIND; break ;;
-												"grub")		install_GRUB; break ;;
-												"EFISTUB")	install_EFISTUB; break ;;
-												"uki")		install_uki; break ;;
-												"systemD")	install_SYSTEMDBOOT; break ;;
-												"quit")		break ;;
-												'')			echo -e "\nInvalid option!\n" ;;
-											esac
-										done ;;
-
-		"General setup")			general_setup ;;
-		"Setup user")				setup_user ;;
-      "Setup network")			echo -e "\nWhich network manager would you like to install?\n"
+									select choiceBoot in "${choiceBoot[@]}"
+									do
+										case $choiceBoot in
+											"rEFInd")	install_REFIND; break ;;
+											"grub")		install_GRUB; break ;;
+											"EFISTUB")	install_EFISTUB; break ;;
+											"uki")		install_uki; break ;;
+											"systemD")	install_SYSTEMDBOOT; break ;;
+											"quit")		break ;;
+											'')			echo -e "\nInvalid option!\n" ;;
+										esac
+									done ;;
+		setup|9)					general_setup ;;
+		user|10)					setup_user ;;
+      network|11)				echo -e "\nWhich network manager would you like to install?\n"
 		
-										choices=(iwd wpa_supplicant quit) 
+									net_choices=(iwd wpa_supplicant quit) 
+									select net_choice in "${net_choices[@]}"
+									do
+										case $net_choice in
+											"iwd")				setup_network_iwd; break ;;
+											"wpa_supplicant")	setup_network_wpa; break ;;
+											"quit")				break ;;
+											'')					echo -e "\nInvalid option!\n" ;;
+										esac
+									done ;;
 
-										select choice in "${choices[@]}"
-										do
-											case $choice in
-												"iwd")				setup_network_iwd; break ;;
-												"wpa_supplicant")	setup_network_wpa; break ;;
-												"quit")				break ;;
-												'')					echo -e "\nInvalid option!\n" ;;
-											esac
-										done ;;
-
-		"Install aur")				install_aur ;;
-		"Install tweaks")			install_tweaks ;;
-      "Install mksh")			install_mksh ;;
-		"Install liveroot")		install_liveroot ;;
-		"Setup snapshots")		setup_snapshots ;;
-		"Setup snapper")			setup_snapper ;;
-      "Mount $mnt")				mount_disk  ;;
-      "Unmount $mnt")			unmount_disk  ;;
-		"Clone disk")				clone_disk ;;
-		"Create squashfs image")	create_archive ;;
-		"Configuration")			echo -e "\nPlease choose an option:\n"
+		aur|12)					install_aur ;;
+		tweaks|13)				install_tweaks ;;
+      mksh|14)					install_mksh ;;
+		liveroot|15)			install_liveroot ;;
+		snapshots|16)			setup_snapshots ;;
+		snapper|17)				setup_snapper ;;
+      mount|18)				mount_disk  ;;
+      unmount|19)				unmount_disk  ;;
+		squashfs|20)			create_archive ;;
+		clone|21)				clone_disk ;;
+		config|22)				echo -e "\nPlease choose an option:\n"
 		
-										choiceConfig=(backup restore print delete quit) 
+									choiceConfig=(backup restore print delete quit) 
+									select choiceConfig in "${choiceConfig[@]}"
+									do
+										case $choiceConfig in
+											"backup")	backup_config ;;
+											"restore")	restore_config ;;
+											"quit")		break ;;
+											'')			echo -e "\nInvalid option!\n" ;;
+										esac
+									done ;;
 
-										select choiceConfig in "${choiceConfig[@]}"
-										do
-											case $choiceConfig in
-												"backup")	backup_config ;;
-												"restore")	restore_config ;;
-												"quit")		break ;;
-												'')			echo -e "\nInvalid option!\n" ;;
-											esac
-										done ;;
-
-		"Delete partitions")		delete_partitions ;;
-		"Clean system")			clean_system ;;
-		"Connect wireless")		connect_wireless ;;
-		"Download script")		download_script ;;
-		"Post setup")				post_setup ;;
-		"Install host packages") install_host_packages ;;
-		"Reset pacman keys")		reset_keys ;;
-		"Change mount to /")		mnt='' ;;
-		"Change mount to /mnt")	mnt=/mnt ;;
-		'')							echo -e "\nInvalid option!\n"; ;;
+		delete|23)				delete_partitions ;;
+		clean|24)				clean_system ;;
+		connect|iwd|25)		connect_wireless ;;
+		script|26)				download_script ;;
+		Post|post|27)			post_setup ;;
+		host|28)			 		install_host_packages ;;
+		reset|keys|29)			reset_keys ;;
+		/|30)						mnt='' ;;
+		/mnt|31)					mnt=/mnt ;;
+		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
+
 done
 
 
