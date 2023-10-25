@@ -50,6 +50,7 @@ rootPart=3
 rootfs=btrfs
 subvols=()
 efi_path=/efi
+encryption=0
 
 user=user
 password=123456
@@ -58,7 +59,8 @@ aur_path=/home/$user
 
 ucode=intel-ucode
 hostname=Arch
-reinstall=0
+reinstall=1
+save_pkg_on_host=1
 
 wifi_ssid="BELL364"
 wifi_pass="13FDC4A93E3C"
@@ -236,7 +238,7 @@ create_partitions () {
 
 	mkdir -p $mnt/{etc,tmp,root}
 	chmod 750 $mnt/root
-	chattr +C $mnt/var/log
+	#chattr +C $mnt/var/log
  
 	unmount_disk
 	mount_disk
@@ -401,11 +403,30 @@ install_REFIND () {
 
 	echo "\"Boot read only\"  \"root=UUID=$ROOT_UUID ro rootflags=$rootflags quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" >> $mnt/boot/refind_linux.conf
 
-	sed -i 's/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g' $mnt$efi_path/EFI/BOOT/refind.conf
+#	sed -i 's/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g; s/#scan_all_linux_kernels false/scan_all_linux_kernels false/g' $mnt$efi_path/EFI/BOOT/refind.conf
 
 	rm -rf /boot/grub
 
 	echo -e "\nYou should have a fully bootable system now. Feel free to test it.\n"
+
+
+cat > $mnt$efi_path/EFI/BOOT/refind.conf <<EOF
+timeout 4 
+#scan_all_linux_kernels off
+also_scan_dirs +,boot,@/boot
+showtools install, shell, bootorder, gdisk, memtest, mok_tool, apple_recovery, windows_recovery, about, hidden_tags, reboot, exit, firmware, fwupdate
+#enable_touch
+textonly
+
+
+menuentry "Arch Linux" {
+    icon     /EFI/refind/icons/os_arch.png
+    volume   "Arch Linux"
+    loader   @/boot/vmlinuz-linux
+    initrd   @/boot/initramfs-linux.img
+    options  "root=UUID=$ROOT_UUID rootflags=subvol=@ rw add_efi_memmap resume=UUID=$SWAP_UUID"
+}
+EOF
 
 }
 
@@ -965,6 +986,7 @@ install_liveroot () {
 
 	pacstrap_install rsync squashfs-tools
 
+	ESP_UUID=$(blkid -s UUID -o value $disk$espPart)
 
 	echo '#!/usr/bin/bash
 
@@ -1014,7 +1036,7 @@ run_latehook() {
 <o> run in overlay mode\n\
 <e> run squashfs + overlay\n\
 <n> create & run squashfs + overlay\n\
-<c> copy / to tmpfs\n\
+<t> copy / to tmpfs\n\
 <d> emergency shell\n\n\
 <enter> continue boot\n"
 
@@ -1057,7 +1079,7 @@ run_latehook() {
 
 			create_overlay
 
-		elif [[ "$key" = "e" ]] || [[ "$key" = "n" ]] || [[ "$key" = "c" ]]; then
+		elif [[ "$key" = "e" ]] || [[ "$key" = "n" ]] || [[ "$key" = "t" ]]; then
 
 			if [[ "$key" = "e" ]] || [[ "$key" = "n" ]]; then
 
@@ -1073,7 +1095,7 @@ run_latehook() {
 
 				umount -l $real_root
 
-			elif [[ "$key" = "c" ]]; then
+			elif [[ "$key" = "t" ]]; then
 
 				mount -t tmpfs -o size=80% none $new_root
 
@@ -1081,6 +1103,8 @@ run_latehook() {
 
 				rsync -a --exclude=root.squashfs --exclude=/efi/ --exclude=/boot/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ /real_root/@/ $new_root
 
+				echo -e "\nYou may now safely remove your USB stick.\n"
+				sleep 1
 			fi
 
 
@@ -1095,6 +1119,7 @@ run_latehook() {
 			echo "Continuing boot..."
 			mount --mkdir -o subvolid=256 ${root} $new_root
 
+			mount --uuid $ESP_UUID $new_root/efi
 		fi
 
 	else
@@ -1102,12 +1127,17 @@ run_latehook() {
 		echo -e "Running default option..."
 
 		mount --mkdir -o subvolid=256 ${root} $new_root
-          
+
+		mount --uuid $ESP_UUID $new_root/efi
+
 	fi
 
 
 }' > $mnt/usr/lib/initcpio/hooks/liveroot
 
+
+	sed -i "s/\$ESP_UUID/$ESP_UUID/g" $mnt/usr/lib/initcpio/hooks/liveroot
+	cat $mnt/usr/lib/initcpio/hooks/liveroot
 
 	echo '#!/bin/sh
 
@@ -1117,10 +1147,10 @@ build() {
 	add_binary btrfs
 	add_binary unsquashfs 
 	add_binary mksquashfs
-	#add_binary unionfs
 	add_module overlay
 	add_module loop
 	add_module squashfs
+	add_module vfat
 	add_runscript
 }
 
@@ -1151,7 +1181,6 @@ default_image="/boot/initramfs-linux.img"' > $mnt/etc/mkinitcpio.d/linux.preset
 	arch-chroot $mnt mkinitcpio -P 
 
 	# So systemd won't remount as 'rw'
-	#arch-chroot $mnt systemctl mask systemd-remount-fs.service
 	systemctl mask systemd-remount-fs.service --root=$mnt
 }
 
@@ -1318,8 +1347,32 @@ pacstrap_install () {
 
 	for package in $packages; do
 
+		if [ "$save_pkg_on_host" -eq 1 ]; then
+
+			# Save package on host machine
+			pacman --noconfirm -Sw $package
+			file="$(ls /var/cache/pacman/pkg/ | grep ^$package-[0-9].*zst$ | tail -1)"
+
+			# Make sure to have a cache copy on both systems
+			if [ "$file" ]; then
+				echo -e "\nCopying ${file[@]} to $mnt/var/cache/pacman/pkg/...\n"
+				cp "/var/cache/pacman/pkg/$file"{,.sig} $mnt/var/cache/pacman/pkg/
+			else
+				echo "Could not retrieve file. Exiting."
+				exit
+			fi
+
+		fi
+
 		if [ "$reinstall" -eq 1 ]; then
-			pacstrap -c -K $mnt $package
+
+			if [ "$save_pkg_on_host" -eq 1 ]; then
+				echo -e "Installing from cache file...\n"
+				arch-chroot $mnt pacman --noconfirm -U "/var/cache/pacman/pkg/$file"
+			else
+				pacstrap -c -K $mnt $package
+			fi
+
 		else
 
 			pacman --sysroot $mnt --noconfirm -Qi $package &> /dev/null && echo "$package already installed." || pacstrap -c -K $mnt $package
@@ -1376,12 +1429,11 @@ choices=("1. Quit
 
 while :; do
 
-echo -e "\nPlease choose:\n"
-
+echo
 echo "${choices[@]}" | column   
 echo  
 
-read choice
+read -p "Which option? " choice
 
 	case $choice in
 		Quit|quit|q|exit|1)	break; ;;
