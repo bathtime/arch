@@ -905,7 +905,7 @@ install_tweaks () {
 
 #cmd || { printf "%b" "FAILED.\n" ; exit 1 ; }
 
-	pacstrap_install terminus-font ncdu dosfstools parted arch-install-scripts tar man gptfdisk
+	pacstrap_install terminus-font ncdu dosfstools parted arch-install-scripts tar man-db gptfdisk
 
 
 	echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
