@@ -236,7 +236,7 @@ create_partitions () {
 
 	fi
 
-	mkdir -p $mnt/{etc,tmp,root}
+	mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg/}
 	chmod 750 $mnt/root
 	#chattr +C $mnt/var/log
  
@@ -270,10 +270,12 @@ mount_disk () {
 
 		fi
 
+
 		# mount efi partition
 		mount --mkdir $disk$espPart $mnt$efi_path
 
 	fi
+		mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg/,proc,sys,dev,run}
 
 }
 
@@ -1379,7 +1381,8 @@ pacstrap_install () {
 
 			if [ "$save_pkg_on_host" -eq 1 ]; then
 				echo -e "Installing from cache file...\n"
-				arch-chroot $mnt pacman --noconfirm -U "/var/cache/pacman/pkg/$file"
+				#arch-chroot $mnt pacman --noconfirm -U "/var/cache/pacman/pkg/$file"
+				pacstrap -c -K $mnt $package
 			else
 				pacstrap -c -K $mnt $package
 			fi
@@ -1407,8 +1410,10 @@ check_viable_disk
 
 loadkeys en
 
+
+# TODO: determine if setfont can be used
 # Make font big and readable
-setfont ter-132b
+#setfont ter-132b
 
 
 choices=("1. Quit
