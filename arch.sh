@@ -1319,7 +1319,7 @@ create_archive () {
 	cd / 
 	rm -rf /root.squashfs
 
-	time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e rootfs.tar.gz -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/cache/ -e /var/log/ -e /etc/pacman.d/gnupg/
+	time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/cache/ -e /var/log/ -e /etc/pacman.d/gnupg/
 
 	ls -la root.squashfs
 
@@ -1329,8 +1329,7 @@ create_archive () {
 
 copy_script () {
 
-	[ -d $mnt/home/$user ] && cp arch.sh $mnt/home/$user || cp arch.sh $mnt/
-	
+	[ -f /home/$user/arch.sh ] && cp /home/$user/arch.sh $mnt/	
 	[ $? -eq 0 ] && echo -e "\nScripts copied.\n" || echo -e "\nScripts could not be copied!!!\n"
 
 }
@@ -1407,13 +1406,12 @@ fi
 
 check_viable_disk
 
-
 loadkeys en
 
-
-# TODO: determine if setfont can be used
 # Make font big and readable
-#setfont ter-132b
+if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ]; then
+	setfont ter-132b
+fi
 
 
 choices=("1. Quit
@@ -1444,6 +1442,9 @@ choices=("1. Quit
 
 
 while :; do
+
+
+# TODO: Print if mounted and what disk
 
 echo
 echo "${choices[@]}" | column   
