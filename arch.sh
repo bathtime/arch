@@ -236,9 +236,8 @@ create_partitions () {
 
 	fi
 
-	mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg/}
+	mkdir -p $mnt/{etc,tmp}
 	chmod 750 $mnt/root
-	#chattr +C $mnt/var/log
  
 	unmount_disk
 	mount_disk
