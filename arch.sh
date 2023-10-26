@@ -59,8 +59,8 @@ aur_path=/home/$user
 
 ucode=intel-ucode
 hostname=Arch
-reinstall=1
 save_pkg_on_host=1
+offline=0
 
 wifi_ssid="BELL364"
 wifi_pass="13FDC4A93E3C"
@@ -203,6 +203,8 @@ create_partitions () {
 
 	check_on_root
 	delete_partitions
+	
+	systemctl daemon-reload
 
 	parted -s $disk mklabel gpt \
 			mkpart ESP fat32 1Mib 512Mib \
@@ -236,9 +238,7 @@ create_partitions () {
 
 	fi
 
-	mkdir -p $mnt/{etc,tmp}
-	chmod 750 $mnt/root
- 
+
 	unmount_disk
 	mount_disk
 
@@ -247,7 +247,7 @@ create_partitions () {
 
 
 mount_disk () {
-
+	
 	check_on_root
 
 	if [[ ! $(mount | grep -E "on /mnt") ]]; then
@@ -274,8 +274,10 @@ mount_disk () {
 		mount --mkdir $disk$espPart $mnt$efi_path
 
 	fi
-		mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg/,proc,sys,dev,run}
 
+	mkdir -p $mnt/{etc,tmp,root}
+	chmod 750 $mnt/root
+ 
 }
 
 
@@ -286,9 +288,7 @@ install_base () {
 	mount_disk
 	copy_script
 
-
 	pacstrap_install base linux linux-firmware vim
-
 
    [ "$rootfs" = "btrfs" ] && pacstrap_install btrfs-progs
 
@@ -317,6 +317,9 @@ EOF
 
 
 hypervisor_setup () {
+
+	#TODO:
+	exit
 
     hypervisor=$(systemd-detect-virt)
 
@@ -389,8 +392,7 @@ install_REFIND () {
 	pacstrap_install refind 
 
 
-	arch-chroot $mnt refind-install --usedefault $disk$espPart --alldrivers
-
+	VOLUME_UUID=$(blkid /dev/sdb | awk -F\" '{ print $2 }')
 	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 	ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
 
@@ -410,24 +412,26 @@ install_REFIND () {
 
 	echo -e "\nYou should have a fully bootable system now. Feel free to test it.\n"
 
-
+mkdir -p $mnt$efi_path/EFI/BOOT/
 cat > $mnt$efi_path/EFI/BOOT/refind.conf <<EOF
 timeout 4 
 #scan_all_linux_kernels off
-also_scan_dirs +,boot,@/boot
+#also_scan_dirs +,boot,@/boot
+#also_scan_dirs +,boot,@/boot
 showtools install, shell, bootorder, gdisk, memtest, mok_tool, apple_recovery, windows_recovery, about, hidden_tags, reboot, exit, firmware, fwupdate
 #enable_touch
 textonly
 
-
 menuentry "Arch Linux" {
     icon     /EFI/refind/icons/os_arch.png
-    volume   "Arch Linux"
+    volume   "$VOLUME_UUID"
     loader   @/boot/vmlinuz-linux
     initrd   @/boot/initramfs-linux.img
-    options  "root=UUID=$ROOT_UUID rootflags=subvol=@ rw add_efi_memmap resume=UUID=$SWAP_UUID"
+    options  "root=UUID=$ROOT_UUID rootflags=subvol=@ rw resume=UUID=$SWAP_UUID"
 }
 EOF
+
+	arch-chroot $mnt refind-install --usedefault $disk$espPart --alldrivers
 
 }
 
@@ -1326,6 +1330,49 @@ create_archive () {
 
 
 
+install_network () {
+
+	echo -e "\nWhich network manager would you like to install?\n"
+		
+	net_choices=(iwd wpa_supplicant quit) 
+	select net_choice in "${net_choices[@]}"
+	do
+		case $net_choice in
+			"iwd")				setup_iwd; break ;;
+			"dhcp")				setup_dhcp; break ;;
+			"wpa_supplicant")	setup_wpa; break ;;
+			"quit")				break ;;
+			'')					echo -e "\nInvalid option!\n" ;;
+		esac
+	done
+
+}
+
+
+
+install_bootloader () {
+
+	echo -e "\nWhich boot manager would you like to install?\n"
+
+	choiceBoot=(rEFInd grub EFISTUB uki systemD quit) 
+				
+	select choiceBoot in "${choiceBoot[@]}"
+	do
+		case $choiceBoot in
+			"rEFInd")	install_REFIND; break ;;
+			"grub")		install_GRUB; break ;;
+			"EFISTUB")	install_EFISTUB; break ;;
+			"uki")		install_uki; break ;;
+			"systemD")	install_SYSTEMDBOOT; break ;;
+			"quit")		break ;;
+			'')			echo -e "\nInvalid option!\n" ;;
+		esac
+	done
+
+}
+
+
+
 copy_script () {
 
 	[ -f /home/$user/arch.sh ] && cp /home/$user/arch.sh $mnt/	
@@ -1361,13 +1408,14 @@ pacstrap_install () {
 		if [ "$save_pkg_on_host" -eq 1 ]; then
 
 			# Save package on host machine
-			pacman --noconfirm -Sw $package
+			[ "$offline" -eq 0 ] && pacman --noconfirm -Sw $package
+
 			file="$(ls /var/cache/pacman/pkg/ | grep ^$package-[0-9].*zst$ | tail -1)"
 
 			# Make sure to have a cache copy on both systems
 			if [ "$file" ]; then
 				echo -e "\nCopying ${file[@]} to $mnt/var/cache/pacman/pkg/...\n"
-				cp "/var/cache/pacman/pkg/$file"{,.sig} $mnt/var/cache/pacman/pkg/
+				#cp "/var/cache/pacman/pkg/$file"{,.sig} $mnt/var/cache/pacman/pkg/
 			else
 				echo "Could not retrieve file. Exiting."
 				exit
@@ -1375,24 +1423,27 @@ pacstrap_install () {
 
 		fi
 
-		if [ "$reinstall" -eq 1 ]; then
+		if [ "$offline" -eq 1 ]; then
 
-			if [ "$save_pkg_on_host" -eq 1 ]; then
-				echo -e "Installing from cache file...\n"
-				#arch-chroot $mnt pacman --noconfirm -U "/var/cache/pacman/pkg/$file"
-				pacstrap -c -K $mnt $package
-			else
-				pacstrap -c -K $mnt $package
-			fi
+			echo -e "Installing from cache file...\n"
+			pacstrap -U -c -K $mnt "/var/cache/pacman/pkg/$file"
 
 		else
-
-			pacman --sysroot $mnt --noconfirm -Qi $package &> /dev/null && echo "$package already installed." || pacstrap -c -K $mnt $package
-
+			pacman --sysroot $mnt --noconfirm -Qi $package &>/dev/null && echo "$package already installed." || pacstrap -c -K $mnt $package
 		fi
 
 	done
+}
 
+
+
+check_online () {
+
+	ping -q -w 1 -c 1 $(ip r | grep default | cut -d ' ' -f 3) > /dev/null || offline=1 
+
+	if [ "$offline" -eq 1 ]; then
+		echo -e "\nNo internet connection found. Offline mode enabled."
+	fi
 }
 
 
@@ -1404,6 +1455,7 @@ else
 fi
 
 check_viable_disk
+check_online
 
 loadkeys en
 
@@ -1442,9 +1494,6 @@ choices=("1. Quit
 
 while :; do
 
-
-# TODO: Print if mounted and what disk
-
 echo
 echo "${choices[@]}" | column   
 echo  
@@ -1459,38 +1508,10 @@ read -p "Which option? " choice
 		base|5)					install_base ;;
 		hypervisor|6)			hypervisor_setup ;;
 		fstab|7)					setup_fstab ;;
-		boot|8)					echo -e "\nWhich boot manager would you like to install?\n"
-
-									choiceBoot=(rEFInd grub EFISTUB uki systemD quit) 
-				
-									select choiceBoot in "${choiceBoot[@]}"
-									do
-										case $choiceBoot in
-											"rEFInd")	install_REFIND; break ;;
-											"grub")		install_GRUB; break ;;
-											"EFISTUB")	install_EFISTUB; break ;;
-											"uki")		install_uki; break ;;
-											"systemD")	install_SYSTEMDBOOT; break ;;
-											"quit")		break ;;
-											'')			echo -e "\nInvalid option!\n" ;;
-										esac
-									done ;;
+		boot|8)					install_bootloader ;;
 		setup|9)					general_setup ;;
 		user|10)					setup_user ;;
-      network|11)				echo -e "\nWhich network manager would you like to install?\n"
-		
-									net_choices=(iwd wpa_supplicant quit) 
-									select net_choice in "${net_choices[@]}"
-									do
-										case $net_choice in
-											"iwd")				setup_iwd; break ;;
-											"dhcp")				setup_dhcp; break ;;
-											"wpa_supplicant")	setup_wpa; break ;;
-											"quit")				break ;;
-											'')					echo -e "\nInvalid option!\n" ;;
-										esac
-									done ;;
-
+      network|11)				install_network ;;
 		aur|12)					install_aur ;;
 		tweaks|13)				install_tweaks ;;
       mksh|14)					install_mksh ;;
