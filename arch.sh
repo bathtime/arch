@@ -60,7 +60,8 @@ aur_path=/home/$user
 ucode=intel-ucode
 hostname=Arch
 save_pkg_on_host=1
-offline=0
+offline=1
+install_separately=0
 
 wifi_ssid="BELL364"
 wifi_pass="13FDC4A93E3C"
@@ -275,7 +276,7 @@ mount_disk () {
 
 	fi
 
-	mkdir -p $mnt/{etc,tmp,root}
+	mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg}
 	chmod 750 $mnt/root
  
 }
@@ -287,6 +288,19 @@ install_base () {
 	check_on_root
 	mount_disk
 	copy_script
+
+echo '[options]
+HoldPkg     = pacman glibc
+Architecture = auto
+
+CheckSpace
+ParallelDownloads = 10
+
+[custom]
+SigLevel = Optional TrustAll
+Server = file:///var/cache/pacman/pkg/' > /etc/pacman-offline.conf
+	cp /etc/pacman-offline.conf $mnt/etc/pacman-offline.conf
+
 
 	pacstrap_install base linux linux-firmware vim
 
@@ -391,6 +405,7 @@ install_REFIND () {
 
 	pacstrap_install refind 
 
+	arch-chroot $mnt refind-install --usedefault $disk$espPart --alldrivers
 
 	VOLUME_UUID=$(blkid /dev/sdb | awk -F\" '{ print $2 }')
 	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
@@ -417,7 +432,6 @@ cat > $mnt$efi_path/EFI/BOOT/refind.conf <<EOF
 timeout 4 
 #scan_all_linux_kernels off
 #also_scan_dirs +,boot,@/boot
-#also_scan_dirs +,boot,@/boot
 showtools install, shell, bootorder, gdisk, memtest, mok_tool, apple_recovery, windows_recovery, about, hidden_tags, reboot, exit, firmware, fwupdate
 #enable_touch
 textonly
@@ -431,7 +445,6 @@ menuentry "Arch Linux" {
 }
 EOF
 
-	arch-chroot $mnt refind-install --usedefault $disk$espPart --alldrivers
 
 }
 
@@ -481,10 +494,10 @@ EOF2
 
 
 	###  Offer readonly grub booting option  ###
-
-	cp $mnt/etc/grub.d/10_linux /etc/grub.d/10_linux-readonly
-	sed -i 's/\"\$title\"/\"\$title \(readonly\)\"/g' $mnt/etc/grub.d/10_linux-readonly
-	sed -i 's/ rw / ro /g' $mnt/etc/grub.d/10_linux-readonly
+	mkdir -p $mnt/etc/grub.d/
+	#cp $mnt/etc/grub.d/10_linux /etc/grub.d/10_linux-readonly
+	#sed -i 's/\"\$title\"/\"\$title \(readonly\)\"/g' $mnt/etc/grub.d/10_linux-readonly
+	#sed -i 's/ rw / ro /g' $mnt/etc/grub.d/10_linux-readonly
 
 	# So systemd won't remount as 'rw'
 	arch-chroot $mnt systemctl mask systemd-remount-fs.service
@@ -1415,7 +1428,7 @@ pacstrap_install () {
 			# Make sure to have a cache copy on both systems
 			if [ "$file" ]; then
 				echo -e "\nCopying ${file[@]} to $mnt/var/cache/pacman/pkg/...\n"
-				#cp "/var/cache/pacman/pkg/$file"{,.sig} $mnt/var/cache/pacman/pkg/
+				cp "/var/cache/pacman/pkg/$file"{,.sig} $mnt/var/cache/pacman/pkg/
 			else
 				echo "Could not retrieve file. Exiting."
 				exit
@@ -1426,13 +1439,20 @@ pacstrap_install () {
 		if [ "$offline" -eq 1 ]; then
 
 			echo -e "Installing from cache file...\n"
-			pacstrap -U -c -K $mnt "/var/cache/pacman/pkg/$file"
+			#pacstrap -U -c -K $mnt "/var/cache/pacman/pkg/$file"
+			#pacstrap -C /etc/pacman-offline.conf -c -K $mnt "$packages"
 
+			# Install one by one
+			[ "$install_separately" -eq 1 ] && pacstrap -C /etc/pacman-offline.conf -c -K $mnt $package
 		else
 			pacman --sysroot $mnt --noconfirm -Qi $package &>/dev/null && echo "$package already installed." || pacstrap -c -K $mnt $package
 		fi
 
 	done
+
+	# Install all at once
+	[ "$install_separately" -eq 0 ] && pacstrap -C /etc/pacman-offline.conf -c -K $mnt $packages
+
 }
 
 
@@ -1443,7 +1463,17 @@ check_online () {
 
 	if [ "$offline" -eq 1 ]; then
 		echo -e "\nNo internet connection found. Offline mode enabled."
+		
 	fi
+}
+
+
+
+build_package_database () {
+
+	echo -e "\nPackage database is updating. Please be patient...\n"
+	repo-add -q -n /var/cache/pacman/pkg/./custom.db.tar.gz /var/cache/pacman/pkg/*.zst
+
 }
 
 
@@ -1456,6 +1486,13 @@ fi
 
 check_viable_disk
 check_online
+
+if [ "$offline" -eq 1 ]; then
+	echo -e "\nInitializing repo for offline installation...
+You may need to run 'Build package database'."
+	
+fi
+
 
 loadkeys en
 
@@ -1489,7 +1526,8 @@ choices=("1. Quit
 22. Connect wireless
 23. Download script
 24. Install host packages
-25. Reset pacman keys")
+25. Reset pacman keys
+26. Build Package database")
 
 
 while :; do
@@ -1526,6 +1564,7 @@ read -p "Which option? " choice
 		script|23)				download_script ;;
 		host|24)			 		install_host_packages ;;
 		reset|keys|25)			reset_keys ;;
+		build_package|26)		build_package_database ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
