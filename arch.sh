@@ -62,6 +62,7 @@ hostname=Arch
 save_pkg_on_host=1
 offline=1
 install_separately=1
+reinstall=1
 
 wifi_ssid="BELL364"
 wifi_pass="13FDC4A93E3C"
@@ -299,14 +300,22 @@ ParallelDownloads = 10
 
 [custom]
 SigLevel = Optional TrustAll
-Server = file:///var/cache/pacman/pkg/' > /etc/pacman-offline.conf
+Server = file:///var/cache/pacman/pkg/
+
+[core]
+Include = /etc/pacman.d/mirrorlist
+
+#[extra-testing]
+#Include = /etc/pacman.d/mirrorlist
+
+[extra]
+Include = /etc/pacman.d/mirrorlist' > /etc/pacman-offline.conf
 	cp /etc/pacman-offline.conf $mnt/etc/pacman-offline.conf
 
 	build_package_database
 	reset_keys
 
-	#pacstrap_install base linux linux-firmware vim parted gptfdisk arch-install-scripts tar
-	pacstrap_install base linux linux-firmware vim parted gptfdisk arch-install-scripts
+	pacstrap_install base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar
 
 	[ "$rootfs" = "btrfs" ] && pacstrap_install btrfs-progs
 
@@ -1405,6 +1414,7 @@ install_host_packages () {
 packages=("arch-install-scripts
 gptfdisk
 less
+pactree
 squashfs-tools
 terminus-font
 vim")
@@ -1430,67 +1440,31 @@ pacstrap_install () {
 
 	for package in $packages; do
 
-		if [ "$save_pkg_on_host" -eq 1 ]; then
+		# Save package on host machine
+		[ "$offline" -eq 0 ] && pacman --noconfirm -Sw $package
 
-			# Save package on host machine
-			[ "$offline" -eq 0 ] && pacman --noconfirm -Sw $package
+		file="$(ls /var/cache/pacman/pkg/ | grep ^$package-[0-9].*zst$ | tail -1)"
 
-
-			file="$(ls /var/cache/pacman/pkg/ | grep ^$package-[0-9].*zst$ | tail -1)"
-
-			# Make sure to have a cache copy on both systems
-			if [ "$file" ]; then
-				echo -e "\nCopying ${file[@]} to $mnt/var/cache/pacman/pkg/...\n"
-				cp "/var/cache/pacman/pkg/$file"{,.sig} $mnt/var/cache/pacman/pkg/
-			else
-				echo "Could not retrieve file. Exiting."
-				exit
-			fi
-
-
-			# Check if package is a bundle. If so, download all required files
-			if [ "$(echo $file | grep '\-any.pkg.tar.zst')" ]; then
-
-				tar xf "$mnt/var/cache/pacman/pkg/$file"
-
-				bundle="$(cat .BUILDINFO | grep 'installed =' | sed 's/installed = //g; s/-[0-9].*$//g')"
-				cd /var/cache/pacman/pkg
-
-				for pac in $bundle; do
-					
-					[ "$offline" -eq 0 ] && pacman --noconfirm -Sw $pac
-				
-					# Find latest version of package
-					latest=$(ls -Art $pac-* | tail -n 1)
-
-					echo -e "\nCopying $pac to $mnt/var/cache/pacman/pkg/...\n"
-					cp /var/cache/pacman/pkg/$latest* $mnt/var/cache/pacman/pkg/
-
-				done
-
-			fi
-
-		fi
-
-		if [ "$offline" -eq 1 ]; then
-
-			echo -e "Installing from cache file...\n"
-			#pacstrap -U -c -K $mnt "/var/cache/pacman/pkg/$file"
-			#pacstrap -C /etc/pacman-offline.conf -c -K $mnt "$packages"
-
-			# Install one by one
-			#[ "$install_separately" -eq 1 ] && pacstrap -C /etc/pacman-offline.conf -c -K $mnt $package
-			[ "$install_separately" -eq 1 ] && pacstrap -C /etc/pacman-offline.conf -c -K $mnt $package
-		else
-			pacman --sysroot $mnt --noconfirm -Qi $package &>/dev/null && echo "$package already installed." || pacstrap -c -K $mnt $package
-		fi
+		pacstrap -C /etc/pacman-offline.conf -c -K $mnt $package
 
 	done
 
-	# Install all at once
-	if [ "$install_separately" -eq 0 ]; then
-		pacstrap -C /etc/pacman-offline.conf -c -K $mnt $packages
-	fi
+}
+
+
+
+copy_packages () {
+
+	packages="$(pacman --sysroot $mnt -Q | sed 's/ [0-9].*$//g')"
+
+	for package in ${packages}; do
+
+		echo "Copying $package..."
+		#pacman --noconfirm -Sw $package
+		cp /var/cache/pacman/pkg/$package* $mnt/var/cache/pacman/pkg/
+
+	done
+
 }
 
 
@@ -1515,6 +1489,15 @@ build_package_database () {
 }
 
 
+
+complete_reinstall () {
+
+	systemctl daemon-reload
+
+	sleep 1
+	umount -R -l /mnt
+
+}
 
 if [ "$1" ]; then
 	disk="$1"
@@ -1566,7 +1549,9 @@ choices=("1. Quit
 23. Download script
 24. Install host packages
 25. Reset pacman keys
-26. Build Package database")
+26. Build Package database
+27. Complete reinstall
+28. Copy packages")
 
 
 while :; do
@@ -1604,6 +1589,8 @@ read -p "Which option? " choice
 		host|24)			 		install_host_packages ;;
 		reset|keys|25)			reset_keys ;;
 		build_package|26)		build_package_database ;;
+		reinstall|27)			complete_reinstall ;;
+		copy_packages|28)		copy_packages ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
