@@ -311,8 +311,7 @@ Include = /etc/pacman.d/mirrorlist
 [extra]
 Include = /etc/pacman.d/mirrorlist' > /etc/pacman-offline.conf
 	cp /etc/pacman-offline.conf $mnt/etc/pacman-offline.conf
-
-	build_package_database
+	
 	reset_keys
 
 	pacstrap_install base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar
@@ -1455,6 +1454,8 @@ pacstrap_install () {
 
 copy_packages () {
 
+	arch-chroot $mnt pacman -Syu
+
 	packages="$(pacman --sysroot $mnt -Q | sed 's/ [0-9].*$//g')"
 
 	for package in ${packages}; do
@@ -1464,6 +1465,9 @@ copy_packages () {
 		cp /var/cache/pacman/pkg/$package* $mnt/var/cache/pacman/pkg/
 
 	done
+
+	build_package_database
+
 
 }
 
