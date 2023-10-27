@@ -61,7 +61,7 @@ ucode=intel-ucode
 hostname=Arch
 save_pkg_on_host=1
 offline=1
-install_separately=0
+install_separately=1
 
 wifi_ssid="BELL364"
 wifi_pass="13FDC4A93E3C"
@@ -302,9 +302,10 @@ Server = file:///var/cache/pacman/pkg/' > /etc/pacman-offline.conf
 	cp /etc/pacman-offline.conf $mnt/etc/pacman-offline.conf
 
 
+	#pacstrap_install base linux linux-firmware vim parted gptfdisk arch-install-scripts tar
 	pacstrap_install base linux linux-firmware vim parted gptfdisk arch-install-scripts
 
-   [ "$rootfs" = "btrfs" ] && pacstrap_install btrfs-progs
+	[ "$rootfs" = "btrfs" ] && pacstrap_install btrfs-progs
 
 
 	###  Prepare auto-login  ###
@@ -1411,11 +1412,28 @@ done
 
 }
 
+package_debundle () {
 
+	tar xf "$1"
+
+
+}
 
 pacstrap_install () {
 
+
+	#package_debundle base
+
+	#exit
+
+#for file in "${base_list[@]}"; do
+#	echo "Copying $file..."
+#	#cp /var/cache/pacman/pkg/$file-* $mnt/var/cache/pacman/pkg/
+#done
+
 	packages="$@"
+
+	#error_check 0
 
 	for package in $packages; do
 
@@ -1424,7 +1442,33 @@ pacstrap_install () {
 			# Save package on host machine
 			[ "$offline" -eq 0 ] && pacman --noconfirm -Sw $package
 
+
 			file="$(ls /var/cache/pacman/pkg/ | grep ^$package-[0-9].*zst$ | tail -1)"
+
+			# Check if package is a bundle. If so, download all required files
+			if [ "$(echo $file | grep '\-any.pkg.tar.zst')" ]; then
+
+				cp /var/cache/pacman/pkg/$file /mnt/var/cache/pacman/pkg/
+				tar xf "$mnt/var/cache/pacman/pkg/$file"
+
+				bundle="$(cat .BUILDINFO | grep 'installed =' | sed 's/installed = //g; s/-[0-9].*$//g')"
+
+				cd /var/cache/pacman/pkg
+
+				for pac in $bundle; do
+					
+					pacman --noconfirm -Sw $pac
+					#package_name="$(pacman -Q $pac | sed 's/ /-/g')" &>/dev/null
+				
+					# Find latest version of package
+					latest=$(ls -Art $pac-* | tail -n 1)
+
+					echo -e "\nCopying $pac to $mnt/var/cache/pacman/pkg/...\n"
+					cp /var/cache/pacman/pkg/$latest* $mnt/var/cache/pacman/pkg/
+
+				done
+
+			fi
 
 			# Make sure to have a cache copy on both systems
 			if [ "$file" ]; then
@@ -1435,6 +1479,7 @@ pacstrap_install () {
 				exit
 			fi
 
+
 		fi
 
 		if [ "$offline" -eq 1 ]; then
@@ -1444,6 +1489,7 @@ pacstrap_install () {
 			#pacstrap -C /etc/pacman-offline.conf -c -K $mnt "$packages"
 
 			# Install one by one
+			#[ "$install_separately" -eq 1 ] && pacstrap -C /etc/pacman-offline.conf -c -K $mnt $package
 			[ "$install_separately" -eq 1 ] && pacstrap -C /etc/pacman-offline.conf -c -K $mnt $package
 		else
 			pacman --sysroot $mnt --noconfirm -Qi $package &>/dev/null && echo "$package already installed." || pacstrap -c -K $mnt $package
@@ -1452,8 +1498,9 @@ pacstrap_install () {
 	done
 
 	# Install all at once
-	[ "$install_separately" -eq 0 ] && pacstrap -C /etc/pacman-offline.conf -c -K $mnt $packages
-
+	if [ "$install_separately" -eq 0 ]; then
+		pacstrap -C /etc/pacman-offline.conf -c -K $mnt $packages
+	fi
 }
 
 
@@ -1501,6 +1548,65 @@ loadkeys en
 if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ]; then
 	setfont ter-132b
 fi
+
+base_list=(readline
+dbus
+libpcap
+libldap
+device-mapper
+libevent
+gdbm
+psmisc
+libgpg-error
+libbpf
+libssh2
+grep
+p11-kit
+sed
+libsecret
+libtirpc
+libsasl
+lz4
+libksba
+libtasn1
+libidn2
+acl
+pinentry
+kmod
+pciutils
+iputils
+expat
+licenses
+libassuan
+keyutils
+libnghttp2
+zlib
+libseccomp
+libxcrypt
+libpsl
+gzip
+popt
+libusb
+libnftnl
+attr
+bzip2
+json-c
+libnetfilter_conntrack
+libsysprof-capture
+libffi
+libcap-ng
+argon2
+npth
+libverto
+libnfnetlink
+filesystem
+libmnl
+ca-certificates-utils
+libutempter
+pacman-mirrorlist
+systemd-sysvcompat
+pambase
+ca-certificates)
 
 
 choices=("1. Quit
@@ -1573,5 +1679,11 @@ done
 
 sync
 unmount_disk
+
+exit
+
+#cat files | sed 's/-[0-9].*//g'
+
+
 
 
