@@ -302,7 +302,7 @@ Server = file:///var/cache/pacman/pkg/' > /etc/pacman-offline.conf
 	cp /etc/pacman-offline.conf $mnt/etc/pacman-offline.conf
 
 
-	pacstrap_install base linux linux-firmware vim
+	pacstrap_install base linux linux-firmware vim parted gptfdisk arch-install-scripts
 
    [ "$rootfs" = "btrfs" ] && pacstrap_install btrfs-progs
 
@@ -1014,7 +1014,8 @@ create_archive() {
 
         cd $real_root/@/
 
-        mksquashfs . $real_root/@/root.squashfs -noappend -no-recovery -mem-percent 50 -e root.squashfs -e boot/* -e efi/* -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/ -e .snapshots/ -e var/tmp/* -e var/cache/* -e var/log/* -e etc/pacman.d/gnupg/ -e var/lib/systemd/random-seed
+        #mksquashfs . $real_root/@/root.squashfs -noappend -no-recovery -mem-percent 50 -e root.squashfs -e boot/* -e efi/* -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/ -e .snapshots/ -e var/tmp/* -e var/cache/* -e var/log/* -e etc/pacman.d/gnupg/ -e var/lib/systemd/random-seed
+        mksquashfs . $real_root/@/root.squashfs -noappend -no-recovery -mem-percent 50 -e root.squashfs -e boot/* -e efi/* -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/ -e .snapshots/ -e var/tmp/* -e var/log/* -e etc/pacman.d/gnupg/ -e var/lib/systemd/random-seed
 
         ls -la $real_root/@/root.squashfs
 
@@ -1570,7 +1571,7 @@ read -p "Which option? " choice
 
 done
 
-
+sync
 unmount_disk
 
 
