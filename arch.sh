@@ -108,7 +108,8 @@ unmount_disk () {
 		[[ "$(pwd | grep $mnt)" ]] && cd ..
 
 		sync
-		umount -n -R $mnt
+		#umount -n -R $mnt
+		umount -R $mnt
 
    	if [[ "$(mount | grep 'on '$mnt)" ]]; then
 
@@ -301,6 +302,8 @@ SigLevel = Optional TrustAll
 Server = file:///var/cache/pacman/pkg/' > /etc/pacman-offline.conf
 	cp /etc/pacman-offline.conf $mnt/etc/pacman-offline.conf
 
+	build_package_database
+	reset_keys
 
 	#pacstrap_install base linux linux-firmware vim parted gptfdisk arch-install-scripts tar
 	pacstrap_install base linux linux-firmware vim parted gptfdisk arch-install-scripts
@@ -408,7 +411,7 @@ install_REFIND () {
 
 	arch-chroot $mnt refind-install --usedefault $disk$espPart --alldrivers
 
-	VOLUME_UUID=$(blkid /dev/sdb | awk -F\" '{ print $2 }')
+	VOLUME_UUID=$(blkid $disk | awk -F\" '{ print $2 }')
 	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 	ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
 
@@ -1421,16 +1424,6 @@ package_debundle () {
 
 pacstrap_install () {
 
-
-	#package_debundle base
-
-	#exit
-
-#for file in "${base_list[@]}"; do
-#	echo "Copying $file..."
-#	#cp /var/cache/pacman/pkg/$file-* $mnt/var/cache/pacman/pkg/
-#done
-
 	packages="$@"
 
 	#error_check 0
@@ -1445,20 +1438,27 @@ pacstrap_install () {
 
 			file="$(ls /var/cache/pacman/pkg/ | grep ^$package-[0-9].*zst$ | tail -1)"
 
+			# Make sure to have a cache copy on both systems
+			if [ "$file" ]; then
+				echo -e "\nCopying ${file[@]} to $mnt/var/cache/pacman/pkg/...\n"
+				cp "/var/cache/pacman/pkg/$file"{,.sig} $mnt/var/cache/pacman/pkg/
+			else
+				echo "Could not retrieve file. Exiting."
+				exit
+			fi
+
+
 			# Check if package is a bundle. If so, download all required files
 			if [ "$(echo $file | grep '\-any.pkg.tar.zst')" ]; then
 
-				cp /var/cache/pacman/pkg/$file /mnt/var/cache/pacman/pkg/
 				tar xf "$mnt/var/cache/pacman/pkg/$file"
 
 				bundle="$(cat .BUILDINFO | grep 'installed =' | sed 's/installed = //g; s/-[0-9].*$//g')"
-
 				cd /var/cache/pacman/pkg
 
 				for pac in $bundle; do
 					
-					pacman --noconfirm -Sw $pac
-					#package_name="$(pacman -Q $pac | sed 's/ /-/g')" &>/dev/null
+					[ "$offline" -eq 0 ] && pacman --noconfirm -Sw $pac
 				
 					# Find latest version of package
 					latest=$(ls -Art $pac-* | tail -n 1)
@@ -1469,16 +1469,6 @@ pacstrap_install () {
 				done
 
 			fi
-
-			# Make sure to have a cache copy on both systems
-			if [ "$file" ]; then
-				echo -e "\nCopying ${file[@]} to $mnt/var/cache/pacman/pkg/...\n"
-				cp "/var/cache/pacman/pkg/$file"{,.sig} $mnt/var/cache/pacman/pkg/
-			else
-				echo "Could not retrieve file. Exiting."
-				exit
-			fi
-
 
 		fi
 
@@ -1549,64 +1539,6 @@ if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ]; then
 	setfont ter-132b
 fi
 
-base_list=(readline
-dbus
-libpcap
-libldap
-device-mapper
-libevent
-gdbm
-psmisc
-libgpg-error
-libbpf
-libssh2
-grep
-p11-kit
-sed
-libsecret
-libtirpc
-libsasl
-lz4
-libksba
-libtasn1
-libidn2
-acl
-pinentry
-kmod
-pciutils
-iputils
-expat
-licenses
-libassuan
-keyutils
-libnghttp2
-zlib
-libseccomp
-libxcrypt
-libpsl
-gzip
-popt
-libusb
-libnftnl
-attr
-bzip2
-json-c
-libnetfilter_conntrack
-libsysprof-capture
-libffi
-libcap-ng
-argon2
-npth
-libverto
-libnfnetlink
-filesystem
-libmnl
-ca-certificates-utils
-libutempter
-pacman-mirrorlist
-systemd-sysvcompat
-pambase
-ca-certificates)
 
 
 choices=("1. Quit
