@@ -44,9 +44,12 @@ error_check () {
 error_check 1
 
 mnt=/mnt
-espPart=1
-swapPart=2
-rootPart=3
+espPartNum=1
+swapPartNum=2
+rootPartNum=3
+espPart=$espPartNum
+swapPart=$swapPartNum
+rootPart=$rootPartNum
 rootfs=btrfs
 subvols=()
 efi_path=/efi
@@ -176,11 +179,10 @@ choose_disk () {
 	echo -e "\nSetup config:\n\ndisk: $disk\nuser: $user\n"
 
         if [ "$(echo $disk | grep nvme)" ]; then
-                espPart="p$espPart"
-                swapPart="p$swapPart"
-                rootPart="p$rootPart"
+                espPart="p$espPartNum"
+                swapPart="p$swapPartNum"
+                rootPart="p$rootPartNum"
         fi
-
 }
 
 
@@ -211,9 +213,9 @@ create_partitions () {
 
 	parted -s $disk mklabel gpt \
 			mkpart ESP fat32 1Mib 512Mib \
-			set $espPart esp on \
+			set $espPartNum esp on \
 			mkpart SWAP linux-swap 512Mib 8512Mib \
-			set $swapPart swap on \
+			set $swapPartNum swap on \
 			mkpart ROOT $rootfs 8512Mib 100% \
 
 	mkfs.fat -F 32 -n EFI $disk$espPart 
@@ -1428,24 +1430,11 @@ done
 
 pacstrap_install () {
 
-	packages="$@"
-
-	#error_check 0
-
-	for package in $packages; do
-
-		# Save package on host machine
-		#[ "$offline" -eq 0 ] && pacman --noconfirm -Sw $package
-
-		file="$(ls /var/cache/pacman/pkg/ | grep ^$package-[0-9].*zst$ | tail -1)"
-
-		if [ "$offline" -eq 1 ]; then
-			pacstrap -C /etc/pacman-offline.conf -c -K $mnt $package
-		else
-			pacstrap -C /etc/pacman.conf -c -K $mnt $package
-		fi
-
-	done
+	if [ "$offline" -eq 1 ]; then
+		pacstrap -C /etc/pacman-offline.conf -c -K $mnt "$@"
+	else
+		pacstrap -C /etc/pacman.conf -c -K $mnt "$@"
+	fi
 
 }
 
@@ -1453,7 +1442,7 @@ pacstrap_install () {
 
 copy_packages () {
 
-	arch-chroot $mnt pacman -Syu
+	[ "$offline" -eq 0 ] && arch-chroot $mnt pacman -Syu
 
 	packages="$(pacman --sysroot $mnt -Q | sed 's/ [0-9].*$//g')"
 
@@ -1467,7 +1456,6 @@ copy_packages () {
 	echo -e "\nPackage database is updating. Please be patient...\n"
 	repo-add -q -n $mnt/var/cache/pacman/pkg/./custom.db.tar.gz $mnt/var/cache/pacman/pkg/*.zst
 
-	build_package_database
 	pacman-db-upgrade
 
 }
@@ -1482,15 +1470,6 @@ check_online () {
 		echo -e "\nNo internet connection found. Offline mode enabled."
 		
 	fi
-}
-
-
-
-build_package_database () {
-
-	echo -e "\nPackage database is updating. Please be patient...\n"
-	repo-add -q -n /var/cache/pacman/pkg/./custom.db.tar.gz /var/cache/pacman/pkg/*.zst
-
 }
 
 
@@ -1554,9 +1533,9 @@ choices=("1. Quit
 23. Download script
 24. Install host packages
 25. Reset pacman keys
-26. Build Package database
-27. Complete reinstall
-28. Copy packages")
+26. Complete reinstall
+27. Copy packages
+28. Minimal auto-install")
 
 
 while :; do
@@ -1593,9 +1572,9 @@ read -p "Which option? " choice
 		script|23)				download_script ;;
 		host|24)			 		install_host_packages ;;
 		reset|keys|25)			reset_keys ;;
-		build_package|26)		build_package_database ;;
-		reinstall|27)			complete_reinstall ;;
-		copy_packages|28)		copy_packages ;;
+		reinstall|26)			complete_reinstall ;;
+		copy_packages|27)		copy_packages ;;
+		auto_install|28)		time create_partitions; install_base; setup_fstab; install_REFIND; general_setup; setup_user; setup_iwd; install_liveroot; copy_packages ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
