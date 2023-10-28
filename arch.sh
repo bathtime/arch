@@ -302,14 +302,14 @@ ParallelDownloads = 10
 SigLevel = Optional TrustAll
 Server = file:///var/cache/pacman/pkg/
 
-[core]
-Include = /etc/pacman.d/mirrorlist
+#[core]
+#Include = /etc/pacman.d/mirrorlist
 
 #[extra-testing]
 #Include = /etc/pacman.d/mirrorlist
 
-[extra]
-Include = /etc/pacman.d/mirrorlist' > /etc/pacman-offline.conf
+#[extra]
+#Include = /etc/pacman.d/mirrorlist' > /etc/pacman-offline.conf
 	cp /etc/pacman-offline.conf $mnt/etc/pacman-offline.conf
 	
 	reset_keys
@@ -1146,7 +1146,7 @@ run_latehook() {
 
                         echo "Copying root filesystem to RAM. Please be patient..."
 
-                        rsync -a --exclude=root.squashfs --exclude=/efi/ --exclude=/boot/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ /real_root/@/ $new_root
+                        rsync -a --exclude=root.squashfs --exclude=/efi/ --exclude=/boot/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ /real_root/@/ $new_root
 
                         echo -e "\nYou may now safely remove your USB stick.\n"
                         sleep 1
@@ -1424,12 +1424,7 @@ done
 
 }
 
-package_debundle () {
 
-	tar xf "$1"
-
-
-}
 
 pacstrap_install () {
 
@@ -1440,11 +1435,15 @@ pacstrap_install () {
 	for package in $packages; do
 
 		# Save package on host machine
-		[ "$offline" -eq 0 ] && pacman --noconfirm -Sw $package
+		#[ "$offline" -eq 0 ] && pacman --noconfirm -Sw $package
 
 		file="$(ls /var/cache/pacman/pkg/ | grep ^$package-[0-9].*zst$ | tail -1)"
 
-		pacstrap -C /etc/pacman-offline.conf -c -K $mnt $package
+		if [ "$offline" -eq 1 ]; then
+			pacstrap -C /etc/pacman-offline.conf -c -K $mnt $package
+		else
+			pacstrap -C /etc/pacman.conf -c -K $mnt $package
+		fi
 
 	done
 
@@ -1461,9 +1460,12 @@ copy_packages () {
 	for package in ${packages}; do
 
 		echo "Copying $package..."
-		cp /var/cache/pacman/pkg/$package* $mnt/var/cache/pacman/pkg/
+		cp -u /var/cache/pacman/pkg/$package* $mnt/var/cache/pacman/pkg/
 
 	done
+
+	echo -e "\nPackage database is updating. Please be patient...\n"
+	repo-add -q -n $mnt/var/cache/pacman/pkg/./custom.db.tar.gz $mnt/var/cache/pacman/pkg/*.zst
 
 	build_package_database
 	pacman-db-upgrade
