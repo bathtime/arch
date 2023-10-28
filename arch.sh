@@ -1461,13 +1461,12 @@ copy_packages () {
 	for package in ${packages}; do
 
 		echo "Copying $package..."
-		#pacman --noconfirm -Sw $package
 		cp /var/cache/pacman/pkg/$package* $mnt/var/cache/pacman/pkg/
 
 	done
 
 	build_package_database
-
+	pacman-db-upgrade
 
 }
 
