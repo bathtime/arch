@@ -62,7 +62,7 @@ aur_path=/home/$user
 
 ucode=intel-ucode
 hostname=Arch
-offline=0
+offline=1
 reinstall=0
 root_only=0
 initramfs=mkinitcpio
@@ -299,24 +299,23 @@ HoldPkg     = pacman glibc
 Architecture = auto
 
 CheckSpace
-ParallelDownloads = 10
+ParallelDownloads = 1
+Color
 
 [custom]
 SigLevel = Optional TrustAll
 Server = file:///var/cache/pacman/pkg/
 ' > /etc/pacman-offline.conf
 	cp /etc/pacman-offline.conf $mnt/etc/pacman-offline.conf
-	
+
 	reset_keys
+
 	packages="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar"
-	#pacstrap_install base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar
 
 	[ "$root_only" ] && packages="$packages sudo"
-
 	[ "$rootfs" = "btrfs" ] && packages="$packages btrfs-progs"
 
 	pacstrap_install "$packages"
-
 
 	###  Prepare auto-login  ###
 
@@ -348,23 +347,19 @@ hypervisor_setup () {
 
     hypervisor=$(systemd-detect-virt)
 
-    case $hypervisor in
+	case $hypervisor in
 
-        kvm )       pacstrap_install qemu-guest-agent
-              	     systemctl enable qemu-guest-agent --root=$mnt
-                    ;;
-        vmware  )   pacstrap_install open-vm-tools
-                    systemctl enable vmtoolsd --root=$mnt
-                    systemctl enable vmware-vmblock-fuse --root=$mnt
-                    ;;
-        oracle )    pacstrap_install virtualbox-guest-utils
-                    systemctl enable vboxservice --root=$mnt
-                    ;;
-        microsoft ) pacstrap_install hyperv
-                    systemctl enable hv_fcopy_daemon --root=$mnt
-                    systemctl enable hv_kvp_daemon --root=$mnt
-                    systemctl enable hv_vss_daemon --root=$mnt
-                    ;;
+		kvm)			pacstrap_install qemu-guest-agent
+						systemctl enable qemu-guest-agent --root=$mnt ;;
+		vmware)		pacstrap_install open-vm-tools
+						systemctl enable vmtoolsd --root=$mnt
+						systemctl enable vmware-vmblock-fuse --root=$mnt ;;
+		oracle)		pacstrap_install virtualbox-guest-utils
+						systemctl enable vboxservice --root=$mnt ;;
+		microsoft)	pacstrap_install hyperv
+						systemctl enable hv_fcopy_daemon --root=$mnt
+						systemctl enable hv_kvp_daemon --root=$mnt
+						systemctl enable hv_vss_daemon --root=$mnt ;;
 	esac
 
 }
@@ -418,16 +413,16 @@ choose_initramfs () {
 		choiceInitramfs=(mkinitcpio dracut booster quit)
 	fi
 
-   select choice in "${choiceInitramfs[@]}"
-   do
-      case $choice in
-         "mkinitcpio")  	pacstrap_install mkinitcpio; break ;;
-         "dracut")      	pacstrap_install dracut; break ;;
-         "booster")  		pacstrap_install booster; break ;;
-         "quit")     break ;;
-         '')         echo -e "\nInvalid option!\n" ;;
-      esac
-   done
+	select choice in "${choiceInitramfs[@]}"
+	do
+		case $choice in
+			"mkinitcpio")  	pacstrap_install mkinitcpio; break ;;
+			"dracut")      	pacstrap_install dracut; break ;;
+			"booster")  		pacstrap_install booster; break ;;
+			"quit")     break ;;
+			'')         echo -e "\nInvalid option!\n" ;;
+		esac
+	done
 
 }
 
@@ -707,11 +702,11 @@ setup_user () {
 	echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/wheel
 
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
-		arch-chroot $mnt useradd -m user -G wheel
+		arch-chroot $mnt useradd -m $user -G wheel
 	else
 		rm -rf $mnt/home/$user
-		arch-chroot $mnt userdel user
-		arch-chroot $mnt useradd -m user -G wheel
+		arch-chroot $mnt userdel $user
+		arch-chroot $mnt useradd -m $user -G wheel
 	fi
 
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
@@ -720,7 +715,7 @@ setup_user () {
 	fi
 
 	arch-chroot $mnt /bin/bash -e << EOF
-		printf "$password\n$password\n" | passwd user
+		printf "$password\n$password\n" | passwd "$user"
 EOF
 
 	# Autologin to tty1
@@ -923,16 +918,16 @@ install_aur () {
 
 	arch-chroot $mnt /bin/bash << EOF
 
-		cd $aur_path
+cd $aur_path
 
-		sudo -u $user git clone https://aur.archlinux.org/$aur_app.git
+sudo -u $user git clone https://aur.archlinux.org/$aur_app.git
 
-		cd $aur_app
-		sudo -u $user makepkg -si
+cd $aur_app
+sudo -u $user makepkg -si
 
-		sudo -u $user $aur_app --gendb
+sudo -u $user $aur_app --gendb
 
-		chown -R $user:$user /home/$user/$aur_app
+chown -R $user:$user /home/$user/$aur_app
 
 EOF
 
@@ -951,8 +946,9 @@ install_tweaks () {
 	check_on_root
 	mount_disk
 
-#cmd || { printf "%b" "FAILED.\n" ; exit 1 ; }
+	#cmd || { printf "%b" "FAILED.\n" ; exit 1 ; }
 
+	
 	pacstrap_install terminus-font ncdu dosfstools parted arch-install-scripts tar man-db gptfdisk
 
 
@@ -980,8 +976,8 @@ install_mksh () {
 
 	[ ! -f $mnt/usr/bin/$aur_app ] && install_aur
 
-	# TODO: fix issue of having to change directorie permissions
-	chown -R user:user /home/$user/
+	# TODO: fix issue of having to change directory permissions
+	arch-chroot $mnt chown -R $user:$user /home/$user/
 
 	if [ ! -f $mnt/usr/bin/mksh ] || [ "$reinstall" = 1 ] ; then
 		arch-chroot $mnt /bin/bash << EOF
@@ -1000,8 +996,7 @@ HISTSIZE=5000
 export VISUAL=emacs
 export EDITOR=/usr/bin/vim
 set -o emacs" > $mnt/home/$user/.mkshrc
-
-	chown user:user $mnt/home/$user/.mkshrc
+	arch-chroot $mnt chown $user:$user /home/$user/.mkshrc
 
 	echo -e 'PATH="$HOME/.local/bin:$PATH"
 export EDITOR=/usr/bin/vim
@@ -1015,7 +1010,7 @@ export RUNLEVEL=3
 export QT_LOGGING_RULES="*=false"
 
 ' > $mnt/home/$user/.profile
-	chown user:user $mnt/home/$user/.profile 
+	arch-chroot $mnt chown $user:$user /home/$user/.profile 
 
 	arch-chroot $mnt /bin/bash << EOF
 chsh -s /usr/bin/mksh                          # root shell
@@ -1040,26 +1035,26 @@ install_liveroot () {
 
 create_archive() {
             
-        echo -e "Creating archive file...\n"
+	echo -e "Creating archive file...\n"
 
-        cd $real_root/@/
+	cd $real_root/@/
 
-        mksquashfs . $real_root/@/root.squashfs -noappend -no-recovery -mem-percent 20 -e root.squashfs -e boot/* -e efi/* -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/ -e .snapshots/ -e var/tmp/* -e var/log/* -e etc/pacman.d/gnupg/ -e var/lib/systemd/random-seed
+	mksquashfs . $real_root/@/root.squashfs -noappend -no-recovery -mem-percent 20 -e root.squashfs -e boot/* -e efi/* -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/ -e .snapshots/ -e var/tmp/* -e var/log/* -e etc/pacman.d/gnupg/ -e var/lib/systemd/random-seed
 
-        ls -la $real_root/@/root.squashfs
+	ls -la $real_root/@/root.squashfs
 
 }
 
 create_overlay() {
 
-        echo -e "\nCreating overlay...\n"
+	echo -e "\nCreating overlay...\n"
 
-        local lower_dir=$(mktemp -d -p /)
-        local ram_dir=$(mktemp -d -p /)
-        mount --move ${new_root} ${lower_dir}
-        mount -t tmpfs cowspace ${ram_dir}
-        mkdir -p ${ram_dir}/upper ${ram_dir}/work
-        mount -t overlay -o lowerdir=${lower_dir},upperdir=${ram_dir}/upper,workdir=${ram_dir}/work rootfs ${new_root}
+	local lower_dir=$(mktemp -d -p /)
+	local ram_dir=$(mktemp -d -p /)
+	mount --move ${new_root} ${lower_dir}
+	mount -t tmpfs cowspace ${ram_dir}
+	mkdir -p ${ram_dir}/upper ${ram_dir}/work
+	mount -t overlay -o lowerdir=${lower_dir},upperdir=${ram_dir}/upper,workdir=${ram_dir}/work rootfs ${new_root}
 
 }
 
@@ -1067,15 +1062,15 @@ create_overlay() {
 run_latehook() {
 
 
-        echo -e "\nPress any key for extra boot options.\n"
+	echo -e "\nPress any key for extra boot options.\n"
 
-        real_root=/real_root
-        new_root=/new_root
-        mkdir -p $real_root $new_root
+	real_root=/real_root
+	new_root=/new_root
+	mkdir -p $real_root $new_root
 
-        if read -t 2 -s -n 1; then
+	if read -t 2 -s -n 1; then
 
-                echo -e "\nPlease choose an option:\n\n\
+		echo -e "\nPlease choose an option:\n\n\
 <s> snapshot\n\
 <w> snapshot + overlay\n\
 <f> snapshot + tmpfs\n\
@@ -1087,110 +1082,109 @@ run_latehook() {
 <d> emergency shell\n\n\
 <enter> continue boot\n"
 
-                read -n 1 -s key
+		read -n 1 -s key
 
 
+		if [[ "$key" = "s" ]] || [[ "$key" = "w" ]] || [[ "$key" = "f" ]]; then
 
-                if [[ "$key" = "s" ]] || [[ "$key" = "w" ]] || [[ "$key" = "f" ]]; then
-
-                        mount --mkdir -o subvolid=256 ${root} $new_root
+			mount --mkdir -o subvolid=256 ${root} $new_root
       
-                        btrfs subvolume list -ts $new_root | less
-                        read -n 3 -p "Enter snapshot number (or press <enter> for current subvolume (256)): " subvol 
+			btrfs subvolume list -ts $new_root | less
+			read -n 3 -p "Enter snapshot number (or press <enter> for current subvolume (256)): " subvol 
 
-                        if [ ! "$subvol" ]; then
-                                echo -e "\nDefault subvolum chosen.\n"
-                                subvol=256
-                        fi
+			if [ ! "$subvol" ]; then
+				echo -e "\nDefault subvolum chosen.\n"
+				subvol=256
+			fi
 
-                        echo -e "\nPlease enter extra mount options (ex., ro ):"
-                        read options 
-                        [ "$options" ] && options=","$options
+			echo -e "\nPlease enter extra mount options (ex., ro ):"
+			read options 
+			[ "$options" ] && options=","$options
 
-                        echo -e "\nWill proceed with the following mount:\n\nmount -o subvolid=$subvol$options ${root} /\n"
+			echo -e "\nWill proceed with the following mount:\n\nmount -o subvolid=$subvol$options ${root} /\n"
 
-                        umount $new_root
-                        mount --mkdir -o subvolid=$subvol$options ${root} $new_root
+			umount $new_root
+			mount --mkdir -o subvolid=$subvol$options ${root} $new_root
 
-                        if [ "$?" -ne 0 ]; then
-                                echo "Could not mount subvol ($subvol). Chosing default (256)."
-                                sleep 2
-                                mount --mkdir -o subvolid=256 ${root} $new_root 
-                        fi
+			if [ "$?" -ne 0 ]; then
+				echo "Could not mount subvol ($subvol). Chosing default (256)."
+				sleep 2
+				mount --mkdir -o subvolid=256 ${root} $new_root 
+			fi
 
-                        [[ "$key" = "w" ]] && create_overlay
+			[[ "$key" = "w" ]] && create_overlay
 
 
-                        if [[ "$key" = "f" ]]; then
+			if [[ "$key" = "f" ]]; then
 
-                                echo "TODO!"
-                                #mount -t tmpfs -o size=80% none $new_root
-                                #rsync -a --exclude=root.squashfs --exclude=/efi/ --exclude=/boot/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ /real_root/@/ $new_root
-                                #umount -l /real_root
+				echo "TODO!"
+				#mount -t tmpfs -o size=60% none $new_root
+				#rsync -a --exclude=root.squashfs --exclude=/efi/ --exclude=/boot/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ /real_root/@/ $new_root
+				#umount -l /real_root
 
-                        fi
+			fi
 
-                elif [[ "$key" = "o" ]]; then
+		elif [[ "$key" = "o" ]]; then
 
-                        mount --mkdir -o subvolid=256 ${root} $new_root
+			mount --mkdir -o subvolid=256 ${root} $new_root
 
-                        create_overlay
+			create_overlay
 
-                elif [[ "$key" = "e" ]] || [[ "$key" = "n" ]] || [[ "$key" = "t" ]]; then
+		elif [[ "$key" = "e" ]] || [[ "$key" = "n" ]] || [[ "$key" = "t" ]]; then
 
-                                mount ${root} $real_root
+			mount ${root} $real_root
 
-                                [[ ! -f "$real_root/@/root.squashfs" ]] || [[ "$key" = "n" ]] && create_archive
+			[[ ! -f "$real_root/@/root.squashfs" ]] || [[ "$key" = "n" ]] && create_archive
 
-                                echo "Extracting archive to RAM. Please be patient..."
+			echo "Extracting archive to RAM. Please be patient..."
 
-                                if [ "$key" = "t" ]; then
-                                        mount -t tmpfs -o size=80% none $new_root
-                                        unsquashfs -d /new_root -f $real_root/@/root.squashfs
-                                        echo -e "\nYou may now safely remove your USB stick.\n"
-                                        sleep 1
-            						  else
-                                        mount "$real_root/@/root.squashfs" $new_root -t squashfs -o loop
-                                        create_overlay
-                                fi
+			if [ "$key" = "t" ]; then
+				mount -t tmpfs -o size=80% none $new_root
+				unsquashfs -d /new_root -f $real_root/@/root.squashfs
+				echo -e "\nYou may now safely remove your USB stick.\n"
+				sleep 1
+			else
+				mount "$real_root/@/root.squashfs" $new_root -t squashfs -o loop
+				create_overlay
+			fi
 
-                                umount -l $real_root
+			umount -l $real_root
 
-                elif [[ "$key" = "r" ]]; then
+		elif [[ "$key" = "r" ]]; then
 
-                        mount ${root} $real_root
-                        mount -t tmpfs -o size=80% none $new_root
+			mount ${root} $real_root
+			mount -t tmpfs -o size=80% none $new_root
 
-                        echo "Copying root filesystem to RAM. Please be patient..."
+			echo "Copying root filesystem to RAM. Please be patient..."
 
-                        rsync -a --exclude=root.squashfs --exclude=/efi/ --exclude=/boot/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ /real_root/@/ $new_root
+			rsync -a --exclude=root.squashfs --exclude=/efi/ --exclude=/boot/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ /real_root/@/ $new_root
 
-                        echo -e "\nYou may now safely remove your USB stick.\n"
-                        sleep 1
+			echo -e "\nYou may now safely remove your USB stick.\n"
+			sleep 1
 
-                elif [[ "$key" = "d" ]]; then
+		elif [[ "$key" = "d" ]]; then
 
-                        echo "Entering emergency shell."
+			echo "Entering emergency shell."
 
-                        bash
+			bash
 
-                else
+		else
 
-                        echo "Continuing boot..."
+			echo "Continuing boot..."
 
-                        umount $new_root
+			umount $new_root
 
-                        mount --mkdir -o subvolid=256 ${root} $new_root
-                        mount --uuid $ESP_UUID $new_root/efi
-                fi
+			mount --mkdir -o subvolid=256 ${root} $new_root
+			mount --uuid $ESP_UUID $new_root/efi
+		fi
 
-        else
+	else
 
-                echo -e "Running default option..."
+		echo -e "Running default option..."
 
-                mount --uuid $ESP_UUID $new_root/efi
+		mount --uuid $ESP_UUID $new_root/efi
 
-        fi
+	fi
 
 }' > $mnt/usr/lib/initcpio/hooks/liveroot
 
@@ -1358,7 +1352,7 @@ clone_disk () {
 create_archive () {
 
 
-	pacstrap_install squashfs-tools
+	#pacstrap_install squashfs-tools
 
 
 	echo "Creating archive file..."
@@ -1366,7 +1360,8 @@ create_archive () {
 	cd / 
 	rm -rf /root.squashfs
 
-	time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/cache/ -e /var/log/ -e /etc/pacman.d/gnupg/
+	#time mksquashfs -no-append -comp lz4 -no-compression -no-duplicates / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/cache/ -e /var/log/ -e /etc/pacman.d/gnupg/
+	time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/cache/ -e /var/log/ -e /etc/pacman.d/gnupg/ -comp lz4  
 
 	ls -la root.squashfs
 
@@ -1475,7 +1470,7 @@ pacstrap_install () {
 			if [ ! "$(pacman --sysroot $mnt -Q $package 2>/dev/null)" ]; then
 				packages="$package $packages"	
 			else
-				echo "Package: $package already installed. Not installing."
+				echo -e "\nPackage: $package already installed. Not installing.\n"
 			fi
 
 		done
