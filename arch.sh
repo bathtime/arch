@@ -62,10 +62,8 @@ aur_path=/home/$user
 
 ucode=intel-ucode
 hostname=Arch
-save_pkg_on_host=1
 offline=1
-install_separately=1
-reinstall=1
+reinstall=0
 
 wifi_ssid="BELL364"
 wifi_pass="13FDC4A93E3C"
@@ -112,8 +110,8 @@ unmount_disk () {
 		[[ "$(pwd | grep $mnt)" ]] && cd ..
 
 		sync
-		#umount -n -R $mnt
-		umount -R $mnt
+		umount -n -R $mnt
+		#umount -R $mnt
 
    	if [[ "$(mount | grep 'on '$mnt)" ]]; then
 
@@ -303,15 +301,7 @@ ParallelDownloads = 10
 [custom]
 SigLevel = Optional TrustAll
 Server = file:///var/cache/pacman/pkg/
-
-#[core]
-#Include = /etc/pacman.d/mirrorlist
-
-#[extra-testing]
-#Include = /etc/pacman.d/mirrorlist
-
-#[extra]
-#Include = /etc/pacman.d/mirrorlist' > /etc/pacman-offline.conf
+' > /etc/pacman-offline.conf
 	cp /etc/pacman-offline.conf $mnt/etc/pacman-offline.conf
 	
 	reset_keys
@@ -346,7 +336,7 @@ EOF
 
 hypervisor_setup () {
 
-	#TODO:
+	echo -e "\nNot tested. Run at your own risk!\n"
 	exit
 
     hypervisor=$(systemd-detect-virt)
@@ -354,7 +344,7 @@ hypervisor_setup () {
     case $hypervisor in
 
         kvm )       pacstrap_install qemu-guest-agent
-              	    systemctl enable qemu-guest-agent --root=$mnt
+              	     systemctl enable qemu-guest-agent --root=$mnt
                     ;;
         vmware  )   pacstrap_install open-vm-tools
                     systemctl enable vmtoolsd --root=$mnt
@@ -1329,11 +1319,12 @@ clone_disk () {
 
 	echo -e "\nCloning disk. Please be patient...\n"
 
-	rsync -a --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ --exclude=/mnt/ / $mnt/
+	rsync -av --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/mnt/ / $mnt/
 
-	mkdir $mnt/{dev,proc,run,sys}
+	#mkdir -p $mnt/{dev,proc,run,sys}
 
-	echo -e"\n*** Remember to update fstab and install a boot manager! ***\n"
+	setup_fstab
+	install_REFIND
 
 }
 
@@ -1430,10 +1421,35 @@ done
 
 pacstrap_install () {
 
-	if [ "$offline" -eq 1 ]; then
-		pacstrap -C /etc/pacman-offline.conf -c -K $mnt "$@"
+
+	if [ "$reinstall" -eq 1 ]; then
+
+		packages="$@"
+
 	else
-		pacstrap -C /etc/pacman.conf -c -K $mnt "$@"
+
+		packages=""
+
+		for package in "$@"; do
+
+			if [ ! "$(pacman --sysroot $mnt -Q $package 2>/dev/null)" ]; then
+				packages="$package $packages"	
+			else
+				echo "Package: $package already installed. Not installing."
+			fi
+
+		done
+
+	fi
+
+	if [ "$packages" ]; then
+
+		if [ "$offline" -eq 1 ]; then
+			pacstrap -C /etc/pacman-offline.conf -c -K $mnt ${packages[@]}
+		else
+			pacstrap -C /etc/pacman.conf -c -K $mnt "$@"
+		fi
+
 	fi
 
 }
@@ -1468,7 +1484,6 @@ check_online () {
 
 	if [ "$offline" -eq 1 ]; then
 		echo -e "\nNo internet connection found. Offline mode enabled."
-		
 	fi
 }
 
@@ -1476,11 +1491,17 @@ check_online () {
 
 complete_reinstall () {
 
+	error_check 0
+cd /
 	systemctl daemon-reload
-
-	sleep 1
+	sync
+	sleep 2
+	umount -l /mnt
+	sleep 2
+	sync
 	umount -R -l /mnt
 
+	error_check 1
 }
 
 if [ "$1" ]; then
@@ -1535,7 +1556,8 @@ choices=("1. Quit
 25. Reset pacman keys
 26. Complete reinstall
 27. Copy packages
-28. Minimal auto-install")
+28. Minimal auto-install
+29. Copy scripts")
 
 
 while :; do
@@ -1574,7 +1596,8 @@ read -p "Which option? " choice
 		reset|keys|25)			reset_keys ;;
 		reinstall|26)			complete_reinstall ;;
 		copy_packages|27)		copy_packages ;;
-		auto_install|28)		time create_partitions; install_base; setup_fstab; install_REFIND; general_setup; setup_user; setup_iwd; install_liveroot; copy_packages ;;
+		auto_install|28)		create_partitions; install_base; setup_fstab; install_REFIND; general_setup; setup_user; setup_iwd; install_liveroot; copy_packages; sync ;;
+		copy_scripts|29)		copy_scripts ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
@@ -1582,11 +1605,5 @@ done
 
 sync
 unmount_disk
-
-exit
-
-#cat files | sed 's/-[0-9].*//g'
-
-
 
 
