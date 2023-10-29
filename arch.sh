@@ -1401,8 +1401,23 @@ install_bootloader () {
 
 copy_script () {
 
-	[ -f /arch.sh ] && chown user:user /arch.sh && cp /arch.sh $mnt/
-	[ $? -eq 0 ] && echo -e "\nScripts copied.\n" || echo -e "\nScripts could not be copied!!!\n"
+	check_on_root
+	mount_disk
+
+	[ -f /arch.sh ] && cp /arch.sh $mnt/
+
+	if [ -f $mnt/arch.sh ]; then
+
+		echo -e "\nScript copied.\n"
+
+		if [ "$root_only" -eq 0 ] && [ $(grep "^$user" /mnt/etc/passwd) ]; then
+			arch-chroot $mnt chown $user:$user /arch.sh 
+		fi
+
+	else
+		echo -e "\nScript could not be copied!!!\n"
+	fi
+
 
 }
 
@@ -1481,6 +1496,8 @@ finalize_install () {
 	repo-add -q -n $mnt/var/cache/pacman/pkg/./custom.db.tar.gz $mnt/var/cache/pacman/pkg/*.zst
 
 	pacman-db-upgrade
+
+	copy_script
 
 	echo "Syncing..."
 	sync
@@ -1625,7 +1642,7 @@ read -p "Which option? " choice
 		finalize|27)			finalize_install ;;
 		root|28)					time auto_install_root ;;
 		user|29)					time auto_install_user ;;
-		copy_scripts|30)		copy_scripts ;;
+		copy_script|30)		copy_script ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
