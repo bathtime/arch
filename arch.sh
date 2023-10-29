@@ -1477,7 +1477,7 @@ finalize_install () {
 
 	done
 
-	echo -e "\nPackage database is updating. Please be patient...\n"
+	echo -e "\nUpdating package database. Please be patient...\n"
 	repo-add -q -n $mnt/var/cache/pacman/pkg/./custom.db.tar.gz $mnt/var/cache/pacman/pkg/*.zst
 
 	pacman-db-upgrade
