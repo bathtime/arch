@@ -1394,7 +1394,7 @@ install_bootloader () {
 
 copy_script () {
 
-	[ -f /home/$user/arch.sh ] && cp /home/$user/arch.sh $mnt/	
+	[ -f /arch.sh ] && cp /arch.sh $mnt/
 	[ $? -eq 0 ] && echo -e "\nScripts copied.\n" || echo -e "\nScripts could not be copied!!!\n"
 
 }
