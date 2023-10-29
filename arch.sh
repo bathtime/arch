@@ -62,9 +62,10 @@ aur_path=/home/$user
 
 ucode=intel-ucode
 hostname=Arch
-offline=1
+offline=0
 reinstall=0
 root_only=0
+initramfs=mkinitcpio
 
 wifi_ssid="BELL364"
 wifi_pass="13FDC4A93E3C"
@@ -402,6 +403,31 @@ setup_fstab () {
 	systemctl daemon-reload
 
 	cat $mnt/etc/fstab
+
+}
+
+
+
+choose_initramfs () {
+
+   echo -e "\nWhich initramfs would you like to install?\n"
+
+	if [ "$1" ]; then
+		choiceInitramfs=$1
+	else
+		choiceInitramfs=(mkinitcpio dracut booster quit)
+	fi
+
+   select choice in "${choiceInitramfs[@]}"
+   do
+      case $choice in
+         "mkinitcpio")  	pacstrap_install mkinitcpio; break ;;
+         "dracut")      	pacstrap_install dracut; break ;;
+         "booster")  		pacstrap_install booster; break ;;
+         "quit")     break ;;
+         '')         echo -e "\nInvalid option!\n" ;;
+      esac
+   done
 
 }
 
@@ -1594,7 +1620,8 @@ choices=("1. Quit
 27. Finalize install
 28. Auto-install (root)
 29. Auto-install (user)
-30. Copy scripts")
+30. Copy scripts
+31. Choose initramfs")
 
 
 while :; do
@@ -1635,6 +1662,7 @@ read -p "Which option? " choice
 		root|28)					time auto_install_root ;;
 		user|29)					time auto_install_user ;;
 		copy_script|30)		copy_script ;;
+		initramfs|31)			choose_initramfs ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
