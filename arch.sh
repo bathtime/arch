@@ -292,7 +292,6 @@ install_base () {
 
 	check_on_root
 	mount_disk
-	copy_script
 
 echo '[options]
 HoldPkg     = pacman glibc
@@ -429,7 +428,8 @@ install_REFIND () {
 	fi
 
 	echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw rootflags=$rootflags quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" > $mnt/boot/refind_linux.conf
-
+	echo "\"Boot nomodeset\"  \"root=UUID=$ROOT_UUID rw rootflags=$rootflags quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold systemd.unit=multi-user.target nomodeset\"" >> $mnt/boot/refind_linux.conf
+	echo "\"Boot acpi=off\"  \"root=UUID=$ROOT_UUID rw rootflags=$rootflags quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold systemd.unit=multi-user.target acpi=off\"" >> $mnt/boot/refind_linux.conf
 	echo "\"Boot read only\"  \"root=UUID=$ROOT_UUID ro rootflags=$rootflags quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" >> $mnt/boot/refind_linux.conf
 
 #	sed -i 's/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g; s/#scan_all_linux_kernels false/scan_all_linux_kernels false/g' $mnt$efi_path/EFI/BOOT/refind.conf
@@ -440,20 +440,12 @@ install_REFIND () {
 
 mkdir -p $mnt$efi_path/EFI/BOOT/
 cat > $mnt$efi_path/EFI/BOOT/refind.conf <<EOF
-timeout 4 
+timeout 2 
 #scan_all_linux_kernels off
 #also_scan_dirs +,boot,@/boot
 showtools install, shell, bootorder, gdisk, memtest, mok_tool, apple_recovery, windows_recovery, about, hidden_tags, reboot, exit, firmware, fwupdate
 #enable_touch
 textonly
-
-menuentry "Arch Linux" {
-    icon     /EFI/refind/icons/os_arch.png
-    volume   "$VOLUME_UUID"
-    loader   @/boot/vmlinuz-linux
-    initrd   @/boot/initramfs-linux.img
-    options  "root=UUID=$ROOT_UUID rootflags=subvol=@ rw resume=UUID=$SWAP_UUID"
-}
 EOF
 
 
@@ -624,7 +616,6 @@ general_setup () {
 
 	check_on_root
 	mount_disk
-	copy_script
 
 
 	echo -e 'en_US.UTF-8 UTF-8\nen_US ISO-8859-1' > $mnt/etc/locale.gen  
@@ -681,7 +672,6 @@ setup_user () {
 
 	check_on_root
 	mount_disk
-	copy_script
 
 
 	pacstrap_install sudo
@@ -735,7 +725,11 @@ export QT_IM_MODULE=Maliit
 export MOZ_ENABLE_WAYLAND=1
 export XDG_RUNTIME_DIR=/run/$USER/1000
 export RUNLEVEL=3
-export QT_LOGGING_RULES="*=false"' > $mnt/home/$user/.bash_profile
+export QT_LOGGING_RULES="*=false"
+
+if [[ ! ${DISPLAY} && ${XDG_VTNR} == 1 ]]; then
+	:
+fi' > $mnt/home/$user/.bash_profile
 	arch-chroot $mnt chown user:user /home/$user/.bash_profile
 
 	touch $mnt/home/$user/.hushlogin
@@ -750,8 +744,6 @@ PS1="$ "' > $mnt/home/$user/.bashrc
 
 	cp $mnt/root/.vimrc $mnt/home/$user/.vimrc
 	arch-chroot $mnt chown user:user /home/$user/.vimrc
-
-	copy_script
 
 }
 
@@ -1126,12 +1118,12 @@ run_latehook() {
 
                                 echo "Extracting archive to RAM. Please be patient..."
 
-                                if [ "$key" = "r" ]; then
+                                if [ "$key" = "t" ]; then
                                         mount -t tmpfs -o size=80% none $new_root
                                         unsquashfs -d /new_root -f $real_root/@/root.squashfs
                                         echo -e "\nYou may now safely remove your USB stick.\n"
                                         sleep 1
-            else
+            						  else
                                         mount "$real_root/@/root.squashfs" $new_root -t squashfs -o loop
                                         create_overlay
                                 fi
