@@ -64,10 +64,10 @@ ucode=intel-ucode
 hostname=Arch
 offline=1
 reinstall=0
+create_installer=0
 
 wifi_ssid="BELL364"
 wifi_pass="13FDC4A93E3C"
-
 
 
 check_viable_disk () {
@@ -304,18 +304,21 @@ Server = file:///var/cache/pacman/pkg/
 ' > /etc/pacman-offline.conf
 	cp /etc/pacman-offline.conf $mnt/etc/pacman-offline.conf
 	
-#TODO: 
-	#reset_keys
+	reset_keys
+	packages="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar"
+	#pacstrap_install base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar
 
-	pacstrap_install base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar
+	[ "$create_installer" ] && packages="$packages sudo"
 
-	[ "$rootfs" = "btrfs" ] && pacstrap_install btrfs-progs
+	[ "$rootfs" = "btrfs" ] && packages="$packages btrfs-progs"
+
+	pacstrap_install "$packages"
 
 
 	###  Prepare auto-login  ###
 
 	# Does a user already exist?
-	if [ ! "$(grep ^$user $mnt/etc/passwd)" ]; then
+	if [ ! "$(grep ^$user $mnt/etc/passwd)" ] || [ "$create_installer" -eq 1 ]; then
 		login_user=root
 	else
 		login_user=$user
@@ -644,9 +647,10 @@ PS1="# "' > $mnt/root/.bashrc
 
 	locale-gen
 
-	printf "$password\n$password\n" | passwd root
 
 EOF
+
+	[ "$create_installer" -eq 0 ] && arch-chroot $mnt printf "$password\n$password\n" | passwd root
 
 	cat > $mnt/root/.vimrc << EOF
 
@@ -729,20 +733,20 @@ export MOZ_ENABLE_WAYLAND=1
 export XDG_RUNTIME_DIR=/run/$USER/1000
 export RUNLEVEL=3
 export QT_LOGGING_RULES="*=false"' > $mnt/home/$user/.bash_profile
-	chown user:user $mnt/home/$user/.bash_profile
+	arch-chroot $mnt chown user:user /home/$user/.bash_profile
 
 	touch $mnt/home/$user/.hushlogin
-	chown user:user $mnt/home/$user/.hushlogin
+	arch-chroot $mnt chown user:user /home/$user/.hushlogin
 
 	echo '[[ $- != *i* ]] && return
 alias ls="ls --color=auto"
 alias grep="grep --color=auto"
 alias vi="vim"
 PS1="$ "' > $mnt/home/$user/.bashrc
-	chown user:user $mnt/home/$user/.bashrc
+	arch-chroot $mnt chown user:user /home/$user/.bashrc
 
 	cp $mnt/root/.vimrc $mnt/home/$user/.vimrc
-	chown user:user $mnt/home/$user/.vimrc
+	arch-chroot $mnt chown user:user /home/$user/.vimrc
 
 	copy_script
 
@@ -1019,8 +1023,7 @@ create_archive() {
 
         cd $real_root/@/
 
-        #mksquashfs . $real_root/@/root.squashfs -noappend -no-recovery -mem-percent 50 -e root.squashfs -e boot/* -e efi/* -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/ -e .snapshots/ -e var/tmp/* -e var/cache/* -e var/log/* -e etc/pacman.d/gnupg/ -e var/lib/systemd/random-seed
-        mksquashfs . $real_root/@/root.squashfs -noappend -no-recovery -mem-percent 50 -e root.squashfs -e boot/* -e efi/* -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/ -e .snapshots/ -e var/tmp/* -e var/log/* -e etc/pacman.d/gnupg/ -e var/lib/systemd/random-seed
+        mksquashfs . $real_root/@/root.squashfs -noappend -no-recovery -mem-percent 20 -e root.squashfs -e boot/* -e efi/* -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/ -e .snapshots/ -e var/tmp/* -e var/log/* -e etc/pacman.d/gnupg/ -e var/lib/systemd/random-seed
 
         ls -la $real_root/@/root.squashfs
 
@@ -1057,9 +1060,9 @@ run_latehook() {
 <f> snapshot + tmpfs\n\
 <o> overlay\n\
 <e> squashfs + overlay\n\
-<r> squashfs + tmpfs\n\
+<t> squashfs + tmpfs\n\
 <n> create + run squashfs + overlay\n\
-<t> rsync / to tmpfs\n\
+<r> rsync / to tmpfs\n\
 <d> emergency shell\n\n\
 <enter> continue boot\n"
 
@@ -1112,7 +1115,7 @@ run_latehook() {
 
                         create_overlay
 
-                elif [[ "$key" = "e" ]] || [[ "$key" = "n" ]] || [[ "$key" = "r" ]]; then
+                elif [[ "$key" = "e" ]] || [[ "$key" = "n" ]] || [[ "$key" = "t" ]]; then
 
                                 mount ${root} $real_root
 
@@ -1132,7 +1135,7 @@ run_latehook() {
 
                                 umount -l $real_root
 
-                elif [[ "$key" = "t" ]]; then
+                elif [[ "$key" = "r" ]]; then
 
                         mount ${root} $real_root
                         mount -t tmpfs -o size=80% none $new_root
@@ -1458,7 +1461,7 @@ pacstrap_install () {
 
 
 
-copy_packages () {
+finalize_install () {
 
 	[ "$offline" -eq 0 ] && arch-chroot $mnt pacman -Syu
 
@@ -1491,20 +1494,38 @@ check_online () {
 
 
 
-auto_install () {
+auto_install_minimal () {
+
+	create_installer=0
 
 	create_partitions
 	install_base
 	setup_fstab
-	setup_iwd
+	install_REFIND
 	general_setup
 	setup_user
 	setup_iwd
 	install_liveroot
-	copy_packages
+	finalize_install	
+
 }
 
 
+
+auto_install_installer () {
+
+	create_installer=1
+
+	create_partitions
+	install_base
+	setup_fstab
+	install_REFIND
+	general_setup
+	setup_iwd
+	install_liveroot
+	finalize_install	
+
+}
 
 if [ "$1" ]; then
 	disk="$1"
@@ -1516,9 +1537,7 @@ check_viable_disk
 check_online
 
 if [ "$offline" -eq 1 ]; then
-	echo -e "\nInitializing repo for offline installation...
-You may need to run 'Build package database'."
-	
+	echo -e "\nInitializing repo for offline installation..."
 fi
 
 
@@ -1556,9 +1575,10 @@ choices=("1. Quit
 23. Download script
 24. Install host packages
 25. Reset pacman keys
-27. Copy packages
-28. Minimal auto-install
-29. Copy scripts")
+27. Finalize install
+28. Auto-install (root)
+29. Auto-install (user)
+30. Copy scripts")
 
 
 while :; do
@@ -1595,14 +1615,16 @@ read -p "Which option? " choice
 		script|23)				download_script ;;
 		host|24)			 		install_host_packages ;;
 		reset|keys|25)			reset_keys ;;
-		copy_packages|27)		copy_packages ;;
-		auto|install|28)		time auto_install ;;
-		copy_scripts|29)		copy_scripts ;;
+		finalize|27)			finalize_install ;;
+		auto|install|28)		time auto_install_installer ;;
+		auto|install|29)		time auto_install_minimal ;;
+		copy_scripts|30)		copy_scripts ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
 done
 
+echo "Syncing..."
 sync
 unmount_disk
 
