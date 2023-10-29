@@ -99,10 +99,11 @@ check_on_root () {
 
 unmount_disk () {
 
-	if [[ "$(mount | grep $mnt)" ]]; then
+	error_check 0 
+
+	if [[ "$(mountpoint $mnt | grep 'is a')" ]]; then
 
 		# Might need to turn error checking off here
-		error_check 1 
 
 		echo "Unmounting $mnt..."
 
@@ -111,31 +112,30 @@ unmount_disk () {
 
 		sync
 		umount -n -R $mnt
-		#umount -R $mnt
 
-   	if [[ "$(mount | grep 'on '$mnt)" ]]; then
+		# Time to get rugged and tough!
+		if [[ "$(mountpoint $mnt | grep 'is a')" ]]; then
 
 			echo -e "\nCouldn't unmount. Trying alternative method. Please be patient...\n" 
 
-			#findmnt -R $mnt
+			mounted=1
 
-			sync
-			umount -R -f $mnt
-			sleep 1
+			while [[ "$mounted" -eq 1 ]]; do
+				
+				cd /
 
-			if [[ "$(mount | grep 'on '$mnt)" ]]; then
-				echo -e "\nCouldn't unmount. Using lazy method...\n" 
-				sleep 1
-				umount -R -l $mnt
-			fi
-		fi 
+				if [[ "$(mountpoint $mnt | grep 'is a')" ]]; then
+					sleep 2
+					umount -l $mnt
+				else
+					mounted=0
+				fi
 
-		if [[ "$?" -eq 0 ]]; then
-			echo -e "\nUnmount successful.\n"
-		else
-			echo -e "\nERROR ($?): could not unmount!\n"
-			exit
-		fi 
+			done
+
+			systemctl daemon-reload
+
+		fi
 
 	else
 		echo -e "\nDisk already unmounted!\n"
@@ -304,7 +304,8 @@ Server = file:///var/cache/pacman/pkg/
 ' > /etc/pacman-offline.conf
 	cp /etc/pacman-offline.conf $mnt/etc/pacman-offline.conf
 	
-	reset_keys
+#TODO: 
+	#reset_keys
 
 	pacstrap_install base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar
 
@@ -1394,7 +1395,7 @@ install_bootloader () {
 
 copy_script () {
 
-	[ -f /arch.sh ] && cp /arch.sh $mnt/
+	[ -f /arch.sh ] && chown user:user /arch.sh && cp /arch.sh $mnt/
 	[ $? -eq 0 ] && echo -e "\nScripts copied.\n" || echo -e "\nScripts could not be copied!!!\n"
 
 }
@@ -1445,7 +1446,8 @@ pacstrap_install () {
 	if [ "$packages" ]; then
 
 		if [ "$offline" -eq 1 ]; then
-			pacstrap -C /etc/pacman-offline.conf -c -K $mnt ${packages[@]}
+			#pacstrap -C /etc/pacman-offline.conf -c -K $mnt ${packages[@]}
+			pacstrap -C /etc/pacman-offline.conf -c $mnt ${packages[@]}
 		else
 			pacstrap -C /etc/pacman.conf -c -K $mnt "$@"
 		fi
@@ -1489,20 +1491,20 @@ check_online () {
 
 
 
-complete_reinstall () {
+auto_install () {
 
-	error_check 0
-cd /
-	systemctl daemon-reload
-	sync
-	sleep 2
-	umount -l /mnt
-	sleep 2
-	sync
-	umount -R -l /mnt
-
-	error_check 1
+	create_partitions
+	install_base
+	setup_fstab
+	setup_iwd
+	general_setup
+	setup_user
+	setup_iwd
+	install_liveroot
+	copy_packages
 }
+
+
 
 if [ "$1" ]; then
 	disk="$1"
@@ -1554,7 +1556,6 @@ choices=("1. Quit
 23. Download script
 24. Install host packages
 25. Reset pacman keys
-26. Complete reinstall
 27. Copy packages
 28. Minimal auto-install
 29. Copy scripts")
@@ -1594,9 +1595,8 @@ read -p "Which option? " choice
 		script|23)				download_script ;;
 		host|24)			 		install_host_packages ;;
 		reset|keys|25)			reset_keys ;;
-		reinstall|26)			complete_reinstall ;;
 		copy_packages|27)		copy_packages ;;
-		auto_install|28)		create_partitions; install_base; setup_fstab; install_REFIND; general_setup; setup_user; setup_iwd; install_liveroot; copy_packages; sync ;;
+		auto|install|28)		time auto_install ;;
 		copy_scripts|29)		copy_scripts ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
