@@ -64,7 +64,7 @@ ucode=intel-ucode
 hostname=Arch
 offline=1
 reinstall=0
-create_installer=0
+root_only=0
 
 wifi_ssid="BELL364"
 wifi_pass="13FDC4A93E3C"
@@ -99,6 +99,10 @@ check_on_root () {
 
 unmount_disk () {
 
+	echo "Syncing..."
+
+	sync
+
 	error_check 0 
 
 	if [[ "$(mountpoint $mnt | grep 'is a')" ]]; then
@@ -110,7 +114,6 @@ unmount_disk () {
 		# Shouldn't be in directory we're unmounting   
 		[[ "$(pwd | grep $mnt)" ]] && cd ..
 
-		sync
 		umount -n -R $mnt
 
 		# Time to get rugged and tough!
@@ -308,7 +311,7 @@ Server = file:///var/cache/pacman/pkg/
 	packages="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar"
 	#pacstrap_install base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar
 
-	[ "$create_installer" ] && packages="$packages sudo"
+	[ "$root_only" ] && packages="$packages sudo"
 
 	[ "$rootfs" = "btrfs" ] && packages="$packages btrfs-progs"
 
@@ -318,7 +321,7 @@ Server = file:///var/cache/pacman/pkg/
 	###  Prepare auto-login  ###
 
 	# Does a user already exist?
-	if [ ! "$(grep ^$user $mnt/etc/passwd)" ] || [ "$create_installer" -eq 1 ]; then
+	if [ ! "$(grep ^$user $mnt/etc/passwd)" ] || [ "$root_only" -eq 1 ]; then
 		login_user=root
 	else
 		login_user=$user
@@ -650,7 +653,7 @@ PS1="# "' > $mnt/root/.bashrc
 
 EOF
 
-	[ "$create_installer" -eq 0 ] && arch-chroot $mnt printf "$password\n$password\n" | passwd root
+	[ "$root_only" -eq 0 ] && arch-chroot $mnt printf "$password\n$password\n" | passwd root
 
 	cat > $mnt/root/.vimrc << EOF
 
@@ -1479,6 +1482,9 @@ finalize_install () {
 
 	pacman-db-upgrade
 
+	echo "Syncing..."
+	sync
+
 }
 
 
@@ -1494,9 +1500,26 @@ check_online () {
 
 
 
-auto_install_minimal () {
+auto_install_root () {
 
-	create_installer=0
+	root_only=1
+
+	create_partitions
+	install_base
+	setup_fstab
+	install_REFIND
+	general_setup
+	setup_iwd
+	install_liveroot
+	finalize_install	
+
+}
+
+
+
+auto_install_user () {
+
+	root_only=0
 
 	create_partitions
 	install_base
@@ -1510,22 +1533,6 @@ auto_install_minimal () {
 
 }
 
-
-
-auto_install_installer () {
-
-	create_installer=1
-
-	create_partitions
-	install_base
-	setup_fstab
-	install_REFIND
-	general_setup
-	setup_iwd
-	install_liveroot
-	finalize_install	
-
-}
 
 if [ "$1" ]; then
 	disk="$1"
@@ -1616,16 +1623,14 @@ read -p "Which option? " choice
 		host|24)			 		install_host_packages ;;
 		reset|keys|25)			reset_keys ;;
 		finalize|27)			finalize_install ;;
-		auto|install|28)		time auto_install_installer ;;
-		auto|install|29)		time auto_install_minimal ;;
+		root|28)					time auto_install_root ;;
+		user|29)					time auto_install_user ;;
 		copy_scripts|30)		copy_scripts ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
 done
 
-echo "Syncing..."
-sync
 unmount_disk
 
 
