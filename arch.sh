@@ -1315,13 +1315,25 @@ download_script () {
 
 	echo -e "\nDowloading scripts from Github..."
 
-	curl -s https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > arch.sh
+	curl -s https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > /arch.sh
 
 	if [[ "$?" -eq 0 ]]; then
-		echo "Download successful!"
+		echo "arch.sh: Download successful!"
 		chmod +x arch.sh
 	else
-		echo "Download unsuccessful."
+		echo "arch.sh: Download unsuccessful."
+	fi
+
+	if [ "$root_only" -eq 0 ] && [ $(grep "^$user" /mnt/etc/passwd) ]; then
+		curl -s https://raw.githubusercontent.com/bathtime/arch/main/post.sh > post.sh
+		chown $user:$user /home/$user/post.sh 
+	fi
+
+	if [[ "$?" -eq 0 ]]; then
+		echo "post.sh: Download successful!"
+		chmod +x post.sh
+	else
+		echo ".sh: Download unsuccessful."
 	fi
 
 }
