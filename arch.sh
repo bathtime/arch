@@ -1319,14 +1319,15 @@ download_script () {
 
 	if [[ "$?" -eq 0 ]]; then
 		echo "arch.sh: Download successful!"
-		chmod +x arch.sh
+		chmod +x /arch.sh
 	else
 		echo "arch.sh: Download unsuccessful."
 	fi
 
 	if [ "$root_only" -eq 0 ] && [ $(grep "^$user" /mnt/etc/passwd) ]; then
-		curl -s https://raw.githubusercontent.com/bathtime/arch/main/post.sh > post.sh
+		curl -s https://raw.githubusercontent.com/bathtime/arch/main/post.sh > /home/$user/post.sh
 		chown $user:$user /home/$user/post.sh 
+		chmod +x /home/$user/post.sh 
 	fi
 
 	if [[ "$?" -eq 0 ]]; then
