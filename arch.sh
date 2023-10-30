@@ -1315,28 +1315,15 @@ download_script () {
 
 	echo -e "\nDowloading scripts from Github..."
 
-	curl -s https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > /arch.sh
+	curl -sL https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > /arch.sh
+	chmod +x /arch.sh
 
-	if [[ "$?" -eq 0 ]]; then
-		echo "arch.sh: Download successful!"
-		chmod +x /arch.sh
-	else
-		echo "arch.sh: Download unsuccessful."
-	fi
+	if [ "$root_only" -eq 0 ] && [ $(grep "^$user" /etc/passwd) ]; then
 
-	if [ "$root_only" -eq 0 ] && [ $(grep "^$user" /mnt/etc/passwd) ]; then
-		curl -s https://raw.githubusercontent.com/bathtime/arch/main/post.sh > /home/$user/post.sh
+		curl -sL https://raw.githubusercontent.com/bathtime/arch/main/post.sh > /home/$user/post.sh
 		chown $user:$user /home/$user/post.sh 
-		chmod +x /home/$user/post.sh 
+		chmod +x /home/$user/post.sh
 	fi
-
-	if [[ "$?" -eq 0 ]]; then
-		echo "post.sh: Download successful!"
-		chmod +x post.sh
-	else
-		echo ".sh: Download unsuccessful."
-	fi
-
 }
 
 
@@ -1430,20 +1417,15 @@ copy_script () {
 	check_on_root
 	mount_disk
 
-	[ -f /arch.sh ] && cp /arch.sh $mnt/
+	echo "Copying arch.sh to $mnt..."
 
-	if [ -f $mnt/arch.sh ]; then
+	cp /arch.sh $mnt/
 
-		echo -e "\nScript copied.\n"
-
-		if [ "$root_only" -eq 0 ] && [ $(grep "^$user" /mnt/etc/passwd) ]; then
-			arch-chroot $mnt chown $user:$user /arch.sh 
-		fi
-
-	else
-		echo -e "\nScript could not be copied!!!\n"
+	if [ "$root_only" -eq 0 ] && [ $(grep "^$user" $mnt/etc/passwd) ]; then
+		echo "Copying post.sh to $mnt/home/$user/..."
+		arch-chroot $mnt chown $user:$user /arch.sh
+		cp /home/$user/post.sh $mnt/home/$user/
 	fi
-
 
 }
 
@@ -1639,6 +1621,7 @@ echo "${choices[@]}" | column
 echo  
 
 read -p "Which option? " choice
+echo
 
 	case $choice in
 		Quit|quit|q|exit|1)	break; ;;
