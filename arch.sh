@@ -315,7 +315,7 @@ Server = file:///var/cache/pacman/pkg/
 	[ "$root_only" ] && packages="$packages sudo"
 	[ "$rootfs" = "btrfs" ] && packages="$packages btrfs-progs"
 
-	pacstrap_install "$packages"
+	pacstrap_install $packages
 
 	###  Prepare auto-login  ###
 
@@ -1278,7 +1278,7 @@ setup_snapshots () {
 
 reset_keys () {
 
-	rm -rf /etc/pacman.d/gnupg
+	#rm -rf /etc/pacman.d/gnupg
 	pacman-key --init
 	pacman-key --populate
 
@@ -1497,7 +1497,7 @@ pacstrap_install () {
 		if [ "$offline" -eq 1 ]; then
 			pacstrap -C /etc/pacman-offline.conf -c -K $mnt ${packages[@]}
 		else
-			pacstrap -C /etc/pacman.conf -c -K $mnt "$@"
+			pacstrap -K $mnt "$@"
 		fi
 
 	fi
@@ -1578,8 +1578,28 @@ auto_install_user () {
 }
 
 post_install () {
+   check_on_root
+   mount_disk
+	pacstrap -C /etc/pacman.conf -c -K $mnt firefox cage 
+exit
 
-	pacstrap -c -K $mnt firefox cage 
+cd /home/user/Downloads
+ARCH="x86_64"
+MIRROR="https://mirrors.kernel.org/archlinux/"
+
+wget "${MIRROR}/core/os/${ARCH}/core.db"
+wget "${MIRROR}/extra/os/${ARCH}/extra.db"
+wget "${MIRROR}/multilib/os/${ARCH}/multilib.db"
+
+cp *.db /var/lib/pacman/sync/
+cp -r /var/lib/pacman/sync/ $mnt/var/lib/pacman/sync/
+pacman -Sup --noconfirm > pkglist
+sed -e 's/\.zst$/.zst.sig/' pkglist > siglist
+wget -nv -i pkglist
+wget -nv -i siglist
+pacman -Su
+
+
 
 }
 
