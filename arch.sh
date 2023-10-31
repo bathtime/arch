@@ -289,8 +289,10 @@ install_base () {
 
 	check_on_root
 	mount_disk
+	
 
-	echo '[options]
+
+echo '[options]
 HoldPkg     = pacman glibc
 Architecture = auto
 
@@ -303,7 +305,8 @@ SigLevel = Optional TrustAll
 Server = file:///var/cache/pacman/pkg/
 ' > /etc/pacman-offline.conf
 	cp /etc/pacman-offline.conf $mnt/etc/pacman-offline.conf
-	
+
+
 	echo "Copying database files..."
 	mkdir -p $mnt/var/lib/pacman/sync
 	cp -r /var/lib/pacman/sync/*.db $mnt/var/lib/pacman/sync/
@@ -404,6 +407,10 @@ setup_fstab () {
 
 
 choose_initramfs () {
+
+	echo "TODO!"
+
+	return 0	
 
    echo -e "\nWhich initramfs would you like to install?\n"
 
@@ -683,6 +690,23 @@ set autoindent
 set smartindent
 
 EOF
+
+
+	# Tweaks
+
+	echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
+	echo 'vm.vfs_cache_pressure=50' > $mnt/etc/sysctl.d/99-cache-pressure.conf
+
+	arch-chroot $mnt systemctl enable systemd-oomd
+
+	echo 'kernel.core_pattern=/dev/null' > $mnt/etc/sysctl.d/50-coredump.conf
+
+	mkdir -p $mnt/etc/systemd/coredump.conf.d/
+	echo '[Coredump]
+Storage=none
+ProcessSizeMax=0' > $mnt/etc/systemd/coredump.conf.d/custom.conf
+
+	echo '* hard core 0' > $mnt/etc/security/limits.conf
 
 }
 
@@ -1492,30 +1516,39 @@ pacstrap_install () {
 	if [ "$packages" ]; then
 
 		if [ "$offline" -eq 1 ]; then
-			pacstrap -c -K $mnt ${packages[@]}
+			pacstrap -C /etc/pacman-offline.conf -c -K $mnt ${packages[@]}
 		else
-			pacstrap -K $mnt ${packages[@]}
+			pacstrap -c -K $mnt ${packages[@]}
 		fi
 
 	fi
 
+	copy_pkgs
+
 }
 
-post_install () {
+custom_install () {
 
 	check_on_root
    mount_disk
 
-	pacstrap_install ncdu atop cage htop
+	read -p "Which package(s) would you like to install? " packages
+
+	if [ "$packages" ]; then
+		pacstrap_install $packages
+	else
+		echo "No packages will be installed."
+	fi
 
 }
 
 
 
-finalize_install () {
+copy_pkgs () {
 
 	[ "$offline" -eq 0 ] && arch-chroot $mnt pacman -Syu
 
+	# Check which packages are installed on chroot system and copy those pkgs from host
 	packages="$(pacman --sysroot $mnt -Q | sed 's/ [0-9].*$//g')"
 
 	for package in ${packages}; do
@@ -1524,6 +1557,8 @@ finalize_install () {
 		cp -u /var/cache/pacman/pkg/$package* $mnt/var/cache/pacman/pkg/
 
 	done
+
+	echo "Total packages: $(ls $mnt/var/cache/pacman/pkg/*.zst | wc -l)"
 
 	echo -e "\nUpdating package database. Please be patient...\n"
 	repo-add -q -n $mnt/var/cache/pacman/pkg/./custom.db.tar.gz $mnt/var/cache/pacman/pkg/*.zst
@@ -1561,7 +1596,7 @@ auto_install_root () {
 	general_setup
 	setup_iwd
 	install_liveroot
-	finalize_install	
+	copy_pkgs	
 
 }
 
@@ -1579,7 +1614,7 @@ auto_install_user () {
 	setup_user
 	setup_iwd
 	install_liveroot
-	finalize_install	
+	copy_pkgs	
 
 }
 
@@ -1637,7 +1672,7 @@ choices=("1. Quit
 29. Auto-install (user)
 30. Copy scripts
 31. Choose initramfs
-32. Post install")
+32. Custom install")
 
 
 while :; do
@@ -1675,12 +1710,12 @@ echo
 		script|23)				download_script ;;
 		host|24)			 		install_host_packages ;;
 		reset|keys|25)			reset_keys ;;
-		finalize|27)			finalize_install ;;
+		pkgs|27)			copy_pkgs ;;
 		root|28)					time auto_install_root ;;
 		user|29)					time auto_install_user ;;
 		copy_script|30)		copy_script ;;
 		initramfs|31)			choose_initramfs ;;
-		post|32)					post_install ;;
+		custom|32)				custom_install ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
