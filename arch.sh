@@ -8,11 +8,7 @@
 To run on the fly:
 bash <(curl -sL bit.ly/a-install)
 
-
-
-
 DOCS
-
 
 
 ###  Set error detection  ###
@@ -307,6 +303,10 @@ SigLevel = Optional TrustAll
 Server = file:///var/cache/pacman/pkg/
 ' > /etc/pacman-offline.conf
 	cp /etc/pacman-offline.conf $mnt/etc/pacman-offline.conf
+	
+	echo "Copying database files..."
+	mkdir -p $mnt/var/lib/pacman/sync
+	cp -r /var/lib/pacman/sync/*.db $mnt/var/lib/pacman/sync/
 
 	reset_keys
 
@@ -637,9 +637,6 @@ general_setup () {
 
 	check_on_root
 	mount_disk
-
-	echo "Syncing repositories..."
-	cp -r /var/lib/pacman/sync/ $mnt/var/lib/pacman/sync/
 
 	echo -e 'en_US.UTF-8 UTF-8\nen_US ISO-8859-1' > $mnt/etc/locale.gen  
 	echo 'LANG=en_US.UTF-8' > $mnt/etc/locale.conf
@@ -1495,12 +1492,21 @@ pacstrap_install () {
 	if [ "$packages" ]; then
 
 		if [ "$offline" -eq 1 ]; then
-			pacstrap -C /etc/pacman-offline.conf -c -K $mnt ${packages[@]}
+			pacstrap -c -K $mnt ${packages[@]}
 		else
-			pacstrap -K $mnt "$@"
+			pacstrap -K $mnt ${packages[@]}
 		fi
 
 	fi
+
+}
+
+post_install () {
+
+	check_on_root
+   mount_disk
+
+	pacstrap_install ncdu atop cage htop
 
 }
 
@@ -1574,32 +1580,6 @@ auto_install_user () {
 	setup_iwd
 	install_liveroot
 	finalize_install	
-
-}
-
-post_install () {
-   check_on_root
-   mount_disk
-	pacstrap -C /etc/pacman.conf -c -K $mnt firefox cage 
-exit
-
-cd /home/user/Downloads
-ARCH="x86_64"
-MIRROR="https://mirrors.kernel.org/archlinux/"
-
-wget "${MIRROR}/core/os/${ARCH}/core.db"
-wget "${MIRROR}/extra/os/${ARCH}/extra.db"
-wget "${MIRROR}/multilib/os/${ARCH}/multilib.db"
-
-cp *.db /var/lib/pacman/sync/
-cp -r /var/lib/pacman/sync/ $mnt/var/lib/pacman/sync/
-pacman -Sup --noconfirm > pkglist
-sed -e 's/\.zst$/.zst.sig/' pkglist > siglist
-wget -nv -i pkglist
-wget -nv -i siglist
-pacman -Su
-
-
 
 }
 
