@@ -58,9 +58,12 @@ aur_path=/home/$user
 
 ucode=intel-ucode
 hostname=Arch
-offline=1
+
+offline=0
 reinstall=0
 root_only=0
+copy_on_host=1
+
 initramfs=mkinitcpio
 
 wifi_ssid="BELL364"
@@ -1532,7 +1535,9 @@ custom_install () {
 	check_on_root
    mount_disk
 
-	read -p "Which package(s) would you like to install? " packages
+	# cage firefox xorg-xwayland weston
+
+	read -p "Which package(s) would you like to install? (ex., cage firefox xorg-xwayland weston pipewire pipewire-alsa) " packages
 
 	if [ "$packages" ]; then
 		pacstrap_install $packages
@@ -1546,7 +1551,7 @@ custom_install () {
 
 copy_pkgs () {
 
-	[ "$offline" -eq 0 ] && arch-chroot $mnt pacman -Syu
+	#[ "$offline" -eq 0 ] && arch-chroot $mnt pacman -Syu
 
 	# Check which packages are installed on chroot system and copy those pkgs from host
 	packages="$(pacman --sysroot $mnt -Q | sed 's/ [0-9].*$//g')"
@@ -1561,9 +1566,14 @@ copy_pkgs () {
 	echo "Total packages: $(ls $mnt/var/cache/pacman/pkg/*.zst | wc -l)"
 
 	echo -e "\nUpdating package database. Please be patient...\n"
-	repo-add -q -n $mnt/var/cache/pacman/pkg/./custom.db.tar.gz $mnt/var/cache/pacman/pkg/*.zst
 
-	pacman-db-upgrade
+	#pacman-db-upgrade
+
+	#repo-add -q -n /var/cache/pacman/pkg/./custom.db.tar.gz /var/cache/pacman/pkg/*.zst
+	#repo-add -q -n $mnt/var/cache/pacman/pkg/./custom.db.tar.gz $mnt/var/cache/pacman/pkg/*.zst
+
+	#pacman -U /mnt/var/cache/pacman/pkg/*.pkg.tar.zst
+	#pacman -U /var/cache/pacman/pkg/*.pkg.tar.zst
 
 	copy_script
 
@@ -1576,10 +1586,12 @@ copy_pkgs () {
 
 check_online () {
 
-	ping -q -w 1 -c 1 $(ip r | grep default | cut -d ' ' -f 3) > /dev/null || offline=1 
+	#ping -q -w 1 -c 1 $(ip r | grep default | cut -d ' ' -f 3) > /dev/null || offline=1 
+	ping -q -w 1 -c 1 kernel.org 
 
 	if [ "$offline" -eq 1 ]; then
 		echo -e "\nNo internet connection found. Offline mode enabled."
+		offline=1 
 	fi
 }
 
@@ -1626,7 +1638,7 @@ else
 fi
 
 check_viable_disk
-check_online
+#check_online
 
 if [ "$offline" -eq 1 ]; then
 	echo -e "\nInitializing repo for offline installation..."
