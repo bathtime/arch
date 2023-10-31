@@ -1551,7 +1551,6 @@ custom_install () {
 
 copy_pkgs () {
 
-	#[ "$offline" -eq 0 ] && arch-chroot $mnt pacman -Syu
 
 	# Check which packages are installed on chroot system and copy those pkgs from host
 	packages="$(pacman --sysroot $mnt -Q | sed 's/ [0-9].*$//g')"
@@ -1565,7 +1564,7 @@ copy_pkgs () {
 
 	echo "Total packages: $(ls $mnt/var/cache/pacman/pkg/*.zst | wc -l)"
 
-	echo -e "\nUpdating package database. Please be patient...\n"
+	#echo -e "\nUpdating package database. Please be patient...\n"
 
 	#pacman-db-upgrade
 
@@ -1631,6 +1630,46 @@ auto_install_user () {
 }
 
 
+
+auto_install_ff () {
+
+	root_only=0
+
+	create_partitions
+	install_base
+	setup_fstab
+	install_REFIND
+	general_setup
+	setup_user
+	setup_iwd
+	install_liveroot
+	pacstrap_install cage firefox xorg-xwayland weston pipewire pipewire-alsa
+	copy_pkgs
+
+}
+
+
+
+auto_install_kde () {
+
+	root_only=0
+
+	create_partitions
+	install_base
+	setup_fstab
+	install_REFIND
+	general_setup
+	setup_user
+	setup_iwd
+	install_liveroot
+	pacstrap_install plasma-desktop plasma-wayland-session plasma-pa kscreen dolphin konsole firefox
+	sed -i 's/^:/   startplasma-wayland/g' $mnt/home/$user/.bash_profile
+	copy_pkgs
+
+}
+
+
+
 if [ "$1" ]; then
 	disk="$1"
 else
@@ -1682,9 +1721,11 @@ choices=("1. Quit
 27. Finalize install
 28. Auto-install (root)
 29. Auto-install (user)
-30. Copy scripts
-31. Choose initramfs
-32. Custom install")
+30. Auto-install (cage + ff)
+31. Auto-install (kde + ff)
+32. Copy scripts
+33. Choose initramfs
+34. Custom install")
 
 
 while :; do
@@ -1725,9 +1766,11 @@ echo
 		pkgs|27)			copy_pkgs ;;
 		root|28)					time auto_install_root ;;
 		user|29)					time auto_install_user ;;
-		copy_script|30)		copy_script ;;
-		initramfs|31)			choose_initramfs ;;
-		custom|32)				custom_install ;;
+		ff|30)					time auto_install_ff ;;
+		kde|31)					time auto_install_kde ;;
+		copy_script|32)		copy_script ;;
+		initramfs|33)			choose_initramfs ;;
+		custom|34)				custom_install ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
