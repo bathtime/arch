@@ -294,7 +294,7 @@ install_base () {
 	check_on_root
 	mount_disk
 
-echo '[options]
+	echo '[options]
 HoldPkg     = pacman glibc
 Architecture = auto
 
@@ -638,6 +638,8 @@ general_setup () {
 	check_on_root
 	mount_disk
 
+	echo "Syncing repositories..."
+	cp -r /var/lib/pacman/sync/ $mnt/var/lib/pacman/sync/
 
 	echo -e 'en_US.UTF-8 UTF-8\nen_US ISO-8859-1' > $mnt/etc/locale.gen  
 	echo 'LANG=en_US.UTF-8' > $mnt/etc/locale.conf
@@ -763,8 +765,26 @@ alias vi="vim"
 PS1="$ "' > $mnt/home/$user/.bashrc
 	arch-chroot $mnt chown user:user /home/$user/.bashrc
 
+	cat > $mnt/root/.vimrc << EOF
+
+au BufReadPost *
+    \ if line("'\"") > 0 && line("'\"") <= line("$") && &filetype != "gitcommit" |
+    \ execute("normal \`\"") |
+    \ endif
+
+set mouse=c
+
+syntax on
+
+set tabstop=3
+set shiftwidth=3
+set autoindent
+set smartindent
+
+EOF
+
 	cp $mnt/root/.vimrc $mnt/home/$user/.vimrc
-	arch-chroot $mnt chown user:user /home/$user/.vimrc
+	arch-chroot $mnt chown $user:$user /home/$user/.vimrc
 
 }
 
@@ -1475,8 +1495,7 @@ pacstrap_install () {
 	if [ "$packages" ]; then
 
 		if [ "$offline" -eq 1 ]; then
-			#pacstrap -C /etc/pacman-offline.conf -c -K $mnt ${packages[@]}
-			pacstrap -C /etc/pacman-offline.conf -c $mnt ${packages[@]}
+			pacstrap -C /etc/pacman-offline.conf -c -K $mnt ${packages[@]}
 		else
 			pacstrap -C /etc/pacman.conf -c -K $mnt "$@"
 		fi
@@ -1558,6 +1577,12 @@ auto_install_user () {
 
 }
 
+post_install () {
+
+	pacstrap -c -K $mnt firefox cage 
+
+}
+
 
 if [ "$1" ]; then
 	disk="$1"
@@ -1611,7 +1636,8 @@ choices=("1. Quit
 28. Auto-install (root)
 29. Auto-install (user)
 30. Copy scripts
-31. Choose initramfs")
+31. Choose initramfs
+32. Post install")
 
 
 while :; do
@@ -1654,6 +1680,7 @@ echo
 		user|29)					time auto_install_user ;;
 		copy_script|30)		copy_script ;;
 		initramfs|31)			choose_initramfs ;;
+		post|32)					post_install ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
