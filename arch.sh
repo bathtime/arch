@@ -776,7 +776,7 @@ export RUNLEVEL=3
 export QT_LOGGING_RULES="*=false"
 
 if [[ ! ${DISPLAY} && ${XDG_VTNR} == 1 ]]; then
-	:
+:
 fi' > $mnt/home/$user/.bash_profile
 	arch-chroot $mnt chown user:user /home/$user/.bash_profile
 
