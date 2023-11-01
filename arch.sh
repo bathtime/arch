@@ -276,7 +276,6 @@ mount_disk () {
 
 		fi
 
-
 		# mount efi partition
 		mount --mkdir $disk$espPart $mnt$efi_path
 
@@ -294,9 +293,7 @@ install_base () {
 	check_on_root
 	mount_disk
 	
-
-
-echo '[options]
+	echo '[options]
 HoldPkg     = pacman glibc
 Architecture = auto
 
@@ -357,16 +354,16 @@ hypervisor_setup () {
 	case $hypervisor in
 
 		kvm)			pacstrap_install qemu-guest-agent
-						systemctl enable qemu-guest-agent --root=$mnt ;;
+						systemctl --root=$mnt enable qemu-guest-agent ;;
 		vmware)		pacstrap_install open-vm-tools
-						systemctl enable vmtoolsd --root=$mnt
-						systemctl enable vmware-vmblock-fuse --root=$mnt ;;
+						systemctl --root=$mnt enable vmtoolsd
+						systemctl --root=$mnt enable vmware-vmblock-fuse ;;
 		oracle)		pacstrap_install virtualbox-guest-utils
-						systemctl enable vboxservice --root=$mnt ;;
+						systemctl --root=$mnt enable vboxservice ;;
 		microsoft)	pacstrap_install hyperv
-						systemctl enable hv_fcopy_daemon --root=$mnt
-						systemctl enable hv_kvp_daemon --root=$mnt
-						systemctl enable hv_vss_daemon --root=$mnt ;;
+						systemctl --root=$mnt enable hv_fcopy_daemon
+						systemctl --root=$mnt enable hv_kvp_daemon
+						systemctl --root=$mnt enable hv_vss_daemon ;;
 	esac
 
 }
@@ -402,6 +399,7 @@ setup_fstab () {
 	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/log')" ]   && echo "tmpfs    /var/log    tmpfs   rw,nodev,nosuid,mode=1775,size=2G   0 0" >> $mnt/etc/fstab
 	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/tmp')" ]   && echo "tmpfs    /var/tmp    tmpfs   rw,nodev,nosuid,mode=1777,size=2G   0 0" >> $mnt/etc/fstab
 
+	sync
 	systemctl daemon-reload
 
 	cat $mnt/etc/fstab
@@ -466,11 +464,7 @@ install_REFIND () {
 
 #	sed -i 's/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g; s/#scan_all_linux_kernels false/scan_all_linux_kernels false/g' $mnt$efi_path/EFI/BOOT/refind.conf
 
-	rm -rf /boot/grub
-
-	echo -e "\nYou should have a fully bootable system now. Feel free to test it.\n"
-
-mkdir -p $mnt$efi_path/EFI/BOOT/
+	mkdir -p $mnt$efi_path/EFI/BOOT/
 cat > $mnt$efi_path/EFI/BOOT/refind.conf <<EOF
 timeout 2 
 #scan_all_linux_kernels off
@@ -480,6 +474,9 @@ showtools install, shell, bootorder, gdisk, memtest, mok_tool, apple_recovery, w
 textonly
 EOF
 
+	rm -rf /boot/grub
+
+	echo -e "\nYou should have a fully bootable system now. Feel free to test it.\n"
 
 }
 
@@ -520,7 +517,7 @@ EOF2
 
 
 	# Allows grub to run snapshots
-	systemctl enable grub-btrfsd.service
+	systemctl --root=$mnt enable grub-btrfsd.service
 	/etc/grub.d/41_snapshots-btrfs
 
 	# Remove grub os-prober message
@@ -535,11 +532,11 @@ EOF2
 	#sed -i 's/ rw / ro /g' $mnt/etc/grub.d/10_linux-readonly
 
 	# So systemd won't remount as 'rw'
-	arch-chroot $mnt systemctl mask systemd-remount-fs.service
 
 	grub-mkconfig -o /boot/grub/grub.cfg
 
 EOF
+	systemctl --root=$mnt mask systemd-remount-fs.service
 
 	echo -e "\nYou should have a fully bootable system now. Feel free to test it.\n"
 
@@ -550,7 +547,7 @@ install_EFISTUB () {
 
 	echo "TODO."
 
-	exit
+	return 0
 
 	mount_disk
 
@@ -593,7 +590,7 @@ install_uki () {
 
 	echo "TODO."
 
-	exit
+	return 0	
 
 	mount_disk
 
@@ -653,6 +650,7 @@ general_setup () {
 	echo 'LANG=en_US.UTF-8' > $mnt/etc/locale.conf
 	echo 'Arch-Linux' > $mnt/etc/hostname
 	echo 'KEYMAP=us' > $mnt/etc/vconsole.conf
+	ln -sf $mnt/usr/share/zoneinfo/Canada/Eastern $mnt/etc/localtime
 
 	echo "127.0.0.1   localhost
 ::1         localhost
@@ -664,16 +662,8 @@ alias grep="grep --color=auto"
 alias vi="vim"
 PS1="# "' > $mnt/root/.bashrc
 
-	arch-chroot $mnt /bin/bash -e << EOF
-
-	hwclock --systohc
-
-	ln -sf /usr/share/zoneinfo/Canada/Eastern /etc/localtime
-
-	locale-gen
-
-
-EOF
+	arch-chroot $mnt hwclock --systohc
+	arch-chroot $mnt locale-gen
 
 	[ "$root_only" -eq 0 ] && arch-chroot $mnt printf "$password\n$password\n" | passwd root
 
@@ -701,7 +691,7 @@ EOF
 	echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
 	echo 'vm.vfs_cache_pressure=50' > $mnt/etc/sysctl.d/99-cache-pressure.conf
 
-	arch-chroot $mnt systemctl enable systemd-oomd
+	systemctl --root=$mnt enable systemd-oomd
 
 	echo 'kernel.core_pattern=/dev/null' > $mnt/etc/sysctl.d/50-coredump.conf
 
@@ -728,13 +718,7 @@ setup_user () {
 	mkdir -p -m 750 $mnt/etc/sudoers.d
 	echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/wheel
 
-	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
-		arch-chroot $mnt useradd -m $user -G wheel
-	else
-		rm -rf $mnt/home/$user
-		arch-chroot $mnt userdel $user
-		arch-chroot $mnt useradd -m $user -G wheel
-	fi
+	arch-chroot $mnt useradd -m $user -G wheel
 
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
 		echo -e "\nUser was not created. Exiting.\n"
@@ -843,7 +827,7 @@ SAE-PT-Group19=f5614183429496736ed0da01f20d14b3415e201531b6fc24987eb128c2090897d
 SAE-PT-Group20=eb986ca0245dcd12c86bf779e36d4434973059133f10e12326cf319db32b98fed48e248f69e015bed36813f716581e13d56a21dbbda4fe3541e355afe49446458e8d8e47777b9866f720197effd6273b6e89cbdc140e58920cf269abe6ea0bf7" > $mnt/var/lib/iwd/"$wifi_ssid".psk
 
 	echo "Enabling network services..."
-	systemctl enable iwd.service --root=$mnt
+	systemctl --root=$mnt enable iwd.service
 
 }
 
@@ -867,7 +851,7 @@ ExecStart=/usr/bin/dhcpcd -b -q %I' > $mnt/etc/systemd/system/dhcpcd@.service.d/
 	[ "$(cat $mnt/etc/dhcpcd.conf | grep noarp)" ] && echo noarp >> $mnt/etc/dhcpcd.conf
 
 	echo "Enabling dhcp services..."
-	systemctl enable dhcpcd.service --root=$mnt
+	systemctl --root=$mnt enable dhcpcd.service
 
 }
 
@@ -885,7 +869,7 @@ setup_wpa () {
 
 
 	#arch-chroot $mnt systemctl enable wpa_supplicant.service
-	systemctl enable wpa_supplicant.service --root=$mnt
+	systemctl --root=$mnt enable wpa_supplicant.service
 
 	mkdir -p $mnt/etc/wpa_supplicant
 	arch-chroot $mnt wpa_passphrase "$wifi_ssid" "$wifi_pass" > $mnt/etc/wpa_supplicant/"$wifi_ssid".conf
@@ -1002,7 +986,7 @@ install_tweaks () {
 	echo 'vm.vfs_cache_pressure=50' > $mnt/etc/sysctl.d/99-cache-pressure.conf
 	sed -Ei 's/^#(Color)$/\1\nILoveCandy/;s/^#(ParallelDownloads).*/\1 = 10/' $mnt/etc/pacman.conf
 
-	arch-chroot $mnt systemctl enable systemd-oomd
+	systemctl --root=$mnt enable systemd-oomd
 
 	echo 'kernel.core_pattern=/dev/null' > $mnt/etc/sysctl.d/50-coredump.conf
 
@@ -1202,7 +1186,7 @@ run_latehook() {
 
 			echo "Copying root filesystem to RAM. Please be patient..."
 
-			rsync -a --exclude=root.squashfs --exclude=/efi/ --exclude=/boot/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ /real_root/@/ $new_root
+			rsync --info=progress2 -a --exclude=root.squashfs --exclude=/efi/ --exclude=/boot/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ /real_root/@/ $new_root
 
 			echo -e "\nYou may now safely remove your USB stick.\n"
 			sleep 1
@@ -1279,7 +1263,7 @@ default_image="/boot/initramfs-linux.img"' > $mnt/etc/mkinitcpio.d/linux.preset
 	arch-chroot $mnt mkinitcpio -P 
 
 	# So systemd won't remount as 'rw'
-	systemctl mask systemd-remount-fs.service --root=$mnt
+	systemctl --root=$mnt mask systemd-remount-fs.service
 }
 
 
@@ -1383,9 +1367,7 @@ clone_disk () {
 
 	echo -e "\nCloning disk. Please be patient...\n"
 
-	rsync -av --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/mnt/ / $mnt/
-
-	#mkdir -p $mnt/{dev,proc,run,sys}
+	rsync --info=progress2 -a --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/mnt/ / $mnt/
 
 	setup_fstab
 	install_REFIND
@@ -1521,7 +1503,9 @@ pacstrap_install () {
 
 	if [ "$packages" ]; then
 
-		[ "$copy_on_host" -eq 1 ] && pacman --noconfirm -Sy ${packages[@]}
+		if [ "$copy_on_host" -eq 1 ] && [ ! "$(pacman -Q $package 2>/dev/null)" ]; then
+			pacman --noconfirm -Sy ${packages[@]}
+		fi
 
 		if [ "$offline" -eq 1 ]; then
 			pacstrap -C /etc/pacman-offline.conf -c -K $mnt ${packages[@]}
@@ -1531,8 +1515,8 @@ pacstrap_install () {
 
 	fi
 
-	copy_pkgs
-
+	echo "Syncing..."
+	sync
 }
 
 custom_install () {
@@ -1549,6 +1533,11 @@ custom_install () {
 	else
 		echo "No packages will be installed."
 	fi
+
+	echo "Syncing..."
+	sync
+
+	copy_pkgs
 
 }
 
@@ -1589,7 +1578,6 @@ copy_pkgs () {
 
 	echo "Syncing..."
 	sync
-
 }
 
 
