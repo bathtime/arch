@@ -136,6 +136,7 @@ unmount_disk () {
 
 			done
 
+			echo -e "\nLazy unmount successful.\n"
 			systemctl daemon-reload
 
 		fi
@@ -1500,6 +1501,8 @@ pacstrap_install () {
 
 		packages="$@"
 
+		[ "$copy_on_host" -eq 1 ] && pacman --noconfirm -Sy ${packages[@]}
+
 	else
 
 		packages=""
@@ -1517,6 +1520,8 @@ pacstrap_install () {
 	fi
 
 	if [ "$packages" ]; then
+
+		[ "$copy_on_host" -eq 1 ] && pacman --noconfirm -Sy ${packages[@]}
 
 		if [ "$offline" -eq 1 ]; then
 			pacstrap -C /etc/pacman-offline.conf -c -K $mnt ${packages[@]}
@@ -1637,7 +1642,7 @@ auto_install_user () {
 
 
 
-auto_install_ff () {
+auto_install_cage () {
 
 	root_only=0
 
@@ -1769,10 +1774,10 @@ echo
 		script|23)				download_script ;;
 		host|24)			 		install_host_packages ;;
 		reset|keys|25)			reset_keys ;;
-		pkgs|27)					time copy_pkgs ;;
+		pkgs|27)					copy_pkgs ;;
 		root|28)					time auto_install_root ;;
 		user|29)					time auto_install_user ;;
-		ff|30)					time auto_install_ff ;;
+		cage|30)					time auto_install_cage ;;
 		kde|31)					time auto_install_kde ;;
 		copy_script|32)		copy_script ;;
 		initramfs|33)			choose_initramfs ;;
