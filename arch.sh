@@ -1551,15 +1551,21 @@ custom_install () {
 
 copy_pkgs () {
 
+	check_on_root
+	mount_disk
 
 	# Check which packages are installed on chroot system and copy those pkgs from host
 	packages="$(pacman --sysroot $mnt -Q | sed 's/ [0-9].*$//g')"
 
+	#cache_pkgs="$(ls /var/cache/pacman/pkg/)"
+
 	for package in ${packages}; do
 
-		echo "Copying $package..."
-		cp -u /var/cache/pacman/pkg/$package* $mnt/var/cache/pacman/pkg/
-
+		if [ "$(ls /var/cache/pacman/pkg/ | grep $package-*[0-9].*.pkg.tar.zst)" ]; then
+		#if [ "$(echo $cache_pkgs | grep $package-*[0-9].*.pkg.tar.zst)" ]; then
+			echo "Copying $package..."
+			cp -u /var/cache/pacman/pkg/$package-*.pkg.tar.zst $mnt/var/cache/pacman/pkg/
+		fi
 	done
 
 	echo "Total packages: $(ls $mnt/var/cache/pacman/pkg/*.zst | wc -l)"
@@ -1763,7 +1769,7 @@ echo
 		script|23)				download_script ;;
 		host|24)			 		install_host_packages ;;
 		reset|keys|25)			reset_keys ;;
-		pkgs|27)			copy_pkgs ;;
+		pkgs|27)					time copy_pkgs ;;
 		root|28)					time auto_install_root ;;
 		user|29)					time auto_install_user ;;
 		ff|30)					time auto_install_ff ;;
