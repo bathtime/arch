@@ -149,7 +149,7 @@ clean_system () {
 	profile=$(ls /home/user/.mozilla/firefox/ | grep .*.default-release)
 	cd $profile
 
-	rm -rf crashes cookies.sqlite* minidumps datareporting sessionstore-backups saved-telemetry-pings storage weave* browser-extension-data security_state gmp-gmpopenh264 synced-tabs.db-wal places.sqlite favicons.sqlite cert9.db places.sqlite-wal storage-sync-v2.sqlite-wal webappsstore.sqlite
+	rm -rf crashes cookies.sqlite* minidumps datareporting sessionstore-backups saved-telemetry-pings storage weave* browser-extension-data security_state gmp-gmpopenh264 synced-tabs.db-wal places.sqlite favicons.sqlite cert9.db places.sqlite-wal storage-sync-v2.sqlite-wal webappsstore.sqlite gmp-widevinecdm
 	#rm -rf crashes cookies.sqlite* minidumps datareporting sessionstore-backups saved-telemetry-pings storage weave* browser-extension-data security_state gmp-gmpopenh264 synced-tabs.db-wal places.sqlite favicons.sqlite cert9.db
 
 }
@@ -166,14 +166,22 @@ backup_config () {
 
 	sudo -u $user tar -pcvf setup.tar $CONFIG_FILES
 
+	rm -rf setup.tar.gpg
 	ls -lah setup.tar
-	#gpg -c setup.tar
+	sudo -u $user gpg -c setup.tar
 
 }
 
 restore_config () {
 
 	cd /home/$user
+	rm -rf setup.tar 
+
+	echo "Downloading setup file..."
+	sudo -u $user curl -sL https://github.com/bathtime/arch/raw/main/setup.tar.gpg > setup.tar.gpg
+
+	echo "Decrypting setup file..."
+	sudo -u $user gpg --output setup.tar --decrypt setup.tar.gpg
 
 	sudo -u $user tar xvf setup.tar
 
