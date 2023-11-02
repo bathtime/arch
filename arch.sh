@@ -719,7 +719,9 @@ setup_user () {
 	mkdir -p -m 750 $mnt/etc/sudoers.d
 	echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/wheel
 
-	arch-chroot $mnt useradd -m $user -G wheel
+	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
+		arch-chroot $mnt useradd -m $user -G wheel
+	fi
 
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
 		echo -e "\nUser was not created. Exiting.\n"
@@ -761,9 +763,13 @@ export RUNLEVEL=3
 export QT_LOGGING_RULES="*=false"
 
 if [[ ! ${DISPLAY} && ${XDG_VTNR} == 1 ]]; then
+#net
 :
 fi' > $mnt/home/$user/.bash_profile
 	arch-chroot $mnt chown user:user /home/$user/.bash_profile
+
+net="iwctl --passphrase $wifi_pass station wlan0 connect $wifi_ssid"
+sed -i "s/^#net/   $net/g" $mnt/home/$user/.bash_profile 
 
 	touch $mnt/home/$user/.hushlogin
 	arch-chroot $mnt chown user:user /home/$user/.hushlogin
@@ -1322,6 +1328,7 @@ do_chroot () {
 
 
 connect_wireless () {
+
 
 	echo -e "\nAttempting to connect to wireless...\n"
 
