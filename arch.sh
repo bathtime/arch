@@ -1662,8 +1662,30 @@ auto_install_kde () {
 	setup_iwd
 	install_liveroot
 	pacstrap_install plasma-desktop plasma-wayland-session plasma-pa kscreen dolphin konsole firefox
-	sed -i 's/^:/   startplasma-wayland/g' $mnt/home/$user/.bash_profile
 	copy_pkgs
+
+
+	# Customize system
+
+	sed -i 's/^:/   startplasma-wayland/g' $mnt/home/$user/.bash_profile
+
+	setup_files
+
+}
+
+
+
+setup_files () {
+
+   rm -rf $mnt/home/$user/setup.tar{,.gpg}
+
+	echo "Downloading setup file..."
+	sudo -u $user curl -sL https://github.com/bathtime/arch/raw/main/setup.tar.gpg > $mnt/home/$user/setup.tar.gpg
+
+	echo "Decrypting setup file..."
+	sudo -u $user gpg --output $mnt/home/$user/setup.tar --decrypt $mnt/home/$user/setup.tar.gpg
+
+	sudo -u $user tar xvf $mnt/home/$user/setup.tar
 
 }
 
@@ -1724,7 +1746,8 @@ choices=("1. Quit
 31. Auto-install (kde + ff)
 32. Copy scripts
 33. Choose initramfs
-34. Custom install")
+34. Custom install
+35. Setup files")
 
 
 while :; do
@@ -1770,6 +1793,7 @@ echo
 		copy_script|32)		copy_script ;;
 		initramfs|33)			choose_initramfs ;;
 		custom|34)				custom_install ;;
+		setup|35)				setup_files ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
