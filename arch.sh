@@ -58,6 +58,7 @@ aur_path=/home/$user
 
 ucode=intel-ucode
 hostname=Arch
+timezone=Canada/Eastern
 
 offline=0
 reinstall=0
@@ -650,7 +651,7 @@ general_setup () {
 	echo 'LANG=en_US.UTF-8' > $mnt/etc/locale.conf
 	echo 'Arch-Linux' > $mnt/etc/hostname
 	echo 'KEYMAP=us' > $mnt/etc/vconsole.conf
-	ln -sf $mnt/usr/share/zoneinfo/Canada/Eastern $mnt/etc/localtime
+	arch-chroot $mnt ln -sf /usr/share/zoneinfo/$timezone /etc/localtime
 
 	echo "127.0.0.1   localhost
 ::1         localhost
@@ -1677,15 +1678,21 @@ auto_install_kde () {
 
 setup_files () {
 
-   rm -rf $mnt/home/$user/setup.tar{,.gpg}
+	check_on_root
+	mount_disk
+
+	rm -rf $mnt/home/$user/setup.tar{,.gpg}
 
 	echo "Downloading setup file..."
 	sudo -u $user curl -sL https://github.com/bathtime/arch/raw/main/setup.tar.gpg > $mnt/home/$user/setup.tar.gpg
 
-	echo "Decrypting setup file..."
-	sudo -u $user gpg --output $mnt/home/$user/setup.tar --decrypt $mnt/home/$user/setup.tar.gpg
+	#arch-chroot -u $user $mnt curl -sL https://github.com/bathtime/arch/raw/main/setup.tar.gpg > $mnt/home/$user/setup.tar.gpg
 
-	sudo -u $user tar xvf $mnt/home/$user/setup.tar
+	echo "Decrypting setup file..."
+	gpg --output $mnt/home/$user/setup.tar --decrypt $mnt/home/$user/setup.tar.gpg
+
+	echo "Extracting setup file..."
+	arch-chroot -u $user $mnt tar xvf /home/user/setup.tar --directory /home/user
 
 }
 
