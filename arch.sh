@@ -1703,16 +1703,13 @@ clean_system () {
 
 backup_config () {
 
-	error_check 0
-
-	#clean_system
+	clean_system
 
 	#sleep 1
 
 	cd /home/$user
 
-	sudo -u $user tar -pcvf setup.tar $CONFIG_FILES
-	error_check 1
+	sudo -u $user tar -pcf setup.tar $CONFIG_FILES
 	rm -rf setup.tar.gpg
 	ls -lah setup.tar
 	sudo -u $user gpg -c setup.tar
@@ -1768,7 +1765,6 @@ last_modified () {
 
 CONFIG_FILES=".config/baloofilerc
 .config/dolphinrc
-.config/epy/configuration.json
 .config/fontconfig/fonts.conf
 .config/gtkrc
 .config/gtkrc-2.0
