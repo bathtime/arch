@@ -822,17 +822,9 @@ EnableNetworkConfiguration=true
 [Scan]
 DisablePeriodicScan=true' > $mnt/etc/iwd/main.conf
 
-	# So iwd can automatically connect without any further interaction
-	mkdir -p $mnt/var/lib/iwd
-	echo "[Security]
-#PreSharedKey=14ad650cdc57e587a5198d3be78cb4ef4dc2574a580949d3b9803774858c5abd
-Passphrase=13FDC4A93E3C
-#SAE-PT-Group19=f5614183429496736ed0da01f20d14b3415e201531b6fc24987eb128c2090897dcb358dc0eac4716994f6dee52bd7cb642bc67f43106478fded1236655418a7a
-#SAE-PT-Group20=eb986ca0245dcd12c86bf779e36d4434973059133f10e12326cf319db32b98fed48e248f69e015bed36813f716581e13d56a21dbbda4fe3541e355afe49446458e8d8e47777b9866f720197effd6273b6e89cbdc140e58920cf269abe6ea0bf7" > $mnt/var/lib/iwd/"$wifi_ssid".psk
-
 	echo "Enabling network services..."
 	systemctl --root=$mnt enable iwd.service
-
+	
 }
 
 
@@ -1691,6 +1683,8 @@ setup_files () {
 	sudo -u $user curl -sL https://github.com/bathtime/arch/raw/main/setup.tar.gpg > $mnt/home/$user/setup.tar.gpg
 
 	#arch-chroot -u $user $mnt curl -sL https://github.com/bathtime/arch/raw/main/setup.tar.gpg > $mnt/home/$user/setup.tar.gpg
+
+	read -p "Press any key when ready to enter password."
 
 	echo "Decrypting setup file..."
 	gpg --output $mnt/home/$user/setup.tar --decrypt $mnt/home/$user/setup.tar.gpg
