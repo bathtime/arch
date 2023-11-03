@@ -309,9 +309,9 @@ Server = file:///var/cache/pacman/pkg/
 	cp /etc/pacman-offline.conf $mnt/etc/pacman-offline.conf
 
 
-	echo "Copying database files..."
-	mkdir -p $mnt/var/lib/pacman/sync
-	cp -r /var/lib/pacman/sync/*.db $mnt/var/lib/pacman/sync/
+	#echo "Copying database files..."
+	#mkdir -p $mnt/var/lib/pacman/sync
+	#cp -r /var/lib/pacman/sync/*.db $mnt/var/lib/pacman/sync/
 
 	reset_keys
 
@@ -873,7 +873,6 @@ setup_wpa () {
 	pacstrap_install iw wpa_supplicant
 
 
-	#arch-chroot $mnt systemctl enable wpa_supplicant.service
 	systemctl --root=$mnt enable wpa_supplicant.service
 
 	mkdir -p $mnt/etc/wpa_supplicant
@@ -1075,7 +1074,7 @@ create_archive() {
 
 	mksquashfs . $real_root/@/root.squashfs -noappend -no-recovery -mem-percent 20 -e root.squashfs -e boot/* -e efi/* -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/ -e .snapshots/ -e var/tmp/* -e var/log/* -e etc/pacman.d/gnupg/ -e var/lib/systemd/random-seed
 
-	ls -la $real_root/@/root.squashfs
+	ls -lah $real_root/@/root.squashfs
 
 }
 
@@ -1382,6 +1381,17 @@ clone_disk () {
 
 
 
+extract_archive () {
+
+	check_on_root
+	mount_disk
+
+	unsquashfs -d $mnt -f /root.squashfs
+
+}
+
+
+
 create_archive () {
 
 
@@ -1393,10 +1403,9 @@ create_archive () {
 	cd / 
 	rm -rf /root.squashfs
 
-	#time mksquashfs -no-append -comp lz4 -no-compression -no-duplicates / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/cache/ -e /var/log/ -e /etc/pacman.d/gnupg/
-	time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/cache/ -e /var/log/ -e /etc/pacman.d/gnupg/ -comp lz4  
+	time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/log/ -e /etc/pacman.d/gnupg/ -comp lz4  
 
-	ls -la root.squashfs
+	ls -lah root.squashfs
 
 }
 
@@ -1489,7 +1498,7 @@ pacstrap_install () {
 
 		packages="$@"
 
-		[ "$copy_on_host" -eq 1 ] && pacman --noconfirm -Sy ${packages[@]}
+		[ "$copy_on_host" -eq 1 ] && pacman --noconfirm -S ${packages[@]}
 
 	else
 
@@ -1510,7 +1519,7 @@ pacstrap_install () {
 	if [ "$packages" ]; then
 
 		if [ "$copy_on_host" -eq 1 ] && [ ! "$(pacman -Q $package 2>/dev/null)" ]; then
-			pacman --noconfirm -Sy ${packages[@]}
+			pacman --noconfirm -S ${packages[@]}
 		fi
 
 		if [ "$offline" -eq 1 ]; then
@@ -1705,14 +1714,13 @@ backup_config () {
 
 	clean_system
 
-	#sleep 1
-
 	cd /home/$user
 
 	sudo -u $user tar -pcf setup.tar $CONFIG_FILES
-	rm -rf setup.tar.gpg
-	ls -lah setup.tar
-	sudo -u $user gpg -c setup.tar
+
+	sudo -u $user gpg --yes -c setup.tar
+	
+	ls -lah setup.tar setup.tar.gpg
 
 }
 
@@ -1721,13 +1729,8 @@ backup_config () {
 restore_config () {
 
 	cd /home/$user
-	rm -rf setup.tar
 
-	echo "Downloading setup file..."
-	sudo -u $user curl -sL https://github.com/bathtime/arch/raw/main/setup.tar.gpg > setup.tar.gpg
-
-	echo "Decrypting setup file..."
-
+	echo "Extracting setup file..."
 	sudo -u $user tar xvf setup.tar
 
 }
@@ -1739,18 +1742,15 @@ install_config () {
 	check_on_root
 	mount_disk
 
-	rm -rf $mnt/home/$user/setup.tar{,.gpg}
-
-	echo "Downloading setup file..."
-	sudo -u $user curl -sL https://github.com/bathtime/arch/raw/main/setup.tar.gpg > $mnt/home/$user/setup.tar.gpg
-
 	read -p "Press any key when ready to enter password."
 
 	echo "Decrypting setup file..."
-	gpg --output $mnt/home/$user/setup.tar --decrypt $mnt/home/$user/setup.tar.gpg
+	gpg --yes --output /home/$user/setup.tar --decrypt /home/$user/setup.tar.gpg
+
+	cp /home/$user/setup.tar $mnt/home/$user/
 
 	echo "Extracting setup file..."
-	arch-chroot -u $user $mnt tar xvf /home/user/setup.tar --directory /home/user
+	arch-chroot -u $user $mnt tar xvf /home/$user/setup.tar --directory /home/$user
 
 }
 
@@ -1858,7 +1858,8 @@ choices=("1. Quit
 32. Copy scripts
 33. Choose initramfs
 34. Custom install
-35. Setup files")
+35. Setup files
+36. Unsquash to target")
 
 
 while :; do
@@ -1928,6 +1929,7 @@ echo
                 					*)				echo -e "\nInvalid option ($config_choice)!\n" ;;
 									esac ;;
 
+		unsquash|36)			extract_archive ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
