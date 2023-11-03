@@ -813,9 +813,18 @@ setup_iwd () {
 
 
 	pacstrap_install iw iwd
+	
+	mkdir -p $mnt/etc/iwd $mnt/var/lib/iwd
+	echo '[1901eb9f-5672-5518-b900-ee43811a3672]
+name=/var/lib/iwd//BELL364.psk
+list= 5220 5805 2462' > $mnt/var/lib/iwd/.known_network.freq 
+ 
+	echo '[Security]
+PreSharedKey=14ad650cdc57e587a5198d3be78cb4ef4dc2574a580949d3b9803774858c5abd
+Passphrase=13FDC4A93E3C
+SAE-PT-Group19=f5614183429496736ed0da01f20d14b3415e201531b6fc24987eb128c2090897dcb358dc0eac4716994f6dee52bd7cb642bc67f43106478fded1236655418a7a
+SAE-PT-Group20=eb986ca0245dcd12c86bf779e36d4434973059133f10e12326cf319db32b98fed48e248f69e015bed36813f716581e13d56a21dbbda4fe3541e355afe49446458e8d8e47777b9866f720197effd6273b6e89cbdc140e58920cf269abe6ea0bf7' > $mnt/var/lib/iwd/BELL364.psk 
 
-
-	mkdir -p $mnt/etc/iwd
 	echo '[General]
 EnableNetworkConfiguration=true
 
@@ -1491,7 +1500,7 @@ pacstrap_install () {
 			if [ ! "$(pacman --sysroot $mnt -Q $package 2>/dev/null)" ]; then
 				packages="$package $packages"	
 			else
-				echo -e "\nPackage: $package already installed. Not installing.\n"
+				echo "Package: $package already installed. Not installing."
 			fi
 
 		done
@@ -1510,10 +1519,11 @@ pacstrap_install () {
 			pacstrap -c -K $mnt ${packages[@]}
 		fi
 
-	fi
 
-	echo "Syncing..."
-	sync
+		echo "Syncing..."
+		sync
+
+	fi
 }
 
 custom_install () {
@@ -1730,7 +1740,7 @@ restore_config () {
 last_modified () {
 
 	cd /home/$user
-	find / -cmin -1 -printf '%t %p\n' | sort -k 1 -n | cut -d' ' -f2-
+	find . -cmin -1 -printf '%t %p\n' | sort -k 1 -n | cut -d' ' -f2-
 
 }
 
@@ -1907,112 +1917,4 @@ done
 unmount_disk
 
 
-backup_config () {
-
-
-        clean_system
-
-        sleep 1
-
-        cd /home/$user
-
-        sudo -u $user tar -pcvf setup.tar $CONFIG_FILES
-
-        ls -lah setup.tar
-
-        sudo -u $user gpg --yes -c setup.tar
-}
-
-restore_config () {
-
-        cd /home/$user
-        rm -rf setup.tar 
-
-        echo "Downloading setup file..."
-        sudo -u $user curl -sL https://github.com/bathtime/arch/raw/main/setup.tar.gpg > setup.tar.gpg
-
-        echo "Decrypting setup file..."
-
-        sudo -u $user tar xvf setup.tar
-
-}
-
-
-
-download_script () {
-
-        echo -e "\nDowloading script from Github..."
-
-        curl -sL https://raw.githubusercontent.com/bathtime/arch/main/post.sh > arch.sh
-
-        if [[ "$?" -eq 0 ]]; then
-        echo "Download successful!"
-                chmod +x post.sh
-        else
-        echo "Download unsuccessful."
-        fi
-
-}
-
-
-
-last_modified () {
-
-        cd /home/$user
-        find . -cmin -1 -printf '%t %p\n' | sort -k 1 -n | cut -d' ' -f2-
-
-}
-
-CONFIG_FILES=".config/baloofilerc
-.config/dolphinrc
-.config/epy/configuration.json
-.config/fontconfig/fonts.conf
-.config/gtkrc
-.config/gtkrc-2.0
-.config/kactivitymanagerd-pluginsrc
-.config/kactivitymanagerdrc
-.config/kcminputrc
-.config/kded5rc
-.config/kdedefaults/package
-.config/kdeglobals
-.config/kfontinstuirc
-.config/kglobalshortcutsrc
-.config/konsolerc
-.config/konsolesshconfig
-.config/krunnerrc
-.config/kscreenlockerrc
-.config/ksplashrc
-.config/ksmserverrc
-.config/kwinrc
-.config/kwinrulesrc
-.config/plasma-org.kde.plasma.desktop-appletsrc
-.config/plasmashellrc
-.config/powermanagementprofilesrc
-.config/systemsettingsrc
-.config/Trolltech.conf
-.local/bin/*
-.local/share/color-schemes/*
-.local/share/dolphin/dolphinstaterc
-.local/share/konsole/*.profile
-.local/share/kxmlgui5/konsole/konsoleui.rc
-.local/share/kxmlgui5/konsole/sessionui.rc
-.local/share/plasma/plasmoids/*
-.local/share/user-places.xbel
-.viminfo
-.mozilla/*"
-
-
-
-choices=("1. Quit
-2. Backup config
-3. Restore config
-4. Post setup
-5. Download script
-6. Connect wireless
-7. Cleanup system
-8. Last modified")
-
-while :; do
-
-done
 
