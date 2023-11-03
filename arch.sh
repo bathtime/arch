@@ -1672,7 +1672,7 @@ auto_install_kde () {
 
 
 
-setup_files () {
+backup_config () {
 
 	check_on_root
 	mount_disk
@@ -1681,8 +1681,6 @@ setup_files () {
 
 	echo "Downloading setup file..."
 	sudo -u $user curl -sL https://github.com/bathtime/arch/raw/main/setup.tar.gpg > $mnt/home/$user/setup.tar.gpg
-
-	#arch-chroot -u $user $mnt curl -sL https://github.com/bathtime/arch/raw/main/setup.tar.gpg > $mnt/home/$user/setup.tar.gpg
 
 	read -p "Press any key when ready to enter password."
 
@@ -1693,6 +1691,87 @@ setup_files () {
 	arch-chroot -u $user $mnt tar xvf /home/user/setup.tar --directory /home/user
 
 }
+
+clean_system () {
+
+	echo "Cleaning system..."
+
+	rm -rf /home/user/.cache/mozilla/
+
+	cd /home/$user/.mozilla/firefox
+	rm -rf 'Crash Reports' 'Pending Pings'
+
+
+	profile=$(ls /home/user/.mozilla/firefox/ | grep .*.default-release)
+	cd $profile
+
+	rm -rf crashes cookies.sqlite* minidumps datareporting sessionstore-backups saved-telemetry-pings storage browser-extension-data security_state gmp-gmpopenh264 synced-tabs.db-wal places.sqlite favicons.sqlite cert9.db places.sqlite-wal storage-sync-v2.sqlite-wal webappsstore.sqlite gmp-widevinecdm
+
+}
+
+
+
+restore_config () {
+
+	cd /home/$user
+	rm -rf setup.tar
+
+	echo "Downloading setup file..."
+	sudo -u $user curl -sL https://github.com/bathtime/arch/raw/main/setup.tar.gpg > setup.tar.gpg
+
+	echo "Decrypting setup file..."
+
+	sudo -u $user tar xvf setup.tar
+
+}
+
+
+
+last_modified () {
+
+	cd /home/$user
+	find / -cmin -1 -printf '%t %p\n' | sort -k 1 -n | cut -d' ' -f2-
+
+}
+
+
+CONFIG_FILES=".config/baloofilerc
+.config/dolphinrc
+.config/epy/configuration.json
+.config/fontconfig/fonts.conf
+.config/gtkrc
+.config/gtkrc-2.0
+.config/kactivitymanagerd-pluginsrc
+.config/kactivitymanagerdrc
+.config/kcminputrc
+.config/kded5rc
+.config/kdedefaults/package
+.config/kdeglobals
+.config/kfontinstuirc
+.config/kglobalshortcutsrc
+.config/konsolerc
+.config/konsolesshconfig
+.config/krunnerrc
+.config/kscreenlockerrc
+.config/ksplashrc
+.config/ksmserverrc
+.config/kwinrc
+.config/kwinrulesrc
+.config/plasma-org.kde.plasma.desktop-appletsrc
+.config/plasmashellrc
+.config/powermanagementprofilesrc
+.config/systemsettingsrc
+.config/Trolltech.conf
+.local/bin/*
+.local/share/color-schemes/*
+.local/share/dolphin/dolphinstaterc
+.local/share/konsole/*.profile
+.local/share/kxmlgui5/konsole/konsoleui.rc
+.local/share/kxmlgui5/konsole/sessionui.rc
+.local/share/plasma/plasmoids/*
+.local/share/user-places.xbel
+.viminfo
+.mozilla/*"
 
 
 
@@ -1798,7 +1877,28 @@ echo
 		copy_script|32)		copy_script ;;
 		initramfs|33)			choose_initramfs ;;
 		custom|34)				custom_install ;;
-		setup|35)				setup_files ;;
+		setup|35)				config_choices=("1. Quit
+2. Backup config
+3. Restore config
+4. Cleanup system
+5. Last modified")
+
+									echo
+									echo "${config_choices[@]}" | column
+									echo  
+
+									read -p "Which option? " config_choice
+
+        							case $config_choice in
+                					quit|1)		echo "Quitting!"; break; ;;
+                					backup|2)	backup_config ;;
+                					restore|3)	restore_config ;;
+                					clean|4)		clean_system ;;
+                					last|5)		last_modified ;;
+                					'')			last_modified ;;
+                					*)				echo -e "\nInvalid option ($config_choice)!\n" ;;
+									esac ;;
+
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
@@ -1806,4 +1906,113 @@ done
 
 unmount_disk
 
+
+backup_config () {
+
+
+        clean_system
+
+        sleep 1
+
+        cd /home/$user
+
+        sudo -u $user tar -pcvf setup.tar $CONFIG_FILES
+
+        ls -lah setup.tar
+
+        sudo -u $user gpg --yes -c setup.tar
+}
+
+restore_config () {
+
+        cd /home/$user
+        rm -rf setup.tar 
+
+        echo "Downloading setup file..."
+        sudo -u $user curl -sL https://github.com/bathtime/arch/raw/main/setup.tar.gpg > setup.tar.gpg
+
+        echo "Decrypting setup file..."
+
+        sudo -u $user tar xvf setup.tar
+
+}
+
+
+
+download_script () {
+
+        echo -e "\nDowloading script from Github..."
+
+        curl -sL https://raw.githubusercontent.com/bathtime/arch/main/post.sh > arch.sh
+
+        if [[ "$?" -eq 0 ]]; then
+        echo "Download successful!"
+                chmod +x post.sh
+        else
+        echo "Download unsuccessful."
+        fi
+
+}
+
+
+
+last_modified () {
+
+        cd /home/$user
+        find . -cmin -1 -printf '%t %p\n' | sort -k 1 -n | cut -d' ' -f2-
+
+}
+
+CONFIG_FILES=".config/baloofilerc
+.config/dolphinrc
+.config/epy/configuration.json
+.config/fontconfig/fonts.conf
+.config/gtkrc
+.config/gtkrc-2.0
+.config/kactivitymanagerd-pluginsrc
+.config/kactivitymanagerdrc
+.config/kcminputrc
+.config/kded5rc
+.config/kdedefaults/package
+.config/kdeglobals
+.config/kfontinstuirc
+.config/kglobalshortcutsrc
+.config/konsolerc
+.config/konsolesshconfig
+.config/krunnerrc
+.config/kscreenlockerrc
+.config/ksplashrc
+.config/ksmserverrc
+.config/kwinrc
+.config/kwinrulesrc
+.config/plasma-org.kde.plasma.desktop-appletsrc
+.config/plasmashellrc
+.config/powermanagementprofilesrc
+.config/systemsettingsrc
+.config/Trolltech.conf
+.local/bin/*
+.local/share/color-schemes/*
+.local/share/dolphin/dolphinstaterc
+.local/share/konsole/*.profile
+.local/share/kxmlgui5/konsole/konsoleui.rc
+.local/share/kxmlgui5/konsole/sessionui.rc
+.local/share/plasma/plasmoids/*
+.local/share/user-places.xbel
+.viminfo
+.mozilla/*"
+
+
+
+choices=("1. Quit
+2. Backup config
+3. Restore config
+4. Post setup
+5. Download script
+6. Connect wireless
+7. Cleanup system
+8. Last modified")
+
+while :; do
+
+done
 
