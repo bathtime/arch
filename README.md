@@ -11,7 +11,7 @@ This program is in alpha.
 - Run in tmpfs, squashfs, overlay, or snapshot
 - Only 1 bash script
 - Auto exit on error (set -e) activated
-- Module based installation
+- 
 
 
 
