@@ -1355,12 +1355,6 @@ download_script () {
 	curl -sL https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > /arch.sh
 	chmod +x /arch.sh
 
-	if [ "$root_only" -eq 0 ] && [ $(grep "^$user" /etc/passwd) ]; then
-
-		curl -sL https://raw.githubusercontent.com/bathtime/arch/main/post.sh > /home/$user/post.sh
-		chown $user:$user /home/$user/post.sh 
-		chmod +x /home/$user/post.sh
-	fi
 }
 
 
@@ -1470,9 +1464,7 @@ copy_script () {
 	cp /arch.sh $mnt/
 
 	if [ "$root_only" -eq 0 ] && [ $(grep "^$user" $mnt/etc/passwd) ]; then
-		echo "Copying post.sh to $mnt/home/$user/..."
 		arch-chroot $mnt chown $user:$user /arch.sh
-		cp /home/$user/post.sh $mnt/home/$user/
 	fi
 
 }
