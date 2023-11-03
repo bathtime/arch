@@ -1676,31 +1676,11 @@ auto_install_kde () {
 
 	sed -i 's/^:/   startplasma-wayland/g' $mnt/home/$user/.bash_profile
 
-	setup_files
+	install_config	
 
 }
 
 
-
-backup_config () {
-
-	check_on_root
-	mount_disk
-
-	rm -rf $mnt/home/$user/setup.tar{,.gpg}
-
-	echo "Downloading setup file..."
-	sudo -u $user curl -sL https://github.com/bathtime/arch/raw/main/setup.tar.gpg > $mnt/home/$user/setup.tar.gpg
-
-	read -p "Press any key when ready to enter password."
-
-	echo "Decrypting setup file..."
-	gpg --output $mnt/home/$user/setup.tar --decrypt $mnt/home/$user/setup.tar.gpg
-
-	echo "Extracting setup file..."
-	arch-chroot -u $user $mnt tar xvf /home/user/setup.tar --directory /home/user
-
-}
 
 clean_system () {
 
@@ -1721,6 +1701,26 @@ clean_system () {
 
 
 
+backup_config () {
+
+	error_check 0
+
+	#clean_system
+
+	#sleep 1
+
+	cd /home/$user
+
+	sudo -u $user tar -pcvf setup.tar $CONFIG_FILES
+	error_check 1
+	rm -rf setup.tar.gpg
+	ls -lah setup.tar
+	sudo -u $user gpg -c setup.tar
+
+}
+
+
+
 restore_config () {
 
 	cd /home/$user
@@ -1735,6 +1735,27 @@ restore_config () {
 
 }
 
+
+
+install_config () {
+
+	check_on_root
+	mount_disk
+
+	rm -rf $mnt/home/$user/setup.tar{,.gpg}
+
+	echo "Downloading setup file..."
+	sudo -u $user curl -sL https://github.com/bathtime/arch/raw/main/setup.tar.gpg > $mnt/home/$user/setup.tar.gpg
+
+	read -p "Press any key when ready to enter password."
+
+	echo "Decrypting setup file..."
+	gpg --output $mnt/home/$user/setup.tar --decrypt $mnt/home/$user/setup.tar.gpg
+
+	echo "Extracting setup file..."
+	arch-chroot -u $user $mnt tar xvf /home/user/setup.tar --directory /home/user
+
+}
 
 
 last_modified () {
@@ -1890,8 +1911,9 @@ echo
 		setup|35)				config_choices=("1. Quit
 2. Backup config
 3. Restore config
-4. Cleanup system
-5. Last modified")
+4. Install config
+5. Cleanup system
+6. Last modified")
 
 									echo
 									echo "${config_choices[@]}" | column
@@ -1903,8 +1925,9 @@ echo
                 					quit|1)		echo "Quitting!"; break; ;;
                 					backup|2)	backup_config ;;
                 					restore|3)	restore_config ;;
-                					clean|4)		clean_system ;;
-                					last|5)		last_modified ;;
+                					install|4)	install_config ;;
+                					clean|5)		clean_system ;;
+                					last|6)		last_modified ;;
                 					'')			last_modified ;;
                 					*)				echo -e "\nInvalid option ($config_choice)!\n" ;;
 									esac ;;
