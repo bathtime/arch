@@ -46,7 +46,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-rootfs=btrfs
+fstype=btrfs
 subvols=()
 efi_path=/efi
 encryption=0
@@ -219,12 +219,12 @@ create_partitions () {
 			set $espPartNum esp on \
 			mkpart SWAP linux-swap 512Mib 8512Mib \
 			set $swapPartNum swap on \
-			mkpart ROOT $rootfs 8512Mib 100% \
+			mkpart ROOT $fstype 8512Mib 100% \
 
 	mkfs.fat -F 32 -n EFI $disk$espPart 
 	mkswap -L SWAP $disk$swapPart
 
-	if [ "$rootfs" = "btrfs" ]; then
+	if [ "$fstype" = "btrfs" ]; then
 		mkfs.btrfs -f -L ROOT $disk$rootPart
 	else
 		mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart
@@ -238,7 +238,7 @@ create_partitions () {
 
 	cd $mnt
 
-	if [ "$rootfs" = "btrfs" ]; then
+	if [ "$fstype" = "btrfs" ]; then
 
 		for subvol in '' "${subvols[@]}"; do
 			btrfs su cr /mnt/@"$subvol"
@@ -261,7 +261,7 @@ mount_disk () {
 	if [[ ! $(mount | grep -E "on /mnt") ]]; then
 
 
-		if [ "$rootfs" = "btrfs" ]; then
+		if [ "$fstype" = "btrfs" ]; then
 
 			echo -e "\nMounting...\n"
 
@@ -284,7 +284,9 @@ mount_disk () {
 
 	mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg}
 	chmod 750 $mnt/root
- 
+
+	fstype="$(lsblk -n -o FSTYPE $disk$rootPart)"
+
 }
 
 
@@ -309,16 +311,18 @@ Server = file:///var/cache/pacman/pkg/
 	cp /etc/pacman-offline.conf $mnt/etc/pacman-offline.conf
 
 
-	#echo "Copying database files..."
-	#mkdir -p $mnt/var/lib/pacman/sync
-	#cp -r /var/lib/pacman/sync/*.db $mnt/var/lib/pacman/sync/
+	if [ "$offline" -eq 1 ]; then
+		echo "Copying database files..."
+		mkdir -p $mnt/var/lib/pacman/sync
+		cp -r /var/lib/pacman/sync/*.db $mnt/var/lib/pacman/sync/
+	fi
 
 	reset_keys
 
 	packages="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar"
 
 	[ "$root_only" ] && packages="$packages sudo"
-	[ "$rootfs" = "btrfs" ] && packages="$packages btrfs-progs"
+	[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs"
 
 	pacstrap_install $packages
 
@@ -452,7 +456,7 @@ install_REFIND () {
 	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 	ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
 
-	if [ "$rootfs" = "btrfs" ]; then
+	if [ "$fstype" = "btrfs" ]; then
 		rootflags='subvol=@'
 	else
 		rootflags=/
@@ -763,7 +767,6 @@ export RUNLEVEL=3
 export QT_LOGGING_RULES="*=false"
 
 if [[ ! ${DISPLAY} && ${XDG_VTNR} == 1 ]]; then
-#net
 :
 fi' > $mnt/home/$user/.bash_profile
 	arch-chroot $mnt chown user:user /home/$user/.bash_profile
@@ -1377,6 +1380,9 @@ clone_disk () {
 	setup_fstab
 	install_REFIND
 
+	echo "Syncing disk..."
+	sync
+
 }
 
 
@@ -1866,7 +1872,6 @@ while :; do
 
 echo
 echo "${choices[@]}" | column   
-echo  
 
 read -p "Which option? " choice
 echo
