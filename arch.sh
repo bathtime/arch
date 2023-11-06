@@ -39,6 +39,9 @@ error_check () {
 # Used to temporarily disable at certain points in script (eg., as in the mount_disk function)
 error_check 1
 
+# Where will this file (arch.sh) be located?
+arch_path=/usr/local/bin
+
 mnt=/mnt
 espPartNum=1
 swapPartNum=2
@@ -1362,6 +1365,7 @@ download_script () {
 clone_disk () {
 
 	check_on_root
+	mount_disk
 
 
 	pacstrap_install rsync
@@ -1461,10 +1465,11 @@ copy_script () {
 
 	echo "Copying arch.sh to $mnt..."
 
-	cp /arch.sh $mnt/
+	mkdir -p $mnt$arch_path
+	cp $arch_path/arch.sh $mnt$arch_path
 
 	if [ "$root_only" -eq 0 ] && [ $(grep "^$user" $mnt/etc/passwd) ]; then
-		arch-chroot $mnt chown $user:$user /arch.sh
+		arch-chroot $mnt chown $user:$user $arch_path/arch.sh
 	fi
 
 }
@@ -1687,6 +1692,30 @@ auto_install_kde () {
 
 }
 
+auto_install_gnome () {
+
+	root_only=0
+
+	create_partitions
+	install_base
+	setup_fstab
+	install_REFIND
+	general_setup
+	setup_user
+	setup_iwd
+	install_liveroot
+	pacstrap_install gnome-shell nautilus gnome-terminal gnome-control-center xdg-user-dirs firefox
+	copy_pkgs
+
+
+	# Customize system
+
+	sed -i 's/^:/   MOZ_ENABLE_WAYLAND=1 QT_QPA_PLATFORM=wayland XDG_SESSION_TYPE=wayland exec dbus-run-session gnome-session/g' $mnt/home/$user/.bash_profile
+
+	install_config	
+
+}
+
 
 
 clean_system () {
@@ -1761,6 +1790,17 @@ last_modified () {
 }
 
 
+
+edit_arch () {
+
+	if [ "$(ls $arch_path | grep arch.sh)" ]; then
+		vim $arch_path/arch.sh && exit
+	fi
+
+}
+
+
+
 CONFIG_FILES=".config/baloofilerc
 .config/dolphinrc
 .config/fontconfig/fonts.conf
@@ -1824,40 +1864,39 @@ fi
 
 
 choices=("1. Quit
-2. Chroot
-3. Choose disk
-4. Partition disk
-5. Install base
-6. Hypervisor setup
-7. Setup fstab
-8. Install boot manager
-9. General setup
-10. Setup user
-11. Setup network
-12. Install aur
-13. Install tweaks
-14. Install mksh
-15. Install liveroot
-16. Setup snapshots
-17. Setup snapper
-18. Mount $mnt
-19. Unmount $mnt
-20. Create squashfs image
-21. Clone disk
-22. Connect wireless
-23. Download script
-24. Install host packages
-25. Reset pacman keys
+2. Edit arch.sh
+3. Chroot
+4. Change disk ($disk)
+5. Partition disk
+6. Install base
+7. Hypervisor setup
+8. Setup fstab
+9. Install boot manager
+10. General setup
+11. Setup user
+12. Setup network
+13. Install aur
+14. Install tweaks
+15. Install mksh
+16. Install liveroot
+17. Setup snapshots
+18. Setup snapper
+19. Mount $mnt
+20. Unmount $mnt
+21. Create squashfs image
+22. Clone / -> $disk
+23. Connect wireless
+24. Download script
+25. Install host packages
+26. Reset pacman keys
 27. Finalize install
-28. Auto-install (root)
-29. Auto-install (user)
-30. Auto-install (cage + ff)
-31. Auto-install (kde + ff)
-32. Copy scripts
-33. Choose initramfs
-34. Custom install
-35. Setup files
-36. Unsquash to target")
+28. Auto-install
+29. Copy scripts
+30. Choose initramfs
+31. Custom install
+32. Setup files
+33. Unsquash to target
+34. Edit arch.sh")
 
 
 while :; do
@@ -1870,39 +1909,60 @@ echo
 
 	case $choice in
 		Quit|quit|q|exit|1)	break; ;;
-		Chroot|chroot|2)		do_chroot ;;
-		disk|3)					choose_disk ;;
-		partition|4)			create_partitions ;;
-		base|5)					install_base ;;
-		hypervisor|6)			hypervisor_setup ;;
-		fstab|7)					setup_fstab ;;
-		boot|8)					install_bootloader ;;
-		setup|9)					general_setup ;;
-		user|10)					setup_user ;;
-      network|11)				install_network ;;
-		aur|12)					install_aur ;;
-		tweaks|13)				install_tweaks ;;
-      mksh|14)					install_mksh ;;
-		liveroot|15)			install_liveroot ;;
-		snapshots|16)			setup_snapshots ;;
-		snapper|17)				setup_snapper ;;
-      mount|18)				mount_disk  ;;
-      unmount|19)				unmount_disk  ;;
-		squashfs|20)			create_archive ;;
-		clone|21)				clone_disk ;;
-		connect|iwd|22)		connect_wireless ;;
-		script|23)				download_script ;;
-		host|24)			 		install_host_packages ;;
-		reset|keys|25)			reset_keys ;;
+		arch|2)					edit_arch ;;
+		Chroot|chroot|3)		do_chroot ;;
+		disk|4)					choose_disk ;;
+		partition|5)			create_partitions ;;
+		base|6)					install_base ;;
+		hypervisor|7)			hypervisor_setup ;;
+		fstab|8)					setup_fstab ;;
+		boot|9)					install_bootloader ;;
+		setup|10)					general_setup ;;
+		user|11)					setup_user ;;
+      network|12)				install_network ;;
+		aur|13)					install_aur ;;
+		tweaks|14)				install_tweaks ;;
+      mksh|15)					install_mksh ;;
+		liveroot|16)			install_liveroot ;;
+		snapshots|17)			setup_snapshots ;;
+		snapper|18)				setup_snapper ;;
+      mount|19)				mount_disk  ;;
+      unmount|20)				unmount_disk  ;;
+		squashfs|21)			create_archive ;;
+		clone|22)				clone_disk ;;
+		connect|iwd|23)		connect_wireless ;;
+		script|24)				download_script ;;
+		host|25)			 		install_host_packages ;;
+		reset|keys|26)			reset_keys ;;
 		pkgs|27)					copy_pkgs ;;
-		root|28)					time auto_install_root ;;
-		user|29)					time auto_install_user ;;
-		cage|30)					time auto_install_cage ;;
-		kde|31)					time auto_install_kde ;;
-		copy_script|32)		copy_script ;;
-		initramfs|33)			choose_initramfs ;;
-		custom|34)				custom_install ;;
-		setup|35)				config_choices=("1. Quit
+		root|28)					config_os=("1. Quit
+2. Root
+3. User
+4. Cage
+5. KDE
+6. Gnome")
+
+									echo
+									echo "${config_os[@]}" | column
+									echo  
+
+									read -p "Which option? " config_os
+
+        							case $config_os in
+                					quit|1)		;;
+                					root|2)		time auto_install_root ;;
+                					user|3)		time auto_install_user ;;
+                					cage|4)		time auto_install_cage ;;
+                					kde|5)		time auto_install_kde ;;
+                					gnome|6)		time auto_install_gnome ;;
+                					'')			;;
+	              					*)				echo -e "\nInvalid option ($config_os)!\n" ;;
+									esac ;;
+
+		copy_script|29)		copy_script ;;
+		initramfs|30)			choose_initramfs ;;
+		custom|31)				custom_install ;;
+		setup|32)			config_choices=("1. Quit
 2. Backup config
 3. Restore config
 4. Install config
@@ -1925,8 +1985,9 @@ echo
                 					'')			last_modified ;;
                 					*)				echo -e "\nInvalid option ($config_choice)!\n" ;;
 									esac ;;
-
-		unsquash|36)			extract_archive ;;
+	
+		unsquash|33)			extract_archive ;;
+		edit|34)					edit_arch ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
