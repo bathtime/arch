@@ -39,8 +39,8 @@ error_check () {
 # Used to temporarily disable at certain points in script (eg., as in the mount_disk function)
 error_check 1
 
-# Where will this file (arch.sh) be located?
-arch_path=/usr/local/bin
+arch_file=$(basename "$0")
+arch_path=$(dirname "$0")
 
 mnt=/mnt
 espPartNum=1
@@ -165,7 +165,7 @@ choose_disk () {
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd"
 		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-		disks=$(echo -e "\nquit\nedit\nrefresh\nhost\n$disks")
+		disks=$(echo -e "\nquit\nedit\n$disks\nrefresh\nhost")
 
 		echo -e "\nWhich drive?\n"
 
@@ -175,7 +175,7 @@ choose_disk () {
 				host)		disk="$(mount | awk '/ on \/ / { print $1}' | sed 's/[0-9]$//g')"; search_disks=0 ; break ;;
 				refresh) break;	;;
 				quit) 	echo -e "\nQuitting!"; exit ;;
-				edit)		vim $arch_path/arch.sh; exit ;;
+				edit)		vim $arch_path/$arch_file; exit ;;
 				'')   	echo -e "\nInvalid option!\n" ; break ;;
 				*)    	search_disks=0; break; ;;
 			esac
@@ -183,13 +183,12 @@ choose_disk () {
 
 	done
 
-	echo -e "\nSetup config:\n\ndisk: $disk\nuser: $user\n"
+	if [ "$(echo $disk | grep nvme)" ]; then
+		espPart="p$espPartNum"
+		swapPart="p$swapPartNum"
+		rootPart="p$rootPartNum"
+	fi
 
-        if [ "$(echo $disk | grep nvme)" ]; then
-                espPart="p$espPartNum"
-                swapPart="p$swapPartNum"
-                rootPart="p$rootPartNum"
-        fi
 }
 
 
@@ -1356,8 +1355,8 @@ download_script () {
 
 	echo -e "\nDowloading scripts from Github..."
 
-	curl -sL https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > /arch.sh
-	chmod +x /arch.sh
+	curl -sL https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > $arch_path$arch_file
+	chmod +x $arch_path$arch_file
 
 }
 
@@ -1464,13 +1463,13 @@ copy_script () {
 	check_on_root
 	mount_disk
 
-	echo "Copying arch.sh to $mnt..."
+	echo "Copying $arch_path/$arch_file to $mnt$arch_path/..."
 
 	mkdir -p $mnt$arch_path
-	cp $arch_path/arch.sh $mnt$arch_path
+	cp $arch_path/$arch_file $mnt$arch_path
 
 	if [ "$root_only" -eq 0 ] && [ $(grep "^$user" $mnt/etc/passwd) ]; then
-		arch-chroot $mnt chown $user:$user $arch_path/arch.sh
+		arch-chroot $mnt chown $user:$user $arch_path/$arch_file
 	fi
 
 }
@@ -1794,8 +1793,8 @@ last_modified () {
 
 edit_arch () {
 
-	if [ "$(ls $arch_path | grep arch.sh)" ]; then
-		vim $arch_path/arch.sh && exit
+	if [ "$(ls $arch_path | grep $arch_file)" ]; then
+		vim $arch_path/$arch_file && exit
 	fi
 
 }
@@ -1863,9 +1862,8 @@ if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ]; then
 fi
 
 
-
 choices=("1. Quit
-2. Edit arch.sh
+2. Edit $arch_file
 3. Chroot
 4. Change disk ($disk)
 5. Partition disk
@@ -1896,8 +1894,7 @@ choices=("1. Quit
 30. Choose initramfs
 31. Custom install
 32. Setup files
-33. Unsquash to target
-34. Edit arch.sh")
+33. Unsquash to target")
 
 
 while :; do
@@ -1905,8 +1902,9 @@ while :; do
 echo
 echo "${choices[@]}" | column   
 
-read -p "Which option? " choice
-echo
+echo -ne "\nEnter an option: "
+
+read choice
 
 	case $choice in
 		Quit|quit|q|exit|1)	break; ;;
