@@ -322,7 +322,7 @@ Server = file:///var/cache/pacman/pkg/
 
 	reset_keys
 
-	packages="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar"
+	packages="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar man-db"
 
 	[ "$root_only" ] && packages="$packages sudo"
 	[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs"
