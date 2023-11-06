@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/env bash
 
 
 # Documentation
@@ -1597,19 +1597,22 @@ copy_pkgs () {
 
 	echo "Syncing..."
 	sync
+
 }
 
 
 
 check_online () {
 
-	#ping -q -w 1 -c 1 $(ip r | grep default | cut -d ' ' -f 3) > /dev/null || offline=1 
-	ping -q -w 1 -c 1 kernel.org 
+	curl -Is  http://www.google.com &>/dev/null && online=1 || online=0
+	#curl -Is  http://www.google.com | head -n 1 &> /dev/null && online=1 || online=0
+	#ping -q -w 1 -c 1 $(ip r | grep default | cut -d ' ' -f 3) &> /dev/null && online=1 || online=0
 
-	if [ "$offline" -eq 1 ]; then
+	if [ $online -eq 0 ]; then
 		echo -e "\nNo internet connection found. Offline mode enabled."
 		offline=1 
 	fi
+
 }
 
 
@@ -1847,11 +1850,7 @@ else
 fi
 
 check_viable_disk
-#check_online
-
-if [ "$offline" -eq 1 ]; then
-	echo -e "\nInitializing repo for offline installation..."
-fi
+check_online
 
 
 loadkeys en
