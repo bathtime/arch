@@ -1723,13 +1723,16 @@ auto_install_gnome () {
 
 clean_system () {
 
-	echo "Cleaning system..."
+	echo "Cleaning unused locales..."
+	ls /usr/share/locales/ | grep -xv "en_US" | xargs rm -r
 
-	rm -rf /home/user/.cache/mozilla/
+	echo "Cleaning ~/.cache..."
+	rm -rf /home/user/.cache/*
+	
+	echo "Cleaning mozilla..."
 
 	cd /home/$user/.mozilla/firefox
 	rm -rf 'Crash Reports' 'Pending Pings'
-
 
 	profile=$(ls /home/user/.mozilla/firefox/ | grep .*.default-release)
 	cd $profile
