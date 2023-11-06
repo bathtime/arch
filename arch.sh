@@ -165,7 +165,7 @@ choose_disk () {
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd"
 		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-		disks+=$(echo -e "\nhost\nrefresh\nquit")
+		disks=$(echo -e "\nquit\nedit\nrefresh\nhost\n$disks")
 
 		echo -e "\nWhich drive?\n"
 
@@ -174,7 +174,8 @@ choose_disk () {
 			case $disk in
 				host)		disk="$(mount | awk '/ on \/ / { print $1}' | sed 's/[0-9]$//g')"; search_disks=0 ; break ;;
 				refresh) break;	;;
-				quit) 	echo -e "\nQuitting!"; exit; ;;
+				quit) 	echo -e "\nQuitting!"; exit ;;
+				edit)		vim $arch_path/arch.sh; exit ;;
 				'')   	echo -e "\nInvalid option!\n" ; break ;;
 				*)    	search_disks=0; break; ;;
 			esac
@@ -1987,7 +1988,6 @@ echo
 									esac ;;
 	
 		unsquash|33)			extract_archive ;;
-		edit|34)					edit_arch ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
