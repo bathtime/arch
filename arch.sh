@@ -1547,7 +1547,8 @@ custom_install () {
 
 	# cage firefox xorg-xwayland weston
 
-	read -p "Which package(s) would you like to install? (ex., cage firefox xorg-xwayland weston pipewire pipewire-alsa) " packages
+	echo -e "Which package(s) would you like to install?\n"
+	read packages
 
 	if [ "$packages" ]; then
 		pacstrap_install $packages
