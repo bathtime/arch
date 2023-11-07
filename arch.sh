@@ -654,6 +654,8 @@ general_setup () {
 	check_on_root
 	mount_disk
 
+	arch-chroot $mnt printf "$password\n$password\n" | passwd
+
 	echo -e 'en_US.UTF-8 UTF-8\nen_US ISO-8859-1' > $mnt/etc/locale.gen  
 	echo 'LANG=en_US.UTF-8' > $mnt/etc/locale.conf
 	echo 'Arch-Linux' > $mnt/etc/hostname
