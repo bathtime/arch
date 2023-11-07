@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/bin/su root
 
 
 # Documentation
@@ -1778,9 +1778,11 @@ install_config () {
 	read -p "Press any key when ready to enter password."
 
 	echo "Decrypting setup file..."
+
 	gpg --yes --output /home/$user/setup.tar --decrypt /home/$user/setup.tar.gpg
 
-	cp /home/$user/setup.tar $mnt/home/$user/
+
+	cp /home/$user/setup.tar{,.gpg} $mnt/home/$user/
 
 	echo "Extracting setup file..."
 	arch-chroot -u $user $mnt tar xvf /home/$user/setup.tar --directory /home/$user
@@ -1843,8 +1845,6 @@ CONFIG_FILES=".config/baloofilerc
 .local/share/user-places.xbel
 .viminfo
 .mozilla/*"
-
-
 
 if [ "$1" ]; then
 	disk="$1"
