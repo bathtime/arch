@@ -285,7 +285,7 @@ mount_disk () {
 
 	fi
 
-	mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg}
+	mkdir -p $mnt/{.snapshots,etc,tmp,root,var/cache/pacman/pkg}
 	chmod 750 $mnt/root
 
 	fstype="$(lsblk -n -o FSTYPE $disk$rootPart)"
@@ -1726,8 +1726,8 @@ auto_install_gnome () {
 
 clean_system () {
 
-	echo "Cleaning unused locales..."
-	ls /usr/share/locales/ | grep -xv "en_US" | xargs rm -r
+	#echo "Cleaning unused locales..."
+	#ls /usr/share/locales/ | grep -xv "en_US" | xargs rm -r
 
 	echo "Cleaning ~/.cache..."
 	rm -rf /home/user/.cache/*
@@ -1754,9 +1754,10 @@ backup_config () {
 
 	sudo -u $user tar -pcf setup.tar $CONFIG_FILES
 
-	sudo -u $user gpg --yes -c setup.tar
+	#sudo -u $user gpg --yes -c setup.tar
 	
-	ls -lah setup.tar setup.tar.gpg
+	#ls -lah setup.tar setup.tar.gpg
+	ls -lah setup.tar
 
 }
 
@@ -1778,14 +1779,13 @@ install_config () {
 	check_on_root
 	mount_disk
 
-	read -p "Press any key when ready to enter password."
-
-	echo "Decrypting setup file..."
-
-	gpg --yes --output /home/$user/setup.tar --decrypt /home/$user/setup.tar.gpg
+	#read -p "Press any key when ready to enter password."
+	#echo "Decrypting setup file..."
+	#gpg --yes --output /home/$user/setup.tar --decrypt /home/$user/setup.tar.gpg
 
 
-	cp /home/$user/setup.tar{,.gpg} $mnt/home/$user/
+	#cp /home/$user/setup.tar{,.gpg} $mnt/home/$user/
+	cp /home/$user/setup.tar $mnt/home/$user/
 
 	echo "Extracting setup file..."
 	arch-chroot -u $user $mnt tar xvf /home/$user/setup.tar --directory /home/$user
@@ -1945,23 +1945,22 @@ read choice
 4. Cage
 5. KDE
 6. Gnome")
+										echo
+										echo "${config_os[@]}" | column
+										echo  
 
-									echo
-									echo "${config_os[@]}" | column
-									echo  
+										read -p "Which option? " config_os
 
-									read -p "Which option? " config_os
-
-        							case $config_os in
-                					quit|1)		;;
-                					root|2)		time auto_install_root ;;
-                					user|3)		time auto_install_user ;;
-                					cage|4)		time auto_install_cage ;;
-                					kde|5)		time auto_install_kde ;;
-                					gnome|6)		time auto_install_gnome ;;
-                					'')			;;
-	              					*)				echo -e "\nInvalid option ($config_os)!\n" ;;
-									esac ;;
+        								case $config_os in
+                						quit|1)		;;
+                						root|2)		time auto_install_root ;;
+                						user|3)		time auto_install_user ;;
+                						cage|4)		time auto_install_cage ;;
+                						kde|5)		time auto_install_kde ;;
+                						gnome|6)		time auto_install_gnome ;;
+                						'')			;;
+	              						*)				echo -e "\nInvalid option ($config_os)!\n" ;;
+										esac ;;
 
 		copy_script|29)		copy_script ;;
 		initramfs|30)			choose_initramfs ;;
@@ -1971,24 +1970,28 @@ read choice
 3. Restore config
 4. Install config
 5. Cleanup system
-6. Last modified")
+6. Last modified")			config_choice=0
 
-									echo
-									echo "${config_choices[@]}" | column
-									echo  
+									while [ ! "$config_choice" = "1" ]; do
 
-									read -p "Which option? " config_choice
+										echo
+										echo "${config_choices[@]}" | column
+										echo  
 
-        							case $config_choice in
-                					quit|1)		echo "Quitting!"; break; ;;
-                					backup|2)	backup_config ;;
-                					restore|3)	restore_config ;;
-                					install|4)	install_config ;;
-                					clean|5)		clean_system ;;
-                					last|6)		last_modified ;;
-                					'')			last_modified ;;
-                					*)				echo -e "\nInvalid option ($config_choice)!\n" ;;
-									esac ;;
+										read -p "Which option? " config_choice
+
+        								case $config_choice in
+                						quit|1)		echo "Quitting!"; break; ;;
+                						backup|2)	backup_config ;;
+                						restore|3)	restore_config ;;
+                						install|4)	install_config ;;
+                						clean|5)		clean_system ;;
+                						last|6)		last_modified ;;
+                						'')			last_modified ;;
+                						*)				echo -e "\nInvalid option ($config_choice)!\n" ;;
+										esac
+
+									done ;;
 	
 		unsquash|33)			extract_archive ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
