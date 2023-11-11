@@ -1690,9 +1690,30 @@ auto_install_kde () {
 	copy_pkgs
 
 
-	# Customize system
-
+	# Auto-launch
 	sed -i 's/^:/   startplasma-wayland/g' $mnt/home/$user/.bash_profile
+
+	# Create desktop icon to edit arch.sh
+	mkdir -p $mnt/home/$user/.local/share/applications
+
+	echo -e '[Desktop Entry]
+Categories=Utility;TextEditor;
+Comment=Setup an Arch Linux system
+Exec=echo -e "Exit gui application to quit progrom!\n"; while :; do sudo /usr/local/bin/arch.sh; done
+GenericName=Arch setup
+Icon=preferences-system-linux
+Keywords=Text;editor;arch;setup
+MimeType=text/english;text/plain;text/x-makefile;text/x-c++hdr;text/x-c++src;text/x-chdr;text/x-csrc;text/x-java;text/x-moc;text/x-pascal;text/x-tcl;text/x-tex;application/x-shellscript;text/x-c;text/x-c++;
+Name=Arch
+NoDisplay=false
+Path=
+StartupNotify=false
+Terminal=true
+TerminalOptions=
+TryExec=vim
+Type=Application
+X-KDE-SubstituteUID=false
+X-KDE-Username=' > $mnt/home/$user/.local/share/applications/arch.desktop
 
 	install_config	
 
