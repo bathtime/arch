@@ -1,5 +1,4 @@
-#!/bin/su root
-
+#!/bin/bash
 
 # Documentation
 
@@ -165,7 +164,7 @@ choose_disk () {
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd"
 		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-		disks=$(echo -e "\nquit\nedit\n$disks\nrefresh\nhost")
+		disks=$(echo -e "\nquit\nedit\n$disks\nhost\nrefresh\nreboot")
 
 		echo -e "\nWhich drive?\n"
 
@@ -174,6 +173,7 @@ choose_disk () {
 			case $disk in
 				host)		disk="$(mount | awk '/ on \/ / { print $1}' | sed 's/[0-9]$//g')"; search_disks=0 ; break ;;
 				refresh) break;	;;
+				reboot)	echo -e "\nRebooting!"; reboot ;;
 				quit) 	echo -e "\nQuitting!"; exit ;;
 				edit)		vim $arch_path/$arch_file; exit ;;
 				'')   	echo -e "\nInvalid option!\n" ; break ;;
@@ -452,6 +452,9 @@ install_REFIND () {
 
 
 	pacstrap_install refind 
+	
+
+	mkdir -p $mnt/{proc,sys,dev,run}
 
 	arch-chroot $mnt refind-install --usedefault $disk$espPart --alldrivers
 
@@ -725,9 +728,6 @@ setup_user () {
 	pacstrap_install sudo
 
 
-	mkdir -p -m 750 $mnt/etc/sudoers.d
-	echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/wheel
-
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
 		arch-chroot $mnt useradd -m $user -G wheel
 	fi
@@ -741,6 +741,13 @@ setup_user () {
 		printf "$password\n$password\n" | passwd "$user"
 EOF
 
+	mkdir -p -m 750 $mnt/etc/sudoers.d
+	echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/1-wheel
+	echo 'user ALL = NOPASSWD: /usr/local/bin/arch.sh' > $mnt/etc/sudoers.d/10-arch
+	chmod 0440 $mnt/etc/sudoers.d/{1-wheel,10-arch}
+
+	arch-chroot $mnt visudo -c
+	
 	# Autologin to tty1
 	mkdir -p $mnt/etc/systemd/system/getty@tty1.service.d
 	echo "[Service]
@@ -1370,15 +1377,15 @@ clone_disk () {
 	mount_disk
 
 
-	pacstrap_install rsync
+	#pacstrap_install rsync
 
 
 	echo -e "\nCloning disk. Please be patient...\n"
 
-	rsync --info=progress2 -a --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/mnt/ / $mnt/
+	rsync --info=progress2 -a --exclude=/efi --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/mnt/ / $mnt/
 
-	setup_fstab
-	install_REFIND
+	#setup_fstab
+	#install_REFIND
 
 	echo "Syncing disk..."
 	sync
