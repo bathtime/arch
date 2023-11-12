@@ -1963,7 +1963,7 @@ read choice
 		squashfs|21)			create_archive ;;
 		clone|22)				clone_disk ;;
 		connect|iwd|23)		connect_wireless ;;
-		script|24)				download_script ;;
+		script|24)				download_script; exit ;;
 		host|25)			 		install_host_packages ;;
 		reset|keys|26)			reset_keys ;;
 		pkgs|27)					copy_pkgs ;;
