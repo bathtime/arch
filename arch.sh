@@ -164,7 +164,7 @@ choose_disk () {
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd"
 		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-		disks=$(echo -e "\nquit\nedit\n$disks\nhost\nrefresh\nreboot")
+		disks=$(echo -e "\nquit\nedit\n$disks\nhost\nrefresh\nreboot\nhibernate\npoweroff")
 
 		echo -e "\nWhich drive?\n"
 
@@ -172,12 +172,14 @@ choose_disk () {
 		do
 			case $disk in
 				host)		disk="$(mount | awk '/ on \/ / { print $1}' | sed 's/[0-9]$//g')"; search_disks=0 ; break ;;
-				refresh) break;	;;
-				reboot)	echo -e "\nRebooting!"; reboot ;;
-				quit) 	echo -e "\nQuitting!"; exit ;;
-				edit)		vim $arch_path/$arch_file; exit ;;
-				'')   	echo -e "\nInvalid option!\n" ; break ;;
-				*)    	search_disks=0; break; ;;
+				refresh) 	break;	;;
+				poweroff)	poweroff ;;
+				hibernate)	echo disk > /sys/power/state ;;
+				reboot)		reboot ;;
+				quit) 		echo -e "\nQuitting!"; exit ;;
+				edit)			vim $arch_path/$arch_file; exit ;;
+				'')   		echo -e "\nInvalid option!\n" ; break ;;
+				*)    		search_disks=0; break; ;;
 			esac
 		done
 
@@ -673,6 +675,7 @@ general_setup () {
 alias ls="ls --color=auto"
 alias grep="grep --color=auto"
 alias vi="vim"
+alias arch="sudo /usr/local/bin/arch.sh"
 PS1="# "' > $mnt/root/.bashrc
 
 	arch-chroot $mnt hwclock --systohc
@@ -790,6 +793,7 @@ fi' > $mnt/home/$user/.bash_profile
 alias ls="ls --color=auto"
 alias grep="grep --color=auto"
 alias vi="vim"
+alias arch="sudo /usr/local/bin/arch.sh"
 PS1="$ "' > $mnt/home/$user/.bashrc
 	arch-chroot $mnt chown user:user /home/$user/.bashrc
 
