@@ -164,7 +164,7 @@ choose_disk () {
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd"
 		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-		disks=$(echo -e "\nquit\nedit\n$disks\nhost\nrefresh\nreboot\nhibernate\npoweroff")
+		disks=$(echo -e "\nquit\nedit\n$disks\nhost\nrefresh\nreboot\nsuspend\nhibernate\npoweroff")
 
 		echo -e "\nWhich drive?\n"
 
@@ -174,6 +174,7 @@ choose_disk () {
 				host)		disk="$(mount | awk '/ on \/ / { print $1}' | sed 's/[0-9]$//g')"; search_disks=0 ; break ;;
 				refresh) 	break;	;;
 				poweroff)	poweroff ;;
+				suspend)		echo mem > /sys/power/state ;;
 				hibernate)	echo disk > /sys/power/state ;;
 				reboot)		reboot ;;
 				quit) 		echo -e "\nQuitting!"; exit ;;
