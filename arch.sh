@@ -1081,8 +1081,6 @@ install_liveroot () {
 
 	pacstrap_install rsync squashfs-tools
 
-	ESP_UUID=$(blkid -s UUID -o value $disk$espPart)
-
 	echo '#!/usr/bin/bash
 
 create_archive() {
@@ -1119,6 +1117,9 @@ run_latehook() {
 	real_root=/real_root
 	new_root=/new_root
 	mkdir -p $real_root $new_root
+
+   disk=$(mount | grep " on /new_root " | sed "s/[0-9] on \/new_root.*//g")
+   ESP_UUID=$(blkid -s UUID -o value $disk"1")
 
 	if read -t 2 -s -n 1; then
 
@@ -1227,19 +1228,16 @@ run_latehook() {
 			umount $new_root
 
 			mount --mkdir -o subvolid=256 ${root} $new_root
+   		mount --uuid $ESP_UUID $new_root/efi
+
 		fi
 
 	else
 
 		echo -e "Running default option..."
+   	mount --uuid $ESP_UUID $new_root/efi
 
 	fi
-
-
-   disk=$(mount | grep " on /new_root " | sed "s/[0-9] on \/new_root.*//g")
-   ESP_UUID=$(blkid -s UUID -o value $disk"1")
-
-   mount --uuid $ESP_UUID $new_root/efi
 
 }' > $mnt/usr/lib/initcpio/hooks/liveroot
 
@@ -1372,7 +1370,7 @@ connect_wireless () {
 
 download_script () {
 
-	echo -e "\nDowloading scripts from Github..."
+	echo -e "\nDowloading script from Github..."
 
 	curl -sL https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > $arch_path$arch_file
 	chmod +x $arch_path$arch_file
@@ -1933,7 +1931,7 @@ choices=("1. Quit
 26. Reset pacman keys
 27. Finalize install
 28. Auto-install
-29. Copy scripts
+29. Copy script
 30. Choose initramfs
 31. Custom install
 32. Setup files
@@ -2032,6 +2030,7 @@ read choice
 									done ;;
 	
 		unsquash|33)			extract_archive ;;
+		'')						;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
