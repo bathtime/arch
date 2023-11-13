@@ -1242,8 +1242,6 @@ run_latehook() {
 
 }' > $mnt/usr/lib/initcpio/hooks/liveroot
 
-
-	sed -i "s/\$ESP_UUID/$ESP_UUID/g" $mnt/usr/lib/initcpio/hooks/liveroot
 	cat $mnt/usr/lib/initcpio/hooks/liveroot
 
 	echo '#!/bin/sh
@@ -1685,6 +1683,9 @@ auto_install_cage () {
 	install_liveroot
 	pacstrap_install cage firefox xorg-xwayland weston pipewire pipewire-alsa
 	copy_pkgs
+	
+	sed -i 's/^:/   cage firefox/g' $mnt/home/$user/.bash_profile
+	install_config	
 
 }
 
