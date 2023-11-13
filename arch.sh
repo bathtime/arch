@@ -1227,16 +1227,19 @@ run_latehook() {
 			umount $new_root
 
 			mount --mkdir -o subvolid=256 ${root} $new_root
-			mount --uuid $ESP_UUID $new_root/efi
 		fi
 
 	else
 
 		echo -e "Running default option..."
 
-		mount --uuid $ESP_UUID $new_root/efi
-
 	fi
+
+
+   disk=$(mount | grep " on /new_root " | sed "s/[0-9] on \/new_root.*//g")
+   ESP_UUID=$(blkid -s UUID -o value $disk"1")
+
+   mount --uuid $ESP_UUID $new_root/efi
 
 }' > $mnt/usr/lib/initcpio/hooks/liveroot
 
@@ -1287,6 +1290,9 @@ default_image="/boot/initramfs-linux.img"' > $mnt/etc/mkinitcpio.d/linux.preset
 
 	# So systemd won't remount as 'rw'
 	systemctl --root=$mnt mask systemd-remount-fs.service
+
+	# Don't remount /efi either
+	systemctl --root=$mnt mask efi.mount 
 }
 
 
