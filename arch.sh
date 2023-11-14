@@ -1378,7 +1378,7 @@ download_script () {
 
 
 
-clone_disk () {
+clone_host () {
 
 	check_on_root
 	mount_disk
@@ -1387,9 +1387,32 @@ clone_disk () {
 	#pacstrap_install rsync
 
 
-	echo -e "\nCloning disk. Please be patient...\n"
+	echo -e "\nCloning / --> $disk. Please be patient...\n"
 
 	rsync --info=progress2 -a --exclude=/efi --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/mnt/ / $mnt/
+
+	#setup_fstab
+	#install_REFIND
+
+	echo "Syncing disk..."
+	sync
+
+}
+
+
+
+clone_target () {
+
+	check_on_root
+	mount_disk
+
+
+	#pacstrap_install rsync
+
+
+	echo -e "\nCloning $disk -> /. Please be patient...\n"
+
+	rsync --info=progress2 -a --exclude=/efi --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/mnt/ $mnt/ /
 
 	#setup_fstab
 	#install_REFIND
@@ -1927,17 +1950,18 @@ choices=("1. Quit
 20. Unmount $mnt
 21. Create squashfs image
 22. Clone / -> $disk
-23. Connect wireless
-24. Download script
-25. Install host packages
-26. Reset pacman keys
-27. Finalize install
-28. Auto-install
-29. Copy script
-30. Choose initramfs
-31. Custom install
-32. Setup files
-33. Unsquash to target")
+23. Clone $disk -> /
+24. Connect wireless
+25. Download script
+26. Install host packages
+27. Reset pacman keys
+28. Finalize install
+29. Auto-install
+30. Copy script
+31. Choose initramfs
+32. Custom install
+33. Setup files
+34. Unsquash to target")
 
 
 while :; do
@@ -1959,7 +1983,7 @@ read choice
 		hypervisor|7)			hypervisor_setup ;;
 		fstab|8)					setup_fstab ;;
 		boot|9)					install_bootloader ;;
-		setup|10)					general_setup ;;
+		setup|10)				general_setup ;;
 		user|11)					setup_user ;;
       network|12)				install_network ;;
 		aur|13)					install_aur ;;
@@ -1971,13 +1995,14 @@ read choice
       mount|19)				mount_disk  ;;
       unmount|20)				unmount_disk  ;;
 		squashfs|21)			create_archive ;;
-		clone|22)				clone_disk ;;
-		connect|iwd|23)		connect_wireless ;;
-		script|24)				download_script; exit ;;
-		host|25)			 		install_host_packages ;;
-		reset|keys|26)			reset_keys ;;
-		pkgs|27)					copy_pkgs ;;
-		root|28)					config_os=("1. Quit
+		clone|22)				clone_host ;;
+		clone|23)				clone_target ;;
+		connect|iwd|24)		connect_wireless ;;
+		script|25)				download_script; exit ;;
+		host|26)			 		install_host_packages ;;
+		reset|keys|27)			reset_keys ;;
+		pkgs|28)					copy_pkgs ;;
+		root|29)					config_os=("1. Quit
 2. Root
 3. User
 4. Cage
@@ -2000,10 +2025,10 @@ read choice
 	              						*)				echo -e "\nInvalid option ($config_os)!\n" ;;
 										esac ;;
 
-		copy_script|29)		copy_script ;;
-		initramfs|30)			choose_initramfs ;;
-		custom|31)				custom_install ;;
-		setup|32)			config_choices=("1. Quit
+		copy_script|30)		copy_script ;;
+		initramfs|31)			choose_initramfs ;;
+		custom|32)				custom_install ;;
+		setup|33)			config_choices=("1. Quit
 2. Backup config
 3. Restore config
 4. Install config
@@ -2031,7 +2056,7 @@ read choice
 
 									done ;;
 	
-		unsquash|33)			extract_archive ;;
+		unsquash|34)			extract_archive ;;
 		'')						;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
