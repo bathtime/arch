@@ -157,21 +157,22 @@ unmount_disk () {
 choose_disk () {
 
 	search_disks=1
+	host="$(mount | awk '/ on \/ / { print $1}' | sed 's/p*[0-9]$//g')"
 
 	while [ $search_disks -eq 1 ]; do
 
 		echo -e "\nDrives found:\n"
 
-		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd"
+		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g"
 		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-		disks=$(echo -e "\nquit\nedit\n$disks\nhost\nrefresh\nreboot\nsuspend\nhibernate\npoweroff")
+		disks=$(echo -e "\nquit\nedit\n$disks\n/\nrefresh\nreboot\nsuspend\nhibernate\npoweroff")
 
 		echo -e "\nWhich drive?\n"
 
 		select disk in $disks
 		do
 			case $disk in
-				host)		disk="$(mount | awk '/ on \/ / { print $1}' | sed 's/[0-9]$//g')"; search_disks=0 ; break ;;
+				/)				disk=$host; search_disks=0 ; break ;;
 				refresh) 	break;	;;
 				poweroff)	poweroff ;;
 				suspend)		echo mem > /sys/power/state ;;
