@@ -1710,7 +1710,7 @@ auto_install_weston () {
 	copy_pkgs
 	
 	#sed -i 's/^:/   cage firefox/g' $mnt/home/$user/.bash_profile
-	sed -i 's/^:/  weston --shell=desktop/g' $mnt/home/$user/.bash_profile
+	sed -i 's/^:/  exec weston --shell=desktop/g' $mnt/home/$user/.bash_profile
 	install_config
 
 	echo '[core]
