@@ -1372,8 +1372,8 @@ download_script () {
 
 	echo -e "\nDowloading script from Github..."
 
-	curl -sL https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > $arch_path$arch_file
-	chmod +x $arch_path$arch_file
+	curl -sL https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > $arch_path/$arch_file
+	chmod +x $arch_path/$arch_file
 
 }
 
@@ -1693,7 +1693,7 @@ auto_install_user () {
 
 
 
-auto_install_cage () {
+auto_install_weston () {
 
 	root_only=0
 
@@ -1705,11 +1705,91 @@ auto_install_cage () {
 	setup_user
 	setup_iwd
 	install_liveroot
-	pacstrap_install cage firefox xorg-xwayland weston pipewire pipewire-alsa
+	#pacstrap_install cage firefox xorg-xwayland weston pipewire pipewire-alsa
+	pacstrap_install weston firefox weston pipewire pipewire-alsa foliate brightnessctl
 	copy_pkgs
 	
-	sed -i 's/^:/   cage firefox/g' $mnt/home/$user/.bash_profile
-	install_config	
+	#sed -i 's/^:/   cage firefox/g' $mnt/home/$user/.bash_profile
+	sed -i 's/^:/  weston --shell=desktop/g' $mnt/home/$user/.bash_profile
+	install_config
+
+	echo '[core]
+# xwayland support
+xwayland=true
+
+[libinput]
+enable-tap=true
+
+[shell]
+#background-image=/usr/share/backgrounds/gnome/Aqua.jpg
+background-type=scale-crop
+background-color=0xff000000
+#background-color=0xff002244
+#panel-color=0x90ff0000
+panel-color=0x00ffffff
+panel-position=bottom
+#clock-format=none
+#animation=zoom
+#startup-animation=none
+close-animation=none
+focus-animation=dim-layer
+#binding-modifier=ctrl
+num-workspaces=6
+locking=false
+cursor-theme=Adwaita
+cursor-size=24
+
+# tablet options
+#lockscreen-icon=/usr/share/icons/gnome/256x256/actions/lock.png
+#lockscreen=/usr/share/backgrounds/gnome/Garden.jpg
+homescreen=/usr/share/backgrounds/gnome/Blinds.jpg
+#animation=fade
+
+# for Laptop displays
+#[output]
+#name=LVDS1
+#mode=preferred
+#mode=1680x1050
+#transform=rotate-90
+
+#[output]
+#name=VGA1
+# The following sets the mode with a modeline, you can get modelines for your preffered resolutions using the cvt utility
+#mode=173.00 1920 2048 2248 2576 1080 1083 1088 1120 -hsync +vsync
+#transform=flipped
+
+#[output]
+#name=X1
+#mode=1024x768
+#transform=flipped-rotate-270
+
+# on screen keyboard input method
+[input-method]
+path=/usr/lib/weston/weston-keyboard
+
+[keyboard]
+keymap_rules=evdev
+repeat-rate=30
+repeat-delay=300
+
+# keymap_options from /usr/share/X11/xkb/rules/base.lst
+#numlock-on=true
+
+[terminal]
+font=monospace
+font-size=18
+
+[launcher]
+icon=/usr/share/icons/hicolor/48x48/apps/gvim.png
+path=/usr/bin/weston-terminal --shell=/usr/bin/bash -m
+
+[launcher]
+icon=/usr/share/icons/hicolor/48x48/apps/firefox.png
+path=MOZ_ENABLE_WAYLAND=1 /usr/bin/firefox
+
+[launcher]
+icon=/usr/share/icons/hicolor/48x48/apps/kwin.png
+path=/usr/bin/foliate' > $mnt/home/$user/.config/weston.ini
 
 }
 
@@ -1729,7 +1809,7 @@ auto_install_kde () {
 	install_liveroot
 	pacstrap_install plasma-desktop plasma-wayland-session plasma-pa kscreen dolphin konsole firefox
 	copy_pkgs
-
+	copy_script
 
 	# Auto-launch
 	sed -i 's/^:/   startplasma-wayland/g' $mnt/home/$user/.bash_profile
@@ -1755,6 +1835,32 @@ TryExec=vim
 Type=Application
 X-KDE-SubstituteUID=false
 X-KDE-Username=' > $mnt/home/$user/.local/share/applications/arch.desktop
+
+
+	echo '[Desktop Entry]
+Categories=Utility
+Comment=Rotate screen
+Exec=rotate.sh
+GenericName=rotate
+Icon=object-rotate-left-symbolic
+Name=rotate
+NoDisplay=false
+StartupNotify=false
+Terminal=false
+TerminalOptions=
+Type=Application
+X-KDE-SubstituteUID=false
+X-KDE-Username=' > /home/$user/.local/share/applications/rotate.desktop
+
+	echo '#!/bin/sh
+
+if [ -f /home/user/.cache/rotated ]; then
+        kscreen-doctor  output.eDP-1.rotation.normal
+        rm -rf /home/user/.cache/rotated
+else
+        kscreen-doctor  output.eDP-1.rotation.left
+        touch /home/user/.cache/rotated
+fi' > $mnt/usr/local/bin/rotate.sh 
 
 	install_config	
 
@@ -1815,6 +1921,7 @@ backup_config () {
 	cd /home/$user
 
 	sudo -u $user tar -pcf setup.tar $CONFIG_FILES
+	chown $user:$user setup.tar
 
 	#sudo -u $user gpg --yes -c setup.tar
 	
@@ -1901,8 +2008,10 @@ CONFIG_FILES=".config/baloofilerc
 .config/systemsettingsrc
 .config/Trolltech.conf
 .local/bin/*
+.local/share/applications/*
 .local/share/color-schemes/*
 .local/share/dolphin/dolphinstaterc
+.local/share/icons/*
 .local/share/konsole/*.profile
 .local/share/kxmlgui5/konsole/konsoleui.rc
 .local/share/kxmlgui5/konsole/sessionui.rc
@@ -2006,7 +2115,7 @@ read choice
 		root|29)					config_os=("1. Quit
 2. Root
 3. User
-4. Cage
+4. Weston
 5. KDE
 6. Gnome")
 										echo
@@ -2019,7 +2128,7 @@ read choice
                 						quit|1)		;;
                 						root|2)		time auto_install_root ;;
                 						user|3)		time auto_install_user ;;
-                						cage|4)		time auto_install_cage ;;
+                						weston|4)	time auto_install_weston ;;
                 						kde|5)		time auto_install_kde ;;
                 						gnome|6)		time auto_install_gnome ;;
                 						'')			;;
