@@ -1379,44 +1379,15 @@ download_script () {
 
 
 
-clone_host () {
+clone () {
 
 	check_on_root
 	mount_disk
 
 
-	#pacstrap_install rsync
+	echo -e "\n$1 $3 -> $4. Please be patient...\n"
 
-
-	echo -e "\nCloning / --> $disk. Please be patient...\n"
-
-	rsync --info=progress2 -a --exclude=/efi --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/mnt/ / $mnt/
-
-	#setup_fstab
-	#install_REFIND
-
-	echo "Syncing disk..."
-	sync
-
-}
-
-
-
-clone_target () {
-
-	check_on_root
-	mount_disk
-
-
-	#pacstrap_install rsync
-
-
-	echo -e "\nCloning $disk -> /. Please be patient...\n"
-
-	rsync --info=progress2 -a --exclude=/efi --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/mnt/ $mnt/ /
-
-	#setup_fstab
-	#install_REFIND
+	rsync $2 --exclude=/efi --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/mnt/ $3 $4
 
 	echo "Syncing disk..."
 	sync
@@ -2071,7 +2042,10 @@ choices=("1. Quit
 31. Choose initramfs
 32. Custom install
 33. Setup files
-34. Unsquash to target")
+34. Unsquash to target
+35. Copy / -> $disk
+36. Copy $disk -> /
+37. Update / <-> $disk")
 
 
 while :; do
@@ -2105,8 +2079,8 @@ read choice
       mount|19)				mount_disk  ;;
       unmount|20)				unmount_disk  ;;
 		squashfs|21)			create_archive ;;
-		clone|22)				clone_host ;;
-		clone|23)				clone_target ;;
+		clone|22)				clone 'Cloning' "-av --del" / $mnt/ ;;
+		clone|23)				clone 'Cloning' "-av --del" $mnt/ / ;;
 		connect|iwd|24)		connect_wireless ;;
 		script|25)				download_script; exit ;;
 		host|26)			 		install_host_packages ;;
@@ -2167,6 +2141,9 @@ read choice
 									done ;;
 	
 		unsquash|34)			extract_archive ;;
+		copy|35)					clone Copying -av / $mnt/ ;;
+		copy|36)					clone Copying -av $mnt/ / ;;
+		update|37)				clone Updating "-auv" / $mnt/ ; clone Updating "-auv" $mnt/ / ;;
 		'')						;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
