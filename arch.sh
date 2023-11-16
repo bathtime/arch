@@ -103,7 +103,6 @@ check_on_root () {
 unmount_disk () {
 
 	echo "Syncing..."
-
 	sync
 
 	error_check 0 
@@ -361,7 +360,7 @@ hypervisor_setup () {
 	echo -e "\nNot tested. Run at your own risk!\n"
 	exit
 
-    hypervisor=$(systemd-detect-virt)
+	hypervisor=$(systemd-detect-virt)
 
 	case $hypervisor in
 
@@ -422,26 +421,21 @@ setup_fstab () {
 
 choose_initramfs () {
 
-	echo "TODO!"
-
-	return 0	
-
-   echo -e "\nWhich initramfs would you like to install?\n"
-
 	if [ "$1" ]; then
 		choiceInitramfs=$1
 	else
-		choiceInitramfs=(mkinitcpio dracut booster quit)
+		choiceInitramfs="mkinitcpio dracut booster quit"
+		echo -e "\nWhich initramfs would you like to install?"
 	fi
 
-	select choice in "${choiceInitramfs[@]}"
+	select choice in $choiceInitramfs
 	do
 		case $choice in
-			"mkinitcpio")  	pacstrap_install mkinitcpio; break ;;
-			"dracut")      	pacstrap_install dracut; break ;;
-			"booster")  		pacstrap_install booster; break ;;
-			"quit")     break ;;
-			'')         echo -e "\nInvalid option!\n" ;;
+			mkinitcpio|1)	pacstrap_install mkinitcpio; break ;;
+			dracut|2)		pacstrap_install dracut; break ;;
+			booster|3)		pacstrap_install booster; break ;;
+			quit|4)			break ;;
+			'')				echo -e "\nInvalid option!\n" ;;
 		esac
 	done
 
@@ -1637,7 +1631,7 @@ auto_install_root () {
 	general_setup
 	setup_iwd
 	install_liveroot
-	copy_pkgs	
+	copy_script
 
 }
 
@@ -1647,15 +1641,8 @@ auto_install_user () {
 
 	root_only=0
 
-	create_partitions
-	install_base
-	setup_fstab
-	install_REFIND
-	general_setup
+	auto_install_root
 	setup_user
-	setup_iwd
-	install_liveroot
-	copy_pkgs	
 
 }
 
@@ -1663,17 +1650,8 @@ auto_install_user () {
 
 auto_install_weston () {
 
-	root_only=0
-
-	create_partitions
-	install_base
-	setup_fstab
-	install_REFIND
-	general_setup
-	setup_user
-	setup_iwd
-	install_liveroot
-	pacstrap_install weston firefox weston pipewire pipewire-alsa foliate brightnessctl
+	auto_install_user
+	pacstrap_install wireplumber pipewire pipewire-pulse weston firefox foliate brightnessctl
 	copy_pkgs
 	
 	sed -i 's/^:/  exec weston --shell=desktop/g' $mnt/home/$user/.bash_profile
@@ -1685,70 +1663,12 @@ auto_install_weston () {
 
 auto_install_kde () {
 
-	root_only=0
-
-	create_partitions
-	install_base
-	setup_fstab
-	install_REFIND
-	general_setup
-	setup_user
-	setup_iwd
-	install_liveroot
+	auto_install_user
 	pacstrap_install plasma-desktop plasma-wayland-session plasma-pa kscreen dolphin konsole firefox
 	copy_pkgs
-	copy_script
 
 	# Auto-launch
 	sed -i 's/^:/   startplasma-wayland/g' $mnt/home/$user/.bash_profile
-
-	# Create desktop icon to edit arch.sh
-	mkdir -p $mnt/home/$user/.local/share/applications
-
-	echo -e '[Desktop Entry]
-Categories=Utility;TextEditor;
-Comment=Setup an Arch Linux system
-Exec=echo -e "Exit gui application to quit progrom!\n"; while :; do sudo /usr/local/bin/arch.sh; done
-GenericName=Arch setup
-Icon=preferences-system-linux
-Keywords=Text;editor;arch;setup
-MimeType=text/english;text/plain;text/x-makefile;text/x-c++hdr;text/x-c++src;text/x-chdr;text/x-csrc;text/x-java;text/x-moc;text/x-pascal;text/x-tcl;text/x-tex;application/x-shellscript;text/x-c;text/x-c++;
-Name=Arch
-NoDisplay=false
-Path=
-StartupNotify=false
-Terminal=true
-TerminalOptions=
-TryExec=vim
-Type=Application
-X-KDE-SubstituteUID=false
-X-KDE-Username=' > $mnt/home/$user/.local/share/applications/arch.desktop
-
-
-	echo '[Desktop Entry]
-Categories=Utility
-Comment=Rotate screen
-Exec=rotate.sh
-GenericName=rotate
-Icon=object-rotate-left-symbolic
-Name=rotate
-NoDisplay=false
-StartupNotify=false
-Terminal=false
-TerminalOptions=
-Type=Application
-X-KDE-SubstituteUID=false
-X-KDE-Username=' > /home/$user/.local/share/applications/rotate.desktop
-
-	echo '#!/bin/sh
-
-if [ -f /home/user/.cache/rotated ]; then
-        kscreen-doctor  output.eDP-1.rotation.normal
-        rm -rf /home/user/.cache/rotated
-else
-        kscreen-doctor  output.eDP-1.rotation.left
-        touch /home/user/.cache/rotated
-fi' > $mnt/usr/local/bin/rotate.sh 
 
 	install_config	
 
@@ -1756,23 +1676,15 @@ fi' > $mnt/usr/local/bin/rotate.sh
 
 auto_install_gnome () {
 
-	root_only=0
-
-	create_partitions
-	install_base
-	setup_fstab
-	install_REFIND
-	general_setup
-	setup_user
-	setup_iwd
-	install_liveroot
-	pacstrap_install gnome-shell nautilus gnome-terminal gnome-control-center xdg-user-dirs firefox
+	auto_install_user
+	#pacstrap_install gnome-shell nautilus gnome-terminal gnome-control-center xdg-user-dirs firefox
+	pacstrap_install gnome-shell nautilus gnome-terminal xdg-user-dirs firefox
 	copy_pkgs
-
 
 	# Customize system
 
-	sed -i 's/^:/   MOZ_ENABLE_WAYLAND=1 QT_QPA_PLATFORM=wayland XDG_SESSION_TYPE=wayland exec dbus-run-session gnome-session/g' $mnt/home/$user/.bash_profile
+	#sed -i 's/^:/   MOZ_ENABLE_WAYLAND=1 QT_QPA_PLATFORM=wayland XDG_SESSION_TYPE=wayland exec dbus-run-session gnome-session/g' $mnt/home/$user/.bash_profile
+	sed -i 's/^:/   MOZ_ENABLE_WAYLAND=1 QT_QPA_PLATFORM=wayland XDG_SESSION_TYPE=wayland gnome-shell --session=wayland/g' $mnt/home/$user/.bash_profile
 
 	install_config	
 
@@ -2016,8 +1928,8 @@ read choice
 
         								case $config_os in
                 						quit|1)		;;
-                						root|2)		time auto_install_root ;;
-                						user|3)		time auto_install_user ;;
+                						root|2)		auto_install_root; copy_pkgs ;;
+                						user|3)		auto_install_user; copy_pkgs;;
                 						weston|4)	time auto_install_weston ;;
                 						kde|5)		time auto_install_kde ;;
                 						gnome|6)		time auto_install_gnome ;;
@@ -2069,6 +1981,5 @@ read choice
 done
 
 unmount_disk
-
 
 
