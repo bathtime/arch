@@ -1948,19 +1948,19 @@ choices=("1. Quit
 19. Mount $mnt
 20. Unmount $mnt
 21. Create squashfs image
-22. Clone / -> $disk
-23. Clone $disk -> /
-24. Connect wireless
-25. Download script
-26. Install host packages
-27. Reset pacman keys
-28. Finalize install
-29. Auto-install
-30. Copy script
-31. Choose initramfs
-32. Custom install
-33. Setup files
-34. Unsquash to target
+22. Connect wireless
+23. Download script
+24. Install host packages
+25. Reset pacman keys
+26. Finalize install
+27. Auto-install
+28. Copy script
+29. Choose initramfs
+30. Custom install
+31. Setup files
+32. Unsquash to target
+33. Clone / -> $disk
+34. Clone $disk -> /
 35. Copy / -> $disk
 36. Copy $disk -> /
 37. Update / <-> $disk")
@@ -1997,14 +1997,12 @@ read choice
       mount|19)				mount_disk  ;;
       unmount|20)				unmount_disk  ;;
 		squashfs|21)			create_archive ;;
-		clone|22)				clone 'Cloning' "-av --del" / $mnt/ ;;
-		clone|23)				clone 'Cloning' "-av --del" $mnt/ / ;;
-		connect|iwd|24)		connect_wireless ;;
-		script|25)				download_script; exit ;;
-		host|26)			 		install_host_packages ;;
-		reset|keys|27)			reset_keys ;;
-		pkgs|28)					copy_pkgs ;;
-		root|29)					config_os=("1. Quit
+		connect|iwd|22)		connect_wireless ;;
+		script|23)				download_script; exit ;;
+		host|24)			 		install_host_packages ;;
+		reset|keys|25)			reset_keys ;;
+		pkgs|26)					copy_pkgs ;;
+		root|27)					config_os=("1. Quit
 2. Root
 3. User
 4. Weston
@@ -2027,10 +2025,10 @@ read choice
 	              						*)				echo -e "\nInvalid option ($config_os)!\n" ;;
 										esac ;;
 
-		copy_script|30)		copy_script ;;
-		initramfs|31)			choose_initramfs ;;
-		custom|32)				custom_install ;;
-		setup|33)			config_choices=("1. Quit
+		copy_script|28)		copy_script ;;
+		initramfs|29)			choose_initramfs ;;
+		custom|30)				custom_install ;;
+		setup|31)			config_choices=("1. Quit
 2. Backup config
 3. Restore config
 4. Install config
@@ -2058,10 +2056,12 @@ read choice
 
 									done ;;
 	
-		unsquash|34)			extract_archive ;;
+		unsquash|32)			extract_archive ;;
+		clone|33)				clone Cloning "-av --del" / $mnt/ ;;
+		clone|34)				clone Cloning "-av --del" $mnt/ / ;;
 		copy|35)					clone Copying -av / $mnt/ ;;
 		copy|36)					clone Copying -av $mnt/ / ;;
-		update|37)				clone Updating "-auv" / $mnt/ ; clone Updating "-auv" $mnt/ / ;;
+		update|37)				clone Updating -auv / $mnt/ ; clone Updating -auv $mnt/ / ;;
 		'')						;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
