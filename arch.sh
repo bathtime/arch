@@ -1582,12 +1582,9 @@ copy_pkgs () {
 	# Check which packages are installed on chroot system and copy those pkgs from host
 	packages="$(pacman --sysroot $mnt -Q | sed 's/ [0-9].*$//g')"
 
-	#cache_pkgs="$(ls /var/cache/pacman/pkg/)"
-
 	for package in ${packages}; do
 
 		if [ "$(ls /var/cache/pacman/pkg/ | grep $package-*[0-9].*.pkg.tar.zst)" ]; then
-		#if [ "$(echo $cache_pkgs | grep $package-*[0-9].*.pkg.tar.zst)" ]; then
 			echo "Copying $package..."
 			cp -u /var/cache/pacman/pkg/$package-*.pkg.tar.zst $mnt/var/cache/pacman/pkg/
 		fi
@@ -1676,91 +1673,11 @@ auto_install_weston () {
 	setup_user
 	setup_iwd
 	install_liveroot
-	#pacstrap_install cage firefox xorg-xwayland weston pipewire pipewire-alsa
 	pacstrap_install weston firefox weston pipewire pipewire-alsa foliate brightnessctl
 	copy_pkgs
 	
-	#sed -i 's/^:/   cage firefox/g' $mnt/home/$user/.bash_profile
 	sed -i 's/^:/  exec weston --shell=desktop/g' $mnt/home/$user/.bash_profile
 	install_config
-
-	echo '[core]
-# xwayland support
-xwayland=true
-
-[libinput]
-enable-tap=true
-
-[shell]
-#background-image=/usr/share/backgrounds/gnome/Aqua.jpg
-background-type=scale-crop
-background-color=0xff000000
-#background-color=0xff002244
-#panel-color=0x90ff0000
-panel-color=0x00ffffff
-panel-position=bottom
-#clock-format=none
-#animation=zoom
-#startup-animation=none
-close-animation=none
-focus-animation=dim-layer
-#binding-modifier=ctrl
-num-workspaces=6
-locking=false
-cursor-theme=Adwaita
-cursor-size=24
-
-# tablet options
-#lockscreen-icon=/usr/share/icons/gnome/256x256/actions/lock.png
-#lockscreen=/usr/share/backgrounds/gnome/Garden.jpg
-homescreen=/usr/share/backgrounds/gnome/Blinds.jpg
-#animation=fade
-
-# for Laptop displays
-#[output]
-#name=LVDS1
-#mode=preferred
-#mode=1680x1050
-#transform=rotate-90
-
-#[output]
-#name=VGA1
-# The following sets the mode with a modeline, you can get modelines for your preffered resolutions using the cvt utility
-#mode=173.00 1920 2048 2248 2576 1080 1083 1088 1120 -hsync +vsync
-#transform=flipped
-
-#[output]
-#name=X1
-#mode=1024x768
-#transform=flipped-rotate-270
-
-# on screen keyboard input method
-[input-method]
-path=/usr/lib/weston/weston-keyboard
-
-[keyboard]
-keymap_rules=evdev
-repeat-rate=30
-repeat-delay=300
-
-# keymap_options from /usr/share/X11/xkb/rules/base.lst
-#numlock-on=true
-
-[terminal]
-font=monospace
-font-size=18
-
-[launcher]
-icon=/usr/share/icons/hicolor/48x48/apps/gvim.png
-path=/usr/bin/weston-terminal --shell=/usr/bin/bash -m
-
-[launcher]
-icon=/usr/share/icons/hicolor/48x48/apps/firefox.png
-path=MOZ_ENABLE_WAYLAND=1 /usr/bin/firefox
-
-[launcher]
-icon=/usr/share/icons/hicolor/48x48/apps/kwin.png
-path=/usr/bin/foliate' > $mnt/home/$user/.config/weston.ini
 
 }
 
@@ -1978,6 +1895,7 @@ CONFIG_FILES=".config/baloofilerc
 .config/powermanagementprofilesrc
 .config/systemsettingsrc
 .config/Trolltech.conf
+.config/weston.ini
 .local/bin/*
 .local/share/applications/*
 .local/share/color-schemes/*
