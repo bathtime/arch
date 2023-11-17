@@ -1781,6 +1781,29 @@ edit_arch () {
 
 
 
+wipe_disk () {
+
+	size=$(lsblk --output=SIZE -dn $disk)
+
+	echo -e "\nType 'yes' to wipe $disk ($size) using $1 method.\n"
+	read choiceWipe
+	
+	if [ $choiceWipe = yes ]; then
+
+		echo -e "\nWiping $disk using $1 method. Please be patient...\n"
+		dd if=/dev/$1 of=$disk bs=1M status=progress
+
+		echo "Syncing..."
+		sync
+
+	else
+		echo -e "\nNot wiping.\n"
+	fi
+
+}
+
+
+
 CONFIG_FILES=".config/baloofilerc
 .config/dolphinrc
 .config/fontconfig/fonts.conf
@@ -1802,6 +1825,7 @@ CONFIG_FILES=".config/baloofilerc
 .config/ksmserverrc
 .config/kwinrc
 .config/kwinrulesrc
+.config/okularrc
 .config/plasma-org.kde.plasma.desktop-appletsrc
 .config/plasmashellrc
 .config/powermanagementprofilesrc
@@ -1816,6 +1840,7 @@ CONFIG_FILES=".config/baloofilerc
 .local/share/konsole/*.profile
 .local/share/kxmlgui5/konsole/konsoleui.rc
 .local/share/kxmlgui5/konsole/sessionui.rc
+.local/share/kxmlgui5/okular/*
 .local/share/plasma/plasmoids/*
 .local/share/user-places.xbel
 .viminfo
@@ -1875,7 +1900,9 @@ choices=("1. Quit
 34. Clone $disk -> /
 35. Copy / -> $disk
 36. Copy $disk -> /
-37. Update / <-> $disk")
+37. Update / <-> $disk
+38. Wipe (zero)
+39. Wipe (urandom)")
 
 
 while :; do
@@ -1974,6 +2001,8 @@ read choice
 		copy|35)					clone Copying -av / $mnt/ ;;
 		copy|36)					clone Copying -av $mnt/ / ;;
 		update|37)				clone Updating -auv / $mnt/ ; clone Updating -auv $mnt/ / ;;
+		wipe|38)					wipe_disk zero;;
+		wipe|39)					wipe_disk urandom;;
 		'')						;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
