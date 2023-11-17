@@ -1904,13 +1904,14 @@ choices=("1. Quit
 30. Custom install
 31. Setup files
 32. Unsquash to target
-33. Clone / -> $disk
-34. Clone $disk -> /
-35. Copy / -> $disk
-36. Copy $disk -> /
-37. Update / <-> $disk
-38. Wipe (zero)
-39. Wipe (urandom)")
+33. Part + Clone / -> $disk
+34. Clone / -> $disk
+35. Clone $disk -> /
+36. Copy / -> $disk
+37. Copy $disk -> /
+38. Update / <-> $disk
+39. Wipe (zero)
+40. Wipe (urandom)")
 
 
 while :; do
@@ -2004,13 +2005,17 @@ read choice
 									done ;;
 	
 		unsquash|32)			extract_archive ;;
-		clone|33)				clone Cloning "-av --del" / $mnt/ ;;
-		clone|34)				clone Cloning "-av --del" $mnt/ / ;;
-		copy|35)					clone Copying -av / $mnt/ ;;
-		copy|36)					clone Copying -av $mnt/ / ;;
-		update|37)				clone Updating -auv / $mnt/ ; clone Updating -auv $mnt/ / ;;
-		wipe|38)					wipe_disk zero;;
-		wipe|39)					wipe_disk urandom;;
+		clone|33)				create_partitions
+									clone Cloning "-av --del" / $mnt/
+									setup_fstab
+									install_REFIND ;;
+		clone|34)				clone Cloning "-av --del" / $mnt/ ;;
+		clone|35)				clone Cloning "-av --del" $mnt/ / ;;
+		copy|36)					clone Copying -av / $mnt/ ;;
+		copy|37)					clone Copying -av $mnt/ / ;;
+		update|38)				clone Updating -auv / $mnt/ ; clone Updating -auv $mnt/ / ;;
+		wipe|39)					wipe_disk zero;;
+		wipe|40)					wipe_disk urandom;;
 		'')						;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
