@@ -106,8 +106,10 @@ unmount_disk () {
 	sync
 
 	error_check 0 
+		
+	#if [[ "$(mountpoint $mnt | grep 'is a')" ]]; then
 
-	if [[ "$(mountpoint $mnt | grep 'is a')" ]]; then
+	if [[ "$(mount | grep /mnt)" ]]; then
 
 		# Might need to turn error checking off here
 
@@ -119,7 +121,7 @@ unmount_disk () {
 		umount -n -R $mnt
 
 		# Time to get rugged and tough!
-		if [[ "$(mountpoint $mnt | grep 'is a')" ]]; then
+		if [[ "$(mount | grep /mnt)" ]]; then
 
 			echo -e "\nCouldn't unmount. Trying alternative method. Please be patient...\n" 
 
@@ -129,7 +131,7 @@ unmount_disk () {
 				
 				cd /
 
-				if [[ "$(mountpoint $mnt | grep 'is a')" ]]; then
+				if [[ "$(mount | grep /mnt)" ]]; then
 					sleep 2
 					umount -l $mnt
 				else
@@ -1783,6 +1785,9 @@ edit_arch () {
 
 wipe_disk () {
 
+	check_on_root
+	unmount_disk
+
 	size=$(lsblk --output=SIZE -dn $disk)
 
 	echo -e "\nType 'yes' to wipe $disk ($size) using $1 method.\n"
@@ -1791,7 +1796,10 @@ wipe_disk () {
 	if [ $choiceWipe = yes ]; then
 
 		echo -e "\nWiping $disk using $1 method. Please be patient...\n"
-		dd if=/dev/$1 of=$disk bs=1M status=progress
+
+		error_check 0
+		time dd if=/dev/$1 of=$disk bs=1M status=progress
+		error_check 1
 
 		echo "Syncing..."
 		sync
