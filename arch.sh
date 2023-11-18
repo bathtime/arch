@@ -1793,7 +1793,7 @@ wipe_disk () {
 	echo -e "\nType 'yes' to wipe $disk ($size) using $1 method.\n"
 	read choiceWipe
 	
-	if [ $choiceWipe = yes ]; then
+	if [[ $choiceWipe = yes ]]; then
 
 		echo -e "\nWiping $disk using $1 method. Please be patient...\n"
 
