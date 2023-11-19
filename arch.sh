@@ -1788,9 +1788,9 @@ wipe_disk () {
 	check_on_root
 	unmount_disk
 
-	size=$(lsblk --output=SIZE -dn $disk)
+	disk_info=$(lsblk --output=SIZE,MODEL,TRAN -dn $disk)
 
-	echo -e "\nType 'yes' to wipe $disk ($size) using $1 method.\n"
+	echo -e "\nType 'yes' to wipe $disk ($disk_info) using $1 method.\n"
 	read choiceWipe
 	
 	if [[ $choiceWipe = yes ]]; then
