@@ -1383,7 +1383,7 @@ clone () {
 
 	echo -e "\n$1 $3 -> $4. Please be patient...\n"
 
-	rsync $2 --exclude=/efi --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/mnt/ $3 $4
+	rsync $2 --exclude=/efi --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/mnt/ $3 $4
 
 	echo "Syncing disk..."
 	sync
@@ -1414,7 +1414,7 @@ create_archive () {
 	cd / 
 	rm -rf /root.squashfs
 
-	time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/log/ -e /etc/pacman.d/gnupg/ -comp lz4  
+	time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /var/tmp/ -e /var/log/ -e /etc/pacman.d/gnupg/ -e /home/$user/.local/share/Trash/ -comp lz4  
 
 	ls -lah root.squashfs
 
@@ -1788,9 +1788,9 @@ wipe_disk () {
 	check_on_root
 	unmount_disk
 
-	disk_info=$(lsblk --output=SIZE,MODEL,TRAN -dn $disk)
+	size=$(lsblk --output=SIZE -dn $disk)
 
-	echo -e "\nType 'yes' to wipe $disk ($disk_info) using $1 method.\n"
+	echo -e "\nType 'yes' to wipe $disk ($size) using $1 method.\n"
 	read choiceWipe
 	
 	if [[ $choiceWipe = yes ]]; then
