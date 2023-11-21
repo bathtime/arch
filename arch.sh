@@ -1788,9 +1788,8 @@ wipe_disk () {
 	check_on_root
 	unmount_disk
 
-	size=$(lsblk --output=SIZE -dn $disk)
 
-	echo -e "\nType 'yes' to wipe $disk ($size) using $1 method.\n"
+	echo -e "\nDisk: $disk_info\n\nType 'yes' to wipe using $1 method.\n"
 	read choiceWipe
 	
 	if [[ $choiceWipe = yes ]]; then
@@ -1810,6 +1809,15 @@ wipe_disk () {
 
 }
 
+
+
+disk_info () {
+
+	echo -ne "\nDisk: $(lsblk --output=PATH,SIZE,MODEL,TRAN -dn $disk) "
+
+	[[ $(lsblk -no MOUNTPOINT $disk$rootPart) ]] && echo "(mounted)" || echo "(unmounted)"
+
+}
 
 
 CONFIG_FILES=".config/baloofilerc
@@ -1860,7 +1868,10 @@ else
 	choose_disk
 fi
 
+
 check_viable_disk
+disk_info
+
 check_online
 
 
@@ -2016,7 +2027,7 @@ read choice
 		update|38)				clone Updating -auv / $mnt/ ; clone Updating -auv $mnt/ / ;;
 		wipe|39)					wipe_disk zero;;
 		wipe|40)					wipe_disk urandom;;
-		'')						;;
+		'')						disk_info ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
