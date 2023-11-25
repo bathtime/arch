@@ -1873,9 +1873,11 @@ choices=("1. Quit
 35. Clone $disk -> /
 36. Copy / -> $disk
 37. Copy $disk -> /
-38. Update / <-> $disk
-39. Wipe (zero)
-40. Wipe (urandom)")
+38. Copy /~ -> $disk$rootPart/
+39. Copy $disk$rootPart/~ -> /
+40. Update / <-> $disk
+41. Wipe (zero)
+42. Wipe (urandom)")
 
 
 while :; do
@@ -1979,9 +1981,11 @@ echo
 		clone|35)				clone Cloning "-av --del" $mnt/ / ;;
 		copy|36)					clone Copying -av / $mnt/ ;;
 		copy|37)					clone Copying -av $mnt/ / ;;
-		update|38)				clone Updating -auv / $mnt/ ; clone Updating -auv $mnt/ / ;;
-		wipe|39)					wipe_disk zero;;
-		wipe|40)					wipe_disk urandom;;
+		copy|38)					cp -vr /home/$user $mnt/ ;;
+		copy|39)					cp -vr $mnt/home/$user / ;;
+		update|40)				clone Updating -auv / $mnt/ ; clone Updating -auv $mnt/ / ;;
+		wipe|41)					wipe_disk zero;;
+		wipe|42)					wipe_disk urandom;;
 		'')						disk_info ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
