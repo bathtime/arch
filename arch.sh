@@ -1774,6 +1774,16 @@ disk_info () {
 }
 
 
+
+copy_home () {
+
+
+echo
+
+
+}
+
+
 CONFIG_FILES=".config/baloofilerc
 .config/dolphinrc
 .config/epy/*
@@ -1873,8 +1883,8 @@ choices=("1. Quit
 35. Clone $disk -> /
 36. Copy / -> $disk
 37. Copy $disk -> /
-38. Copy /~ -> $disk$rootPart/
-39. Copy $disk$rootPart/~ -> /
+38. Copy /home -> $disk$rootPart/
+39. Copy $disk$rootPart/home -> /
 40. Update / <-> $disk
 41. Wipe (zero)
 42. Wipe (urandom)")
@@ -1981,8 +1991,8 @@ echo
 		clone|35)				clone Cloning "-av --del" $mnt/ / ;;
 		copy|36)					clone Copying -av / $mnt/ ;;
 		copy|37)					clone Copying -av $mnt/ / ;;
-		copy|38)					cp -vr /home/$user $mnt/ ;;
-		copy|39)					cp -vr $mnt/home/$user / ;;
+		copy|38)					clone Copying -av /home $mnt/ ;;
+		copy|39)					clone Copying -av $mnt/home / ;;
 		update|40)				clone Updating -auv / $mnt/ ; clone Updating -auv $mnt/ / ;;
 		wipe|41)					wipe_disk zero;;
 		wipe|42)					wipe_disk urandom;;
