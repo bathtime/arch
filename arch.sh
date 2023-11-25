@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# Documentation
-
 : << DOCS
 
 To run on the fly:
@@ -107,8 +105,6 @@ unmount_disk () {
 
 	error_check 0 
 		
-	#if [[ "$(mountpoint $mnt | grep 'is a')" ]]; then
-
 	if [[ "$(mount | grep /mnt)" ]]; then
 
 		# Might need to turn error checking off here
@@ -166,13 +162,15 @@ choose_disk () {
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g"
 		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-		disks=$(echo -e "\nquit\nedit\n$disks\n/\nrefresh\nreboot\nsuspend\nhibernate\npoweroff")
+		disks=$(echo -e "\nquit\nedit\n#\n\$\n$disks\n/\nrefresh\nreboot\nsuspend\nhibernate\npoweroff")
 
 		echo -e "\nWhich drive?\n"
 
 		select disk in $disks
 		do
 			case $disk in
+				$)				sudo -u $user bash ;;
+				\#)				bash ;;
 				/)				disk=$host; search_disks=0 ; break ;;
 				refresh) 	break;	;;
 				poweroff)	poweroff ;;
@@ -253,7 +251,6 @@ create_partitions () {
 		done
 
 	fi
-
 
 	unmount_disk
 	mount_disk
@@ -899,61 +896,6 @@ setup_wpa () {
 
 
 
-setup_snapper () {
-
-	check_on_root
-	mount_disk
-
-	# Snapshot script
-	echo '#!/bin/bash
-
-snapper --no-dbus create --read-write
-snapper --no-dbus list
-
-# Needs to be updated for grub-btrfs list
-grub-mkconfig -o /boot/grub/grub.cfg' > $mnt/usr/local/bin/snapshot.sh
-
-	chmod +x $mnt/usr/local/bin/snapshot.sh
-
-
-	arch-chroot $mnt /bin/bash -e << EOF
-
-	snapper --no-dbus -c root create-config /
-	snapper --no-dbus list-configs
-
-	# Automate snapper and btrfs services  ###
-	systemctl enable snapper-timeline.timer
-	systemctl enable snapper-cleanup.timer
-	#systemctl enable snapper-boot.timer
- 
-	#systemctl enable btrfs-balance.timer
-	#systemctl enable btrfs-scrub@-.timer
-	#systemctl enable btrfs-trim.timer
- 
-	# Have snapper take a snapshot every 120 mins (default is every 1hr)
-	mkdir -p /etc/systemd/system/snapper-timeline.timer.d/
-
-	cat > /etc/systemd/system/snapper-timeline.timer.d/frequency.conf << EOF2
-[Timer]
-OnCalendar=
-OnCalendar=*:0/120
-EOF2
-
-	echo "To edit snapper config, run: vi /etc/snapper/configs/root"
-
-	# Needs to be run on inital snapshot
-	/etc/grub.d/41_snapshots-btrfs
-
-	systemctl enable grub-btrfsd
-
-	snapshot.sh
-
-EOF
-
-}
-
-
-
 install_aur () {
 
 	check_on_root
@@ -1291,23 +1233,6 @@ default_image="/boot/initramfs-linux.img"' > $mnt/etc/mkinitcpio.d/linux.preset
 
 
 
-setup_snapshots () {
-
-	check_on_root
-	mount_disk
-
-	rm -rf $mnt/.snapshots/
-	mkdir -p $mnt/.snapshots
-
-	rm -rf $mnt/snapshot
-	touch $mnt/snapshot
-	arch-chroot $mnt btrfs subvolume snapshot / /.snapshots/first
-	rm $mnt/snapshot
-
-}
-
-
-
 reset_keys () {
 
 	#rm -rf /etc/pacman.d/gnupg
@@ -1570,6 +1495,35 @@ custom_install () {
 
 
 
+create_snapshot () {
+
+	btrfs subvolume list -t /
+
+	echo -e "\nWhat would you like to name the snapshot?\n"
+	read snapshot 
+
+	if [ "$snapshot" ]; then
+		btrfs subvolume snapshot / /.snapshots/"$snapshot"
+	else
+		echo "No name give. Exiting."
+	fi
+
+	echo "Syncing..."
+	sync
+
+}
+
+
+
+restore_snapshot () {
+
+	echo "TODO!"
+
+
+}
+
+
+
 copy_pkgs () {
 
 	check_on_root
@@ -1610,8 +1564,6 @@ copy_pkgs () {
 check_online () {
 
 	curl -Is  http://www.google.com &>/dev/null && online=1 || online=0
-	#curl -Is  http://www.google.com | head -n 1 &> /dev/null && online=1 || online=0
-	#ping -q -w 1 -c 1 $(ip r | grep default | cut -d ' ' -f 3) &> /dev/null && online=1 || online=0
 
 	if [ $online -eq 0 ]; then
 		echo -e "\nNo internet connection found. Offline mode enabled."
@@ -1679,13 +1631,11 @@ auto_install_kde () {
 auto_install_gnome () {
 
 	auto_install_user
-	#pacstrap_install gnome-shell nautilus gnome-terminal gnome-control-center xdg-user-dirs firefox
 	pacstrap_install gnome-shell nautilus gnome-terminal xdg-user-dirs firefox
 	copy_pkgs
 
 	# Customize system
 
-	#sed -i 's/^:/   MOZ_ENABLE_WAYLAND=1 QT_QPA_PLATFORM=wayland XDG_SESSION_TYPE=wayland exec dbus-run-session gnome-session/g' $mnt/home/$user/.bash_profile
 	sed -i 's/^:/   MOZ_ENABLE_WAYLAND=1 QT_QPA_PLATFORM=wayland XDG_SESSION_TYPE=wayland gnome-shell --session=wayland/g' $mnt/home/$user/.bash_profile
 
 	install_config	
@@ -1822,6 +1772,7 @@ disk_info () {
 
 CONFIG_FILES=".config/baloofilerc
 .config/dolphinrc
+.config/epy/*
 .config/fontconfig/fonts.conf
 .config/gtkrc
 .config/gtkrc-2.0
@@ -1875,8 +1826,6 @@ disk_info
 check_online
 
 
-loadkeys en
-
 # Make font big and readable
 if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ]; then
 	setfont ter-132b
@@ -1899,8 +1848,8 @@ choices=("1. Quit
 14. Install tweaks
 15. Install mksh
 16. Install liveroot
-17. Setup snapshots
-18. Setup snapper
+17. Create snapshot /
+18. Restore snapshot /
 19. Mount $mnt
 20. Unmount $mnt
 21. Create squashfs image
@@ -1934,6 +1883,8 @@ echo -ne "\nEnter an option: "
 
 read choice
 
+echo
+
 	case $choice in
 		Quit|quit|q|exit|1)	break; ;;
 		arch|2)					edit_arch ;;
@@ -1951,8 +1902,8 @@ read choice
 		tweaks|14)				install_tweaks ;;
       mksh|15)					install_mksh ;;
 		liveroot|16)			install_liveroot ;;
-		snapshots|17)			setup_snapshots ;;
-		snapper|18)				setup_snapper ;;
+		create_snapshot|17)	create_snapshot ;;
+		restore_snapshot|18)	restore_snapshot ;;
       mount|19)				mount_disk  ;;
       unmount|20)				unmount_disk  ;;
 		squashfs|21)			create_archive ;;
