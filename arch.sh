@@ -1530,17 +1530,21 @@ copy_pkgs () {
 	mount_disk
 
 	# Check which packages are installed on chroot system and copy those pkgs from host
-	packages="$(pacman --sysroot $mnt -Q | sed 's/ [0-9].*$//g')"
+	#packages="$(pacman --sysroot $mnt -Q | sed 's/ [0-9].*$//g')"
+	packages="$(pacman --sysroot $mnt -Q | sed 's/ /-/g; s/$/-/g')"
 
 	for package in ${packages}; do
 
-		if [ "$(ls /var/cache/pacman/pkg/ | grep $package-*[0-9].*.pkg.tar.zst)" ]; then
+		#if [ "$(ls /var/cache/pacman/pkg/ | grep $package-*[0-9].*.pkg.tar.zst)" ]; then
+		if [ "$(ls /var/cache/pacman/pkg/ | grep $package*)" ]; then
 			echo "Copying $package..."
-			cp -u /var/cache/pacman/pkg/$package-*.pkg.tar.zst $mnt/var/cache/pacman/pkg/
+			cp -u /var/cache/pacman/pkg/$package* $mnt/var/cache/pacman/pkg/
 		fi
+
 	done
 
-	echo "Total packages: $(ls $mnt/var/cache/pacman/pkg/*.zst | wc -l)"
+	echo -e "\n.zst packages: $(ls $mnt/var/cache/pacman/pkg/*.zst | wc -l)\n"
+	echo -e "Total packages: $(ls $mnt/var/cache/pacman/pkg/* | wc -l)\n"
 
 	#echo -e "\nUpdating package database. Please be patient...\n"
 
