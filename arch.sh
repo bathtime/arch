@@ -252,7 +252,7 @@ create_partitions () {
 
 	fi
 	
-	unmount_disk
+#	unmount_disk
 	mount_disk
 
 }
@@ -263,7 +263,7 @@ mount_disk () {
 
 	check_on_root
 
-	if [[ ! $(mount | grep -E "on /mnt") ]]; then
+	if [[ ! $(mount | grep -E $disk$rootPart | grep -E "on $mnt") ]]; then
 
 
 		if [ "$fstype" = "btrfs" ]; then
@@ -282,9 +282,11 @@ mount_disk () {
 
 		fi
 
-		# mount efi partition
-		mount --mkdir $disk$espPart $mnt$efi_path
 
+	fi
+	
+	if [[ ! $(mount | grep -E $disk$espPart | grep -E "on $mnt$efi_path") ]]; then
+		mount --mkdir $disk$espPart $mnt$efi_path
 	fi
 
 	mkdir -p $mnt/{.snapshots,etc,tmp,root,var/cache/pacman/pkg}
@@ -323,6 +325,7 @@ Server = file:///var/cache/pacman/pkg/
 	fi
 
 	reset_keys
+
 
 	packages="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar man-db"
 
@@ -1757,7 +1760,6 @@ disk_info () {
 
 sync_disk () {
 
-	#error_check 0
 	echo
 
 	sync &
@@ -1770,7 +1772,7 @@ sync_disk () {
 		dirty=$(cat /proc/meminfo | awk '/Dirty:/ { print $2 }')
 		[ $dirty -ne 0 ] && perc=$(( 100 - (dirty * 100 / initial_dirty) )) || perc=100 
 
-		printf '\rSyncing: %i kB of %i kB... (%i%%)  ' $dirty $initial_dirty $perc
+		printf '\rSyncing: %i kB... (%i%%)   ' $dirty $perc
 
 		sleep .1
 
