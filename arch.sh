@@ -260,7 +260,7 @@ create_partitions () {
 
 
 mount_disk () {
-	
+
 	check_on_root
 
 	if [[ ! $(mount | grep -E "on /mnt") ]]; then
@@ -1777,6 +1777,7 @@ sync_disk () {
 	done
 
 	echo
+	sleep .1
 
 }
 
