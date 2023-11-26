@@ -70,6 +70,7 @@ initramfs=mkinitcpio
 wifi_ssid="BELL364"
 wifi_pass="13FDC4A93E3C"
 
+dirty_threshold=0
 
 check_viable_disk () {
 
@@ -100,8 +101,7 @@ check_on_root () {
 
 unmount_disk () {
 
-	echo "Syncing..."
-	sync
+	sync_disk
 
 	error_check 0 
 		
@@ -251,7 +251,7 @@ create_partitions () {
 		done
 
 	fi
-
+	
 	unmount_disk
 	mount_disk
 
@@ -409,7 +409,6 @@ setup_fstab () {
 	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/log')" ]   && echo "tmpfs    /var/log    tmpfs   rw,nodev,nosuid,mode=1775,size=2G   0 0" >> $mnt/etc/fstab
 	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/tmp')" ]   && echo "tmpfs    /var/tmp    tmpfs   rw,nodev,nosuid,mode=1777,size=2G   0 0" >> $mnt/etc/fstab
 
-	sync
 	systemctl daemon-reload
 
 	cat $mnt/etc/fstab
@@ -847,7 +846,7 @@ DisablePeriodicScan=true' > $mnt/etc/iwd/main.conf
 
 	echo "Enabling network services..."
 	systemctl --root=$mnt enable iwd.service
-	
+
 }
 
 
@@ -1228,7 +1227,8 @@ default_image="/boot/initramfs-linux.img"' > $mnt/etc/mkinitcpio.d/linux.preset
 	systemctl --root=$mnt mask systemd-remount-fs.service
 
 	# Don't remount /efi either
-	systemctl --root=$mnt mask efi.mount 
+	systemctl --root=$mnt mask efi.mount
+
 }
 
 
@@ -1309,9 +1309,6 @@ clone () {
 	echo -e "\n$1 $3 -> $4. Please be patient...\n"
 
 	rsync $2 --exclude=/efi --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/mnt/ $3 $4
-
-	echo "Syncing disk..."
-	sync
 
 }
 
@@ -1463,10 +1460,6 @@ pacstrap_install () {
 			pacstrap -c -K $mnt ${packages[@]}
 		fi
 
-
-		echo "Syncing..."
-		sync
-
 	fi
 }
 
@@ -1474,8 +1467,6 @@ custom_install () {
 
 	check_on_root
    mount_disk
-
-	# cage firefox xorg-xwayland weston
 
 	echo -e "Which package(s) would you like to install?\n"
 	read packages
@@ -1486,8 +1477,6 @@ custom_install () {
 		echo "No packages will be installed."
 	fi
 
-	echo "Syncing..."
-	sync
 
 	copy_pkgs
 
@@ -1507,9 +1496,6 @@ create_snapshot () {
 	else
 		echo "No name give. Exiting."
 	fi
-
-	echo "Syncing..."
-	sync
 
 }
 
@@ -1557,9 +1543,6 @@ copy_pkgs () {
 	#pacman -U /var/cache/pacman/pkg/*.pkg.tar.zst
 
 	copy_script
-
-	echo "Syncing..."
-	sync
 
 }
 
@@ -1754,9 +1737,6 @@ wipe_disk () {
 		time dd if=/dev/$1 of=$disk bs=1M status=progress
 		error_check 1
 
-		echo "Syncing..."
-		sync
-
 	else
 		echo -e "\nNot wiping.\n"
 	fi
@@ -1775,11 +1755,28 @@ disk_info () {
 
 
 
-copy_home () {
+sync_disk () {
 
+	#error_check 0
+	echo
 
-echo
+	sync &
 
+	dirty=$(cat /proc/meminfo | awk '/Dirty:/ { print $2 }')
+	initial_dirty=$dirty
+
+	while [[ $dirty -gt $dirty_threshold ]]; do
+
+		dirty=$(cat /proc/meminfo | awk '/Dirty:/ { print $2 }')
+		[ $dirty -ne 0 ] && perc=$(( 100 - (dirty * 100 / initial_dirty) )) || perc=100 
+
+		printf '\rSyncing: %i kB of %i kB... (%i%%)  ' $dirty $initial_dirty $perc
+
+		sleep .1
+
+	done
+
+	echo
 
 }
 
@@ -1872,7 +1869,7 @@ choices=("1. Quit
 23. Download script
 24. Install host packages
 25. Reset pacman keys
-26. Finalize install
+26. Copy packages
 27. Auto-install
 28. Copy script
 29. Choose initramfs
@@ -2000,6 +1997,8 @@ echo
 		'')						disk_info ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
+
+	sync_disk
 
 done
 
