@@ -1814,6 +1814,7 @@ CONFIG_FILES=".config/baloofilerc
 .config/Trolltech.conf
 .config/weston.ini
 .local/bin/*
+.local/lib/*
 .local/share/applications/*
 .local/share/color-schemes/*
 .local/share/dolphin/dolphinstaterc
