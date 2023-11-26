@@ -105,7 +105,15 @@ unmount_disk () {
 
 	error_check 0 
 		
-	if [[ "$(mount | grep /mnt)" ]]; then
+	#if [[ "$(mount | grep /mnt)" ]]; then
+	if [[ $(mount | grep -E $disk$espPart | grep -E "on $mnt$efi_path") ]]; then
+		echo "Unmounting $mnt$efi_path..."
+		umount -n -R $mnt$efi_path
+		sleep .1
+
+	fi
+
+	if [[ $(mount | grep -E $disk$rootPart | grep -E "on $mnt") ]]; then
 
 		# Might need to turn error checking off here
 
@@ -252,7 +260,7 @@ create_partitions () {
 
 	fi
 	
-#	unmount_disk
+	unmount_disk
 	mount_disk
 
 }
@@ -1020,6 +1028,7 @@ install_liveroot () {
 	check_on_root
 	mount_disk
 
+	touch $mnt/etc/vconsole.conf
 
 	pacstrap_install rsync squashfs-tools
 
@@ -1779,7 +1788,7 @@ sync_disk () {
 	done
 
 	echo
-	sleep .1
+	sleep 1
 
 }
 
