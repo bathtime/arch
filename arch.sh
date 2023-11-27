@@ -105,7 +105,6 @@ unmount_disk () {
 
 	error_check 0 
 		
-	#if [[ "$(mount | grep /mnt)" ]]; then
 	if [[ $(mount | grep -E $disk$espPart | grep -E "on $mnt$efi_path") ]]; then
 		echo "Unmounting $mnt$efi_path..."
 		umount -n -R $mnt$efi_path
@@ -665,7 +664,7 @@ general_setup () {
 	mount_disk
 
 	arch-chroot $mnt printf "$password\n$password\n" | passwd
-
+	
 	echo -e 'en_US.UTF-8 UTF-8\nen_US ISO-8859-1' > $mnt/etc/locale.gen  
 	echo 'LANG=en_US.UTF-8' > $mnt/etc/locale.conf
 	echo 'Arch-Linux' > $mnt/etc/hostname
@@ -705,23 +704,6 @@ set autoindent
 set smartindent
 
 EOF
-
-
-	# Tweaks
-
-	echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
-	echo 'vm.vfs_cache_pressure=50' > $mnt/etc/sysctl.d/99-cache-pressure.conf
-
-	systemctl --root=$mnt enable systemd-oomd
-
-	echo 'kernel.core_pattern=/dev/null' > $mnt/etc/sysctl.d/50-coredump.conf
-
-	mkdir -p $mnt/etc/systemd/coredump.conf.d/
-	echo '[Coredump]
-Storage=none
-ProcessSizeMax=0' > $mnt/etc/systemd/coredump.conf.d/custom.conf
-
-	echo '* hard core 0' > $mnt/etc/security/limits.conf
 
 }
 
@@ -949,15 +931,12 @@ install_tweaks () {
 	mount_disk
 
 	#cmd || { printf "%b" "FAILED.\n" ; exit 1 ; }
-
 	
-	pacstrap_install terminus-font ncdu dosfstools parted arch-install-scripts tar man-db gptfdisk
+	pacstrap_install terminus-font ncdu
 
-
-	echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
+	[ ! $(cat $mnt/etc/vconsole.conf | grep 'FONT=ter-132b') ] && echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
 	echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
 	echo 'vm.vfs_cache_pressure=50' > $mnt/etc/sysctl.d/99-cache-pressure.conf
-	sed -Ei 's/^#(Color)$/\1\nILoveCandy/;s/^#(ParallelDownloads).*/\1 = 10/' $mnt/etc/pacman.conf
 
 	systemctl --root=$mnt enable systemd-oomd
 
@@ -1596,6 +1575,7 @@ auto_install_user () {
 
 	auto_install_root
 	setup_user
+	install_tweaks
 
 }
 
@@ -1788,7 +1768,7 @@ sync_disk () {
 	done
 
 	echo
-	sleep 1
+	sleep .5
 
 }
 
