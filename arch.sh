@@ -1750,11 +1750,11 @@ disk_info () {
 sync_disk () {
 
 	echo
-
 	sync &
 
 	dirty=$(cat /proc/meminfo | awk '/Dirty:/ { print $2 }')
 	initial_dirty=$dirty
+	stall_count=0
 
 	while [[ $dirty -gt $dirty_threshold ]]; do
 
@@ -1762,6 +1762,20 @@ sync_disk () {
 		[ $dirty -ne 0 ] && perc=$(( 100 - (dirty * 100 / initial_dirty) )) || perc=100 
 
 		printf '\rSyncing: %i kB... (%i%%)   ' $dirty $perc
+
+		if [[ $dirty -eq $last_dirty ]]; then
+			stall_count=$(( stall_count + 1 ))
+		else
+			stall_count=0
+		fi
+
+		last_dirty=$dirty
+		
+		if [ $stall_count -gt 10 ]; then
+			sync &
+			stall_count=0
+			echo "Resyncing..."
+		fi
 
 		sleep .1
 
