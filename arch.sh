@@ -1763,7 +1763,7 @@ sync_disk () {
 
 		printf '\rSyncing: %i kB... (%i%%)   ' $dirty $perc
 
-		if [[ $dirty -eq $last_dirty ]]; then
+		if [[ $dirty -ge $last_dirty ]]; then
 			stall_count=$(( stall_count + 1 ))
 		else
 			stall_count=0
@@ -1793,6 +1793,7 @@ CONFIG_FILES=".config/baloofilerc
 .config/fontconfig/fonts.conf
 .config/gtkrc
 .config/gtkrc-2.0
+.config/gwenviewrc
 .config/kactivitymanagerd-pluginsrc
 .config/kactivitymanagerdrc
 .config/kcminputrc
@@ -1820,12 +1821,10 @@ CONFIG_FILES=".config/baloofilerc
 .local/lib/*
 .local/share/applications/*
 .local/share/color-schemes/*
-.local/share/dolphin/dolphinstaterc
+.local/share/dolphin/*
 .local/share/icons/*
 .local/share/konsole/*.profile
-.local/share/kxmlgui5/konsole/konsoleui.rc
-.local/share/kxmlgui5/konsole/sessionui.rc
-.local/share/kxmlgui5/okular/*
+.local/share/kxmlgui5/*
 .local/share/plasma/plasmoids/*
 .local/share/user-places.xbel
 .viminfo
