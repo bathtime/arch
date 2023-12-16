@@ -1822,6 +1822,7 @@ CONFIG_FILES=".config/baloofilerc
 .local/share/applications/*
 .local/share/color-schemes/*
 .local/share/dolphin/*
+.local/share/fonts/*
 .local/share/icons/*
 .local/share/konsole/*.profile
 .local/share/kxmlgui5/*
