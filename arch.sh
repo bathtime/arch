@@ -1598,6 +1598,7 @@ auto_install_kde () {
 
 	auto_install_user
 	pacstrap_install plasma-desktop plasma-wayland-session plasma-pa kscreen dolphin konsole firefox
+ 	pacstrap_install ffmpegthumbs chromium gwenview vlc
 	copy_pkgs
 
 	# Auto-launch
