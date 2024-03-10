@@ -1643,6 +1643,12 @@ clean_system () {
 
 	rm -rf crashes cookies.sqlite* minidumps datareporting sessionstore-backups saved-telemetry-pings storage browser-extension-data security_state gmp-gmpopenh264 synced-tabs.db-wal places.sqlite favicons.sqlite cert9.db places.sqlite-wal storage-sync-v2.sqlite-wal webappsstore.sqlite gmp-widevinecdm
 
+	echo "Cleaning chromium..."
+
+	cd /home/$user/.config/chromium
+
+	rm -rf Safe\ Browsing component_crx_cache WidevineCdm IndexedDB GrShaderCache OnDeviceHeadSuggestModel hyphen-data ZxcvbnData ShaderCache Default/{Service\ Worker/,IndexedDB,History,GPUCache,Sessions,DawnCache,Extension\ State,Web\ Data,Visited\ Links}
+
 }
 
 
@@ -1790,6 +1796,7 @@ sync_disk () {
 
 
 CONFIG_FILES=".config/baloofilerc
+.config/chromium
 .config/dolphinrc
 .config/epy/*
 .config/fontconfig/fonts.conf
