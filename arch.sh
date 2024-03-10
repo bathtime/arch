@@ -268,6 +268,7 @@ create_partitions () {
 
 mount_disk () {
 
+	error_check 0
 	check_on_root
 
 	if [[ ! $(mount | grep -E $disk$rootPart | grep -E "on $mnt") ]]; then
@@ -281,6 +282,7 @@ mount_disk () {
 
 			for subvol in '' "${subvols[@]}"; do
 				mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
+				echo mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
 			done
 
 		else
@@ -300,7 +302,6 @@ mount_disk () {
 	chmod 750 $mnt/root
 
 	fstype="$(lsblk -n -o FSTYPE $disk$rootPart)"
-
 }
 
 
@@ -1597,8 +1598,8 @@ auto_install_weston () {
 auto_install_kde () {
 
 	auto_install_user
-	pacstrap_install plasma-desktop plasma-wayland-session plasma-pa kscreen dolphin konsole firefox
- 	pacstrap_install ffmpegthumbs chromium gwenview vlc
+	#pacstrap_install plasma-desktop plasma-wayland-session plasma-pa kscreen dolphin konsole firefox
+	pacstrap_install plasma-desktop plasma-pa kscreen dolphin konsole firefox chromium gimp gwenview okular obs-studio ffmpegthumbs
 	copy_pkgs
 
 	# Auto-launch
@@ -1907,7 +1908,7 @@ read choice
 echo
 
 	case $choice in
-		Quit|quit|q|exit|1)	break; ;;
+		Quit|quit|q|exit|1)	break; exit ;;
 		arch|2)					edit_arch ;;
 		Chroot|chroot|3)		do_chroot ;;
 		disk|4)					choose_disk ;;
