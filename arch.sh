@@ -396,6 +396,8 @@ setup_fstab () {
 	check_on_root
 	mount_disk
 
+	echo -e "\nCreating new /etc/fstab file...\n"
+
 	genfstab -U $mnt > $mnt/etc/fstab
 
 
@@ -415,11 +417,11 @@ setup_fstab () {
 	# Make /efi read-only
 	#sed -i 's/\/efi.*vfat.*rw/\/efi     vfat     ro/' $mnt/etc/fstab
 
-	[ ! "$(cat $mnt/etc/fstab | grep 'none swap defaults 0 0')" ] && echo -e "UUID=$SWAP_UUID none swap defaults 0 0\n" >> $mnt/etc/fstab
 #	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/cache')" ] && echo "tmpfs    /var/cache  tmpfs   rw,nodev,nosuid,mode=1755,size=2G   0 0" >> $mnt/etc/fstab
+	[ ! "$(cat $mnt/etc/fstab | grep 'none swap defaults 0 0')" ] && echo -e "UUID=$SWAP_UUID none swap defaults 0 0\n" >> $mnt/etc/fstab
 	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/log')" ]   && echo "tmpfs    /var/log    tmpfs   rw,nodev,nosuid,mode=1775,size=2G   0 0" >> $mnt/etc/fstab
 	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/tmp')" ]   && echo "tmpfs    /var/tmp    tmpfs   rw,nodev,nosuid,mode=1777,size=2G   0 0" >> $mnt/etc/fstab
-
+	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/user/.cache')" ]   && echo "tmpfs    /home/user/.cache    tmpfs  rw,size=1G,nr_inodes=5k,noexec,nodev,nosuid,uid=user,mode=1777 0 0" >> $mnt/etc/fstab
 	systemctl daemon-reload
 
 	cat $mnt/etc/fstab
@@ -575,7 +577,8 @@ install_EFISTUB () {
 
 	echo 'ALL_config="/etc/mkinitcpio.conf"
 ALL_kver="/boot/vmlinuz-linux"
-ALL_microcode=(/boot/*-ucode.img)
+#ALL_microcode=(/boot/*-ucode.img)
+microcode=(/boot/*-ucode.img)
 
 PRESETS=("default")
 
@@ -768,6 +771,8 @@ export MOZ_ENABLE_WAYLAND=1
 export XDG_RUNTIME_DIR=/run/$USER/1000
 export RUNLEVEL=3
 export QT_LOGGING_RULES="*=false"
+export XDG_CACHE_HOME=/run/user/1000/usercache
+#export CHROME_USER_DATA_DIR=/run/user/1000/chrome
 
 if [[ ! ${DISPLAY} && ${XDG_VTNR} == 1 ]]; then
 :
@@ -1156,6 +1161,8 @@ run_latehook() {
 
 			echo "Continuing boot..."
 
+			sleep 2
+
 			umount $new_root
 
 			mount --mkdir -o subvolid=256 ${root} $new_root
@@ -1166,7 +1173,13 @@ run_latehook() {
 	else
 
 		echo -e "Running default option..."
-   	mount --uuid $ESP_UUID $new_root/efi
+
+      sleep 2
+
+      umount $new_root
+      mount --mkdir -o subvolid=256 ${root} $new_root
+
+      mount --uuid $ESP_UUID $new_root/efi
 
 	fi
 
@@ -1641,7 +1654,8 @@ clean_system () {
 	profile=$(ls /home/user/.mozilla/firefox/ | grep .*.default-release)
 	cd $profile
 
-	rm -rf crashes cookies.sqlite* minidumps datareporting sessionstore-backups saved-telemetry-pings storage browser-extension-data security_state gmp-gmpopenh264 synced-tabs.db-wal places.sqlite favicons.sqlite cert9.db places.sqlite-wal storage-sync-v2.sqlite-wal webappsstore.sqlite gmp-widevinecdm
+	#rm -rf crashes cookies.sqlite* minidumps datareporting sessionstore-backups saved-telemetry-pings storage browser-extension-data security_state gmp-gmpopenh264 synced-tabs.db-wal places.sqlite favicons.sqlite cert9.db places.sqlite-wal storage-sync-v2.sqlite-wal webappsstore.sqlite gmp-widevinecdm
+	rm -rf crashes minidumps datareporting sessionstore-backups saved-telemetry-pings storage browser-extension-data security_state gmp-gmpopenh264 synced-tabs.db-wal places.sqlite favicons.sqlite cert9.db places.sqlite-wal storage-sync-v2.sqlite-wal webappsstore.sqlite gmp-widevinecdm
 
 	echo "Cleaning chromium..."
 
@@ -1840,6 +1854,8 @@ CONFIG_FILES=".config/baloofilerc
 .viminfo
 .mozilla/*"
 
+type arch.sh | sed 's/arch.sh is /\narch.sh found at /'
+
 if [ "$1" ]; then
 	disk="$1"
 else
@@ -2000,8 +2016,10 @@ echo
 									clone Cloning "-av --del" / $mnt/
 									setup_fstab
 									install_REFIND ;;
-		clone|34)				clone Cloning "-av --del" / $mnt/ ;;
-		clone|35)				clone Cloning "-av --del" $mnt/ / ;;
+		clone|34)				clone Cloning "-av --del" / $mnt/ 
+									setup_fstab ;;
+		clone|35)				clone Cloning "-av --del" $mnt/ /
+									setup_fstab ;;
 		copy|36)					clone Copying -av / $mnt/ ;;
 		copy|37)					clone Copying -av $mnt/ / ;;
 		copy|38)					clone Copying -av /home $mnt/ ;;
