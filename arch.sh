@@ -1854,7 +1854,8 @@ CONFIG_FILES=".config/baloofilerc
 .viminfo
 .mozilla/*"
 
-type arch.sh | sed 's/arch.sh is /\narch.sh found at /'
+#type arch.sh | sed 's/arch.sh is /\narch.sh found at /'
+echo -e "\nRunning $(whereis arch.sh)"
 
 if [ "$1" ]; then
 	disk="$1"
