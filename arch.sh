@@ -7,7 +7,6 @@ bash <(curl -sL bit.ly/a-install)
 
 DOCS
 
-
 ###  Set error detection  ###
  
 error() {
@@ -17,9 +16,30 @@ error() {
 	local errornum=$3
 	local command=$4
 
-	echo -e "\e[0;41m\n\n$1: Error $3 on line $2: \n\n$4\n\e[0;29m\n\n"
+	#echo -e "\e[0;41m\n\n$1: Error $3 on line $2: \n\n$4\n\e[0;29m\n\n"
+
+	echo -e "\e[0;41m\n\nFile: \e[1;2;41m$1\n\e[0;41mError: \e[1;2;41m$3\n\e[0;41mLine:\e[1;2;41m $2\n\e[0;41mCommand:\e[1;2;41m $4\n\e[0;29m\n"
+
+	finished=0
+
+	while [ $finished -eq 0 ]; do
+
+		echo -e "What now?\n\n[e] edit (last position)\n[n] edit (error position)\n[c] continue\n[x] exit\n"
+
+		read -p "Choice: " -n 2 choice
+
+		case $choice in
+				e)		vim $arch_path/$arch_file; exit ;;
+				n)		vim +$2 $arch_path/$arch_file; exit ;;
+				c)		set +e; break ;;
+				x)		exit ;;
+				*) 	finished=0 ;;
+		esac
+
+	done
 
 }
+
 
 trap 'error "${BASH_SOURCE}" "${LINENO}" "$?" "${BASH_COMMAND}"' ERR
 
@@ -35,6 +55,9 @@ error_check () {
 
 # Used to temporarily disable at certain points in script (eg., as in the mount_disk function)
 error_check 1
+
+
+
 
 arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
@@ -72,6 +95,8 @@ wifi_pass="13FDC4A93E3C"
 
 dirty_threshold=0
 
+
+
 check_viable_disk () {
 
 	if [[ "$disk" == "" ]]; then
@@ -85,8 +110,6 @@ check_viable_disk () {
 	fi
 
 }
-
-
 
 check_on_root () {
   
@@ -302,6 +325,9 @@ mount_disk () {
 	chmod 750 $mnt/root
 
 	fstype="$(lsblk -n -o FSTYPE $disk$rootPart)"
+
+	error_check 1
+
 }
 
 
@@ -577,8 +603,7 @@ install_EFISTUB () {
 
 	echo 'ALL_config="/etc/mkinitcpio.conf"
 ALL_kver="/boot/vmlinuz-linux"
-#ALL_microcode=(/boot/*-ucode.img)
-microcode=(/boot/*-ucode.img)
+ALL_microcode=(/boot/*-ucode.img)
 
 PRESETS=("default")
 
@@ -771,8 +796,6 @@ export MOZ_ENABLE_WAYLAND=1
 export XDG_RUNTIME_DIR=/run/$USER/1000
 export RUNLEVEL=3
 export QT_LOGGING_RULES="*=false"
-export XDG_CACHE_HOME=/run/user/1000/usercache
-#export CHROME_USER_DATA_DIR=/run/user/1000/chrome
 
 if [[ ! ${DISPLAY} && ${XDG_VTNR} == 1 ]]; then
 :
@@ -1161,8 +1184,6 @@ run_latehook() {
 
 			echo "Continuing boot..."
 
-			sleep 2
-
 			umount $new_root
 
 			mount --mkdir -o subvolid=256 ${root} $new_root
@@ -1173,13 +1194,7 @@ run_latehook() {
 	else
 
 		echo -e "Running default option..."
-
-      sleep 2
-
-      umount $new_root
-      mount --mkdir -o subvolid=256 ${root} $new_root
-
-      mount --uuid $ESP_UUID $new_root/efi
+   	mount --uuid $ESP_UUID $new_root/efi
 
 	fi
 
@@ -1853,9 +1868,6 @@ CONFIG_FILES=".config/baloofilerc
 .local/share/user-places.xbel
 .viminfo
 .mozilla/*"
-
-#type arch.sh | sed 's/arch.sh is /\narch.sh found at /'
-echo -e "\nRunning $(whereis arch.sh)"
 
 if [ "$1" ]; then
 	disk="$1"
