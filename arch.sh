@@ -16,8 +16,6 @@ error() {
 	local errornum=$3
 	local command=$4
 
-	#echo -e "\e[0;41m\n\n$1: Error $3 on line $2: \n\n$4\n\e[0;29m\n\n"
-
 	echo -e "\e[0;41m\n\nFile: \e[1;2;41m$1\n\e[0;41mError: \e[1;2;41m$3\n\e[0;41mLine:\e[1;2;41m $2\n\e[0;41mCommand:\e[1;2;41m $4\n\e[0;29m\n"
 
 	finished=0
@@ -40,8 +38,10 @@ error() {
 
 }
 
-
 trap 'error "${BASH_SOURCE}" "${LINENO}" "$?" "${BASH_COMMAND}"' ERR
+trap 'echo;echo; read -s -r -n 1 -p "<ctrl> + c pressed. Press any key to continue... "; set +e' SIGINT
+
+
 
 error_check () {
 
@@ -55,8 +55,6 @@ error_check () {
 
 # Used to temporarily disable at certain points in script (eg., as in the mount_disk function)
 error_check 1
-
-
 
 
 arch_file=$(basename "$0")
@@ -305,7 +303,6 @@ mount_disk () {
 
 			for subvol in '' "${subvols[@]}"; do
 				mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
-				echo mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
 			done
 
 		else
