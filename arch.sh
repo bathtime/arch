@@ -444,7 +444,7 @@ setup_fstab () {
 	[ ! "$(cat $mnt/etc/fstab | grep 'none swap defaults 0 0')" ] && echo -e "UUID=$SWAP_UUID none swap defaults 0 0\n" >> $mnt/etc/fstab
 	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/log')" ]   && echo "tmpfs    /var/log    tmpfs   rw,nodev,nosuid,mode=1775,size=2G   0 0" >> $mnt/etc/fstab
 	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/tmp')" ]   && echo "tmpfs    /var/tmp    tmpfs   rw,nodev,nosuid,mode=1777,size=2G   0 0" >> $mnt/etc/fstab
-	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/user/.cache')" ]   && echo "tmpfs    /home/user/.cache    tmpfs  rw,size=1G,nr_inodes=5k,noexec,nodev,nosuid,uid=user,mode=1777 0 0" >> $mnt/etc/fstab
+	#[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/user/.cache')" ]   && echo "tmpfs    /home/user/.cache    tmpfs  rw,size=1G,nr_inodes=5k,noexec,nodev,nosuid,uid=user,mode=1777 0 0" >> $mnt/etc/fstab
 	systemctl daemon-reload
 
 	cat $mnt/etc/fstab
@@ -1327,6 +1327,7 @@ clone () {
 
 	rsync $2 --exclude=/efi --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
 
+	echo -e "\nNOTE: You may need to update fstab!\n"
 }
 
 
@@ -1851,6 +1852,8 @@ CONFIG_FILES=".config/baloofilerc
 .config/powermanagementprofilesrc
 .config/systemsettingsrc
 .config/Trolltech.conf
+.config/vlc/vlc-qt-interface.conf
+.config/vlc/vlcrc
 .config/weston.ini
 .local/bin/*
 .local/lib/*
@@ -2026,10 +2029,8 @@ echo
 									clone Cloning "-av --del" / $mnt/
 									setup_fstab
 									install_REFIND ;;
-		clone|34)				clone Cloning "-av --del" / $mnt/ 
-									setup_fstab ;;
-		clone|35)				clone Cloning "-av --del" $mnt/ /
-									setup_fstab ;;
+		clone|34)				clone Cloning "-av --del" / $mnt/ ;; 
+		clone|35)				clone Cloning "-av --del" $mnt/ / ;;
 		copy|36)					clone Copying -av / $mnt/ ;;
 		copy|37)					clone Copying -av $mnt/ / ;;
 		copy|38)					clone Copying -av /home $mnt/ ;;
