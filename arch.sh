@@ -190,7 +190,7 @@ choose_disk () {
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g"
 		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-		disks=$(echo -e "\nquit\nedit\n#\n\$\n$disks\n/\nrefresh\nreboot\nsuspend\nhibernate\npoweroff")
+		disks=$(echo -e "\nquit\nedit\n#\n\$\n$disks\n/\nrefresh\nreboot\nsuspend\nhibernate\npoweroff\nhtop")
 
 		echo -e "\nWhich drive?\n"
 
@@ -204,6 +204,7 @@ choose_disk () {
 				poweroff)	poweroff ;;
 				suspend)		echo mem > /sys/power/state ;;
 				hibernate)	echo disk > /sys/power/state ;;
+				htop)			su - user -c /usr/bin/htop ;;
 				reboot)		reboot ;;
 				quit) 		echo -e "\nQuitting!"; exit ;;
 				edit)			vim $arch_path/$arch_file; exit ;;
@@ -359,6 +360,7 @@ Server = file:///var/cache/pacman/pkg/
 
 
 	packages="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar man-db"
+	#packages="linux vi arch-install-scripts pacman-contrib tar man-db"
 
 	[ "$root_only" ] && packages="$packages sudo"
 	[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs"
@@ -955,6 +957,61 @@ install_tweaks () {
 
 	check_on_root
 	mount_disk
+
+	echo '[Unit]
+Description=AC user power service
+
+[Service]
+ExecStart=/home/user/.local/bin/power.sh
+
+[Install]
+WantedBy=multi-user.target' > $mnt/etc/systemd/system/user-power.service
+
+	ln -s $mnt/etc/systemd/system/user-power.service $mnt/etc/systemd/system/multi-user.target.wants/user-power.service
+
+
+# Needs to be reimplimented after hibernation
+
+echo '#!/bin/sh
+
+case $1/$2 in
+  pre/*)
+    echo "Going to $2..."
+    ;;
+  post/*)
+    echo "Waking up from $2..."
+         echo 85 > /sys/class/power_supply/BAT0/charge_control_end_threshold
+    ;;
+esac' > $mnt/usr/lib/systemd/system-sleep/sleep.sh 
+
+
+	exit
+
+	pacstrap_install pacman -S acpid
+
+	# TODO find a way to activate sysd service
+	arch-chroot $mnt systemctl enable acpid.service
+
+	echo 'SUBSYSTEM=="power_supply", ATTR{online}=="0", RUN+="/home/user/.local/bin/pluggedin.sh false"
+SUBSYSTEM=="power_supply", ATTR{online}=="1", RUN+="/home/user/.local/bin/pluggedin.sh true"' > $mnt/etc/udev/rules.d/powersave.rules
+
+echo '[Unit]
+Description=ACPI event daemon
+Documentation=man:acpid(8)
+
+[Service]
+ExecStart=/usr/bin/acpid --foreground --netlink
+
+[Install]
+WantedBy=multi-user.target' > $mnt/usr/lib/systemd/system/acpid.service
+
+	# Manually enable it
+	ln -s /usr/lib/systemd/system/acpid.service /etc/systemd/system/multi-user.target.wants/acpid.service
+
+	exit
+
+
+
 
 	#cmd || { printf "%b" "FAILED.\n" ; exit 1 ; }
 	
@@ -1830,6 +1887,7 @@ CONFIG_FILES=".config/baloofilerc
 .config/gtkrc
 .config/gtkrc-2.0
 .config/gwenviewrc
+.config/htop
 .config/kactivitymanagerd-pluginsrc
 .config/kactivitymanagerdrc
 .config/kcminputrc
@@ -1849,11 +1907,10 @@ CONFIG_FILES=".config/baloofilerc
 .config/okularrc
 .config/plasma-org.kde.plasma.desktop-appletsrc
 .config/plasmashellrc
+.config/powerdevilrc
 .config/powermanagementprofilesrc
 .config/systemsettingsrc
 .config/Trolltech.conf
-.config/vlc/vlc-qt-interface.conf
-.config/vlc/vlcrc
 .config/weston.ini
 .local/bin/*
 .local/lib/*
