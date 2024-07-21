@@ -190,7 +190,7 @@ choose_disk () {
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g"
 		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-		disks=$(echo -e "\nquit\nedit\n#\n\$\n$disks\n/\nrefresh\nreboot\nsuspend\nhibernate\npoweroff\nhtop")
+		disks=$(echo -e "\nquit\nedit\n$\n#\n$disks\n/\nupdate\nrefresh\nreboot\nsuspend\nhibernate\npoweroff\nhtop")
 
 		echo -e "\nWhich drive?\n"
 
@@ -199,6 +199,7 @@ choose_disk () {
 			case $disk in
 				$)				sudo -u $user bash ;;
 				\#)				bash ;;
+				update)		pacman -Syu --noconfirm ;;
 				/)				disk=$host; search_disks=0 ; break ;;
 				refresh) 	break;	;;
 				poweroff)	poweroff ;;
@@ -1006,7 +1007,7 @@ ExecStart=/usr/bin/acpid --foreground --netlink
 WantedBy=multi-user.target' > $mnt/usr/lib/systemd/system/acpid.service
 
 	# Manually enable it
-	ln -s /usr/lib/systemd/system/acpid.service /etc/systemd/system/multi-user.target.wants/acpid.service
+	ln -s $mnt/usr/lib/systemd/system/acpid.service $mnt/etc/systemd/system/multi-user.target.wants/acpid.service
 
 	exit
 
@@ -1713,6 +1714,13 @@ clean_system () {
 	#echo "Cleaning unused locales..."
 	#ls /usr/share/locales/ | grep -xv "en_US" | xargs rm -r
 
+
+### NEEDED FILES ####
+
+# key4.db logins.json
+
+
+
 	echo "Cleaning ~/.cache..."
 	rm -rf /home/user/.cache/*
 	
@@ -1824,6 +1832,28 @@ wipe_disk () {
 	else
 		echo -e "\nNot wiping.\n"
 	fi
+
+}
+
+
+wipe_freespace () {
+
+
+	echo -e "\nWiping freespace on $disk using zero method. Please be patient...\n"
+	echo -e "Run 'watch -n 1 -x df / --sync' in another terminal to see progress.\n"
+
+	error_check 0
+
+	cd /
+
+	file=$(cat /dev/urandom | tr -cd 'a-f0-9' | head -c 32).tmp
+	(dd if=/dev/zero of=$file bs=4M status=progress; dd if=/dev/zero of=$file.small bs=256 status=progress) &>/dev/null
+
+
+	sync ; sleep 60 ; sync
+	rm $file $file.small
+
+	error_check 1
 
 }
 
@@ -1986,7 +2016,8 @@ choices=("1. Quit
 39. Copy $disk$rootPart/home -> /
 40. Update / <-> $disk
 41. Wipe (zero)
-42. Wipe (urandom)")
+42. Wipe (urandom)
+43. Wipe freespace")
 
 
 while :; do
@@ -2093,8 +2124,9 @@ echo
 		copy|38)					clone Copying -av /home $mnt/ ;;
 		copy|39)					clone Copying -av $mnt/home / ;;
 		update|40)				clone Updating -auv / $mnt/ ; clone Updating -auv $mnt/ / ;;
-		wipe|41)					wipe_disk zero;;
-		wipe|42)					wipe_disk urandom;;
+		wipe|41)					wipe_disk zero ;;
+		wipe|42)					wipe_disk urandom ;;
+		wipe-free|43)			wipe_freespace ;;
 		'')						disk_info ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
