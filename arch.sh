@@ -68,7 +68,6 @@ espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 fstype=btrfs
-fstype=ext4
 subvols=()
 efi_path=/efi
 encryption=0
@@ -501,7 +500,7 @@ install_REFIND () {
 	if [ "$fstype" = "btrfs" ]; then
 		rootflags='subvol=@'
 	else
-		rootflags='/'
+		rootflags=/
 	fi
 
 	echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw rootflags=$rootflags quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" > $mnt/boot/refind_linux.conf
@@ -535,13 +534,7 @@ install_GRUB () {
 	mount_disk
 
 
-	#pacstrap_install grub grub-btrfs os-prober efibootmgr inotify-tools lz4
-	pacstrap_install grub os-prober efibootmgr inotify-tools lz4
-
-	if [ "$fstype" = "btrfs" ]; then
-		pacstrap_install grub-btrfs
-	fi
-
+	pacstrap_install grub grub-btrfs os-prober efibootmgr inotify-tools lz4
 
 
 	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
@@ -570,10 +563,8 @@ EOF2
 
 
 	# Allows grub to run snapshots
-	if [ "$fstype" = "btrfs" ]; then
-		systemctl --root=$mnt enable grub-btrfsd.service
-		/etc/grub.d/41_snapshots-btrfs
-	fi
+	systemctl --root=$mnt enable grub-btrfsd.service
+	/etc/grub.d/41_snapshots-btrfs
 
 	# Remove grub os-prober message
 	sed -i 's/grub_warn/#grub_warn/g' /etc/grub.d/30_os-prober
@@ -1654,20 +1645,13 @@ auto_install_root () {
 	create_partitions
 	install_base
 	setup_fstab
-
-	# ext4 will not work on refind so install with grub  
-	if [ "$fstype" = "btrfs" ]; then
-		install_REFIND
-	else
-		install_GRUB
-	fi
-
+	install_REFIND
 	general_setup
 	setup_iwd
 	install_liveroot
 	copy_script
 	copy_pkgs
- 
+
 }
 
 
