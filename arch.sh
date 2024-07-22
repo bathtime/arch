@@ -1944,6 +1944,7 @@ CONFIG_FILES=".config/baloofilerc
 .config/systemsettingsrc
 .config/Trolltech.conf
 .config/weston.ini
+.config/vlc/*
 .local/bin/*
 .local/lib/*
 .local/share/applications/*
