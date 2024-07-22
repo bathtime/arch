@@ -9,11 +9,13 @@ This program is in alpha.
 - USB installation option
 - Run in tmpfs, squashfs, overlay, or snapshot mode
 - Auto exit on error (set -e) activated
-- Captures current firefox/chromium profile
+- Captures current firefox/chromium profile from host system
+- Auto-setup installs full-featured OS in one command (kde, gnome, weston...)
+- Copy/clone/sync from another system
 
 # Requirements:
 
-- Arch linux host system
+- Arch linux (Will not install from other non-Arch systems!)
 - Internet
 
   
