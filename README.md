@@ -15,7 +15,7 @@ This program is in alpha.
 
 # Requirements:
 
-- Arch linux (Will not install from other non-Arch systems!)
+- Arch linux (Must be run on an Arch-based system!)
 - Internet
 
   
