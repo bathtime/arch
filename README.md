@@ -6,6 +6,7 @@ This program is in alpha.
 
 # Features:
 
+- BTRFS filesystem
 - USB installation option
 - Run in tmpfs, squashfs, overlay, or snapshot mode
 - Captures current firefox/chromium profile from host system
