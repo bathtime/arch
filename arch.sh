@@ -534,8 +534,11 @@ install_GRUB () {
 	mount_disk
 
 
-	pacstrap_install grub grub-btrfs os-prober efibootmgr inotify-tools lz4
+	pacstrap_install grub os-prober efibootmgr inotify-tools lz4
 
+	if [ "$fstype" = "btrfs" ]; then
+		pacstrap_install grub-btrfs
+	fi
 
 	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 
@@ -1645,7 +1648,14 @@ auto_install_root () {
 	create_partitions
 	install_base
 	setup_fstab
-	install_REFIND
+
+	# TODO make grub work with btrfs
+	if [ "$fstype" = "btrfs" ]; then
+		install_REFIND
+	else
+		install_GRUB
+	fi
+
 	general_setup
 	setup_iwd
 	install_liveroot
