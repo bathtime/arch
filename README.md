@@ -6,12 +6,15 @@ This program is in alpha.
 
 # Features:
 
-- Online and Offline install
 - USB installation option
-- Run in tmpfs, squashfs, overlay, or snapshot
-- Only 1 bash script
+- Run in tmpfs, squashfs, overlay, or snapshot mode
 - Auto exit on error (set -e) activated
-- 
+- Captures current firefox/chromium profile
 
+# Requirements:
 
+- Arch linux host system
+- Internet
+
+  
 
