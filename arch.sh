@@ -67,7 +67,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype=btrfs
+fstype=ext4
 subvols=()
 efi_path=/efi
 encryption=0
@@ -84,7 +84,8 @@ timezone=Canada/Eastern
 offline=0
 reinstall=0
 root_only=0
-copy_on_host=1
+#copy_on_host=1
+copy_on_host=0
 
 initramfs=mkinitcpio
 
@@ -566,8 +567,10 @@ EOF2
 
 
 	# Allows grub to run snapshots
-	systemctl --root=$mnt enable grub-btrfsd.service
-	/etc/grub.d/41_snapshots-btrfs
+	if [ "$fstype" = "btrfs" ]; then
+		systemctl --root=$mnt enable grub-btrfsd.service
+		/etc/grub.d/41_snapshots-btrfs
+	fi
 
 	# Remove grub os-prober message
 	sed -i 's/grub_warn/#grub_warn/g' /etc/grub.d/30_os-prober
