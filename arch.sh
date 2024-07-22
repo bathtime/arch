@@ -1702,7 +1702,7 @@ auto_install_kde () {
 
 	auto_install_user
  
-	pacstrap_install plasma-desktop plasma-pa kscreen dolphin konsole firefox chromium gimp gwenview okular obs-studio ffmpegthumbs
+	pacstrap_install plasma-desktop plasma-pa kscreen dolphin konsole firefox chromium gimp gwenview okular obs-studio ffmpegthumbs bleachbit ncdu
 	copy_pkgs
 
 	# Auto-launch
