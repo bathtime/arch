@@ -1591,16 +1591,19 @@ copy_pkgs () {
 	check_on_root
 	mount_disk
 
-	# Check which packages are installed on chroot system and copy those pkgs from host
-	#packages="$(pacman --sysroot $mnt -Q | sed 's/ [0-9].*$//g')"
+	# Check which packages are installed on chroot system
 	packages="$(pacman --sysroot $mnt -Q | sed 's/ /-/g; s/$/-/g')"
 
+	# Copy only packages from host system that are installed on chroot system
 	for package in ${packages}; do
 
 		#if [ "$(ls /var/cache/pacman/pkg/ | grep $package-*[0-9].*.pkg.tar.zst)" ]; then
 		if [ "$(ls /var/cache/pacman/pkg/ | grep $package*)" ]; then
-			echo "Copying $package..."
-			cp -u /var/cache/pacman/pkg/$package* $mnt/var/cache/pacman/pkg/
+
+			echo -n "Copying $package... "
+
+			# Only copy if the package is newer or nonexistant
+			cp -u /var/cache/pacman/pkg/$package* $mnt/var/cache/pacman/pkg/ && echo "[done]"
 		fi
 
 	done
@@ -1617,8 +1620,6 @@ copy_pkgs () {
 
 	#pacman -U /mnt/var/cache/pacman/pkg/*.pkg.tar.zst
 	#pacman -U /var/cache/pacman/pkg/*.pkg.tar.zst
-
-	copy_script
 
 }
 
@@ -1649,6 +1650,7 @@ auto_install_root () {
 	setup_iwd
 	install_liveroot
 	copy_script
+	copy_pkgs
 
 }
 
@@ -1661,6 +1663,7 @@ auto_install_user () {
 	auto_install_root
 	setup_user
 	#install_tweaks
+	copy_pkgs
 
 }
 
@@ -1669,10 +1672,13 @@ auto_install_user () {
 auto_install_weston () {
 
 	auto_install_user
+
 	pacstrap_install wireplumber pipewire pipewire-pulse weston firefox foliate brightnessctl
 	copy_pkgs
 	
 	sed -i 's/^:/  exec weston --shell=desktop/g' $mnt/home/$user/.bash_profile
+
+	backup_config
 	install_config
 
 }
@@ -1684,7 +1690,6 @@ auto_install_kde () {
 	auto_install_user
  
 	pacstrap_install plasma-desktop plasma-pa kscreen dolphin konsole firefox chromium gimp gwenview okular obs-studio ffmpegthumbs
-
 	copy_pkgs
 
 	# Auto-launch
@@ -1695,9 +1700,11 @@ auto_install_kde () {
 
 }
 
+
 auto_install_gnome () {
 
 	auto_install_user
+
 	pacstrap_install gnome-shell nautilus gnome-terminal xdg-user-dirs firefox
 	copy_pkgs
 
@@ -1706,22 +1713,14 @@ auto_install_gnome () {
 	sed -i 's/^:/   MOZ_ENABLE_WAYLAND=1 QT_QPA_PLATFORM=wayland XDG_SESSION_TYPE=wayland gnome-shell --session=wayland/g' $mnt/home/$user/.bash_profile
 
 	backup_config
-	install_config	
-
+	install_config
 }
-
 
 
 clean_system () {
 
 	#echo "Cleaning unused locales..."
 	#ls /usr/share/locales/ | grep -xv "en_US" | xargs rm -r
-
-
-### NEEDED FILES ####
-
-# key4.db logins.json
-
 
 
 	echo "Cleaning ~/.cache..."
@@ -1735,7 +1734,6 @@ clean_system () {
 	profile=$(ls /home/user/.mozilla/firefox/ | grep .*.default-release)
 	cd $profile
 
-	#rm -rf crashes cookies.sqlite* minidumps datareporting sessionstore-backups saved-telemetry-pings storage browser-extension-data security_state gmp-gmpopenh264 synced-tabs.db-wal places.sqlite favicons.sqlite cert9.db places.sqlite-wal storage-sync-v2.sqlite-wal webappsstore.sqlite gmp-widevinecdm
 	rm -rf crashes minidumps datareporting sessionstore-backups saved-telemetry-pings storage browser-extension-data security_state gmp-gmpopenh264 synced-tabs.db-wal places.sqlite favicons.sqlite cert9.db places.sqlite-wal storage-sync-v2.sqlite-wal webappsstore.sqlite gmp-widevinecdm
 
 	echo "Cleaning chromium..."
