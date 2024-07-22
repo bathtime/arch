@@ -1660,7 +1660,7 @@ auto_install_user () {
 
 	auto_install_root
 	setup_user
-	install_tweaks
+	#install_tweaks
 
 }
 
@@ -1682,13 +1682,15 @@ auto_install_weston () {
 auto_install_kde () {
 
 	auto_install_user
-	#pacstrap_install plasma-desktop plasma-wayland-session plasma-pa kscreen dolphin konsole firefox
+ 
 	pacstrap_install plasma-desktop plasma-pa kscreen dolphin konsole firefox chromium gimp gwenview okular obs-studio ffmpegthumbs
+
 	copy_pkgs
 
 	# Auto-launch
 	sed -i 's/^:/   startplasma-wayland/g' $mnt/home/$user/.bash_profile
 
+	backup_config
 	install_config	
 
 }
@@ -1703,6 +1705,7 @@ auto_install_gnome () {
 
 	sed -i 's/^:/   MOZ_ENABLE_WAYLAND=1 QT_QPA_PLATFORM=wayland XDG_SESSION_TYPE=wayland gnome-shell --session=wayland/g' $mnt/home/$user/.bash_profile
 
+	backup_config
 	install_config	
 
 }
@@ -1750,6 +1753,7 @@ backup_config () {
 	clean_system
 
 	cd /home/$user
+	rm -rf setup.tar
 
 	sudo -u $user tar -pcf setup.tar $CONFIG_FILES
 	chown $user:$user setup.tar
