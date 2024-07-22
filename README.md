@@ -8,10 +8,10 @@ This program is in alpha.
 
 - USB installation option
 - Run in tmpfs, squashfs, overlay, or snapshot mode
-- Auto exit on error (set -e) activated
 - Captures current firefox/chromium profile from host system
 - Auto-setup installs full-featured OS in one command (kde, gnome, weston...)
 - Copy/clone/sync from another system
+- Error detection (set -e) activated
 
 # Requirements:
 
