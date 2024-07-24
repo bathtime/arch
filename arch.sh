@@ -263,6 +263,7 @@ create_partitions () {
 	if [ "$fstype" = "btrfs" ]; then
 		mkfs.btrfs -f -L ROOT $disk$rootPart
 	else
+		#pacman -S dosfstools
 		mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart
 	fi
 
@@ -697,6 +698,9 @@ general_setup () {
 	check_on_root
 	mount_disk
 
+	rm -rf $mnt/var/log && ln -s $mnt/run/user/1000/ $mnt/var/log
+	rm -rf $mnt/var/tmp && ln -s $mnt/tmp $mnt/var/tmp
+
 	arch-chroot $mnt printf "$password\n$password\n" | passwd
 	
 	echo -e 'en_US.UTF-8 UTF-8\nen_US ISO-8859-1' > $mnt/etc/locale.gen  
@@ -765,9 +769,15 @@ setup_user () {
 		printf "$password\n$password\n" | passwd "$user"
 EOF
 
+
+	rm -rf $mnt/home/$user/.cache
+
+	sudo -u $user ln -s $mnt/run/user/1000/ $mnt/home/$user/.cache
+
+
 	mkdir -p -m 750 $mnt/etc/sudoers.d
 	echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/1-wheel
-	echo 'user ALL = NOPASSWD: /usr/local/bin/arch.sh' > $mnt/etc/sudoers.d/10-arch
+	echo "$user ALL = NOPASSWD: /usr/local/bin/arch.sh" > $mnt/etc/sudoers.d/10-arch
 	chmod 0440 $mnt/etc/sudoers.d/{1-wheel,10-arch}
 
 	arch-chroot $mnt visudo -c
@@ -1264,7 +1274,7 @@ run_latehook() {
         fi
 
 
-}' > /usr/lib/initcpio/hooks/liveroot
+}' > $mnt/usr/lib/initcpio/hooks/liveroot
 
 	cat $mnt/usr/lib/initcpio/hooks/liveroot
 
@@ -1753,6 +1763,7 @@ clean_system () {
 	cd $profile
 
 	rm -rf crashes minidumps datareporting sessionstore-backups saved-telemetry-pings storage browser-extension-data security_state gmp-gmpopenh264 synced-tabs.db-wal places.sqlite favicons.sqlite cert9.db places.sqlite-wal storage-sync-v2.sqlite-wal webappsstore.sqlite gmp-widevinecdm
+
 
 	echo "Cleaning chromium..."
 
