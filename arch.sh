@@ -70,7 +70,6 @@ rootPart=$rootPartNum
 fstype=ext4
 subvols=()
 efi_path=/efi
-encryption=0
 
 user=user
 password=123456
@@ -1101,30 +1100,32 @@ install_liveroot () {
 
 	pacstrap_install rsync squashfs-tools
 
-	echo '#!/usr/bin/bash
+
+   echo '#!/usr/bin/bash
+
+   fstype="ext4"
+   fsroot=""
 
 create_archive() {
             
-	echo -e "Creating archive file...\n"
+   echo -e "Creating archive file...\n"
 
-	cd $real_root/@/
-
-	mksquashfs . $real_root/@/root.squashfs -noappend -no-recovery -mem-percent 20 -e root.squashfs -e boot/* -e efi/* -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/ -e .snapshots/ -e var/tmp/* -e var/log/* -e etc/pacman.d/gnupg/ -e var/lib/systemd/random-seed
-
-	ls -lah $real_root/@/root.squashfs
+   cd $real_root/"$fsroot"
+   mksquashfs . $real_root/"$fsroot"root.squashfs -noappend -no-recovery -mem-percent 20 -e root.squashfs -e boot/* -e efi/* -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/ -e .snapshots/ -e var/tmp/* -e var/log/* -e etc/pacman.d/gnupg/ -e var/lib/systemd/random-seed
+   ls -lah $real_root/"$fsroot"root.squashfs
 
 }
 
 create_overlay() {
 
-	echo -e "\nCreating overlay...\n"
+   echo -e "\nCreating overlay...\n"
 
-	local lower_dir=$(mktemp -d -p /)
-	local ram_dir=$(mktemp -d -p /)
-	mount --move ${new_root} ${lower_dir}
-	mount -t tmpfs cowspace ${ram_dir}
-	mkdir -p ${ram_dir}/upper ${ram_dir}/work
-	mount -t overlay -o lowerdir=${lower_dir},upperdir=${ram_dir}/upper,workdir=${ram_dir}/work rootfs ${new_root}
+   local lower_dir=$(mktemp -d -p /)
+   local ram_dir=$(mktemp -d -p /)
+   mount --move ${new_root} ${lower_dir}
+   mount -t tmpfs cowspace ${ram_dir}
+   mkdir -p ${ram_dir}/upper ${ram_dir}/work
+   mount -t overlay -o lowerdir=${lower_dir},upperdir=${ram_dir}/upper,workdir=${ram_dir}/work rootfs ${new_root}
 
 }
 
@@ -1132,18 +1133,19 @@ create_overlay() {
 run_latehook() {
 
 
-	echo -e "\nPress any key for extra boot options.\n"
+   echo -e "\nPress any key for extra boot options.\n"
 
-	real_root=/real_root
-	new_root=/new_root
-	mkdir -p $real_root $new_root
+   real_root=/real_root
+   new_root=/new_root
+   mkdir -p $real_root $new_root
 
    disk=$(mount | grep " on /new_root " | sed "s/[0-9] on \/new_root.*//g")
    ESP_UUID=$(blkid -s UUID -o value $disk"1")
 
-	if read -t 2 -s -n 1; then
 
-		echo -e "\nPlease choose an option:\n\n\
+        if read -t 2 -s -n 1; then
+
+                echo -e "\nPlease choose an option:\n\n\
 <s> snapshot\n\
 <w> snapshot + overlay\n\
 <f> snapshot + tmpfs\n\
@@ -1155,111 +1157,114 @@ run_latehook() {
 <d> emergency shell\n\n\
 <enter> continue boot\n"
 
-		read -n 1 -s key
+                read -n 1 -s key
 
 
-		if [[ "$key" = "s" ]] || [[ "$key" = "w" ]] || [[ "$key" = "f" ]]; then
+                if [[ "$key" = "s" ]] || [[ "$key" = "w" ]] || [[ "$key" = "f" ]]; then
 
-			mount --mkdir -o subvolid=256 ${root} $new_root
+                        mount --mkdir -o subvolid=256 ${root} $new_root
       
-			btrfs subvolume list -ts $new_root | less
-			read -n 3 -p "Enter snapshot number (or press <enter> for current subvolume (256)): " subvol 
+                        btrfs subvolume list -ts $new_root | less
+                        read -n 3 -p "Enter snapshot number (or press <enter> for current subvolume (256)): " subvol 
 
-			if [ ! "$subvol" ]; then
-				echo -e "\nDefault subvolum chosen.\n"
-				subvol=256
-			fi
+                        if [ ! "$subvol" ]; then
+                                echo -e "\nDefault subvolum chosen.\n"
+                                subvol=256
+                        fi
 
-			echo -e "\nPlease enter extra mount options (ex., ro ):"
-			read options 
-			[ "$options" ] && options=","$options
+                        echo -e "\nPlease enter extra mount options (ex., ro ):"
+                        read options 
+                        [ "$options" ] && options=","$options
 
-			echo -e "\nWill proceed with the following mount:\n\nmount -o subvolid=$subvol$options ${root} /\n"
+                        echo -e "\nWill proceed with the following mount:\n\nmount -o subvolid=$subvol$options ${root} /\n"
 
-			umount $new_root
-			mount --mkdir -o subvolid=$subvol$options ${root} $new_root
+                        umount $new_root
+                        mount --mkdir -o subvolid=$subvol$options ${root} $new_root
 
-			if [ "$?" -ne 0 ]; then
-				echo "Could not mount subvol ($subvol). Chosing default (256)."
-				sleep 2
-				mount --mkdir -o subvolid=256 ${root} $new_root 
-			fi
+                        if [ "$?" -ne 0 ]; then
+                                echo "Could not mount subvol ($subvol). Chosing default (256)."
+                                sleep 2
+                                mount --mkdir -o subvolid=256 ${root} $new_root 
+                        fi
 
-			[[ "$key" = "w" ]] && create_overlay
+                        [[ "$key" = "w" ]] && create_overlay
 
 
-			if [[ "$key" = "f" ]]; then
+                        if [[ "$key" = "f" ]]; then
 
-				echo "TODO!"
-				#mount -t tmpfs -o size=60% none $new_root
-				#rsync -a --exclude=root.squashfs --exclude=/efi/ --exclude=/boot/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ /real_root/@/ $new_root
-				#umount -l /real_root
+                                echo "TODO!"
+                                #mount -t tmpfs -o size=60% none $new_root
+                                #rsync -a --exclude=root.squashfs --exclude=/efi/ --exclude=/boot/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ /real_root/@/ $new_root
+                                #umount -l /real_root
 
-			fi
+                        fi
 
-		elif [[ "$key" = "o" ]]; then
+                elif [[ "$key" = "o" ]]; then
 
-			mount --mkdir -o subvolid=256 ${root} $new_root
+                        if [ "$fstype" = "btrfs" ]; then
+                                mount --mkdir -o subvolid=256 ${root} $new_root
+                        fi
 
-			create_overlay
+                        create_overlay
 
-		elif [[ "$key" = "e" ]] || [[ "$key" = "n" ]] || [[ "$key" = "t" ]]; then
+                elif [[ "$key" = "e" ]] || [[ "$key" = "n" ]] || [[ "$key" = "t" ]]; then
 
-			mount ${root} $real_root
+                        mount ${root} $real_root
 
-			[[ ! -f "$real_root/@/root.squashfs" ]] || [[ "$key" = "n" ]] && create_archive
+                        [[ ! -f "$real_root/"$fsroot"root.squashfs" ]] || [[ "$key" = "n" ]] && create_archive
 
-			echo "Extracting archive to RAM. Please be patient..."
+                        echo "Extracting archive to RAM. Please be patient..."
 
-			if [ "$key" = "t" ]; then
-				mount -t tmpfs -o size=80% none $new_root
-				unsquashfs -d /new_root -f $real_root/@/root.squashfs
-				echo -e "\nYou may now safely remove your USB stick.\n"
-				sleep 1
-			else
-				mount "$real_root/@/root.squashfs" $new_root -t squashfs -o loop
-				create_overlay
-			fi
+                        if [ "$key" = "t" ]; then
+                                mount -t tmpfs -o size=80% none $new_root
+                                unsquashfs -d /new_root -f $real_root/"$fsroot"root.squashfs
+                                echo -e "\nYou may now safely remove your USB stick.\n"
+                                sleep 1
+                        else
+                                mount "$real_root/"$fsroot"root.squashfs" $new_root -t squashfs -o loop
+                                create_overlay
+                        fi
 
-			umount -l $real_root
+                        umount -l $real_root
 
-		elif [[ "$key" = "r" ]]; then
+                elif [[ "$key" = "r" ]]; then
 
-			mount ${root} $real_root
-			mount -t tmpfs -o size=80% none $new_root
+                        mount ${root} $real_root
+                        mount -t tmpfs -o size=80% none $new_root
 
-			echo "Copying root filesystem to RAM. Please be patient..."
+                        echo "Copying root filesystem to RAM. Please be patient..."
 
-			rsync --info=progress2 -a --exclude=root.squashfs --exclude=/efi/ --exclude=/boot/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ /real_root/@/ $new_root
+                        rsync --info=progress2 -a --exclude=root.squashfs --exclude=/efi/ --exclude=/boot/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ /real_root/"$fsroot" $new_root
 
-			echo -e "\nYou may now safely remove your USB stick.\n"
-			sleep 1
+                        echo -e "\nYou may now safely remove your USB stick.\n"
+                        sleep 1
 
-		elif [[ "$key" = "d" ]]; then
+                elif [[ "$key" = "d" ]]; then
 
-			echo "Entering emergency shell."
+                        echo "Entering emergency shell."
 
-			bash
+                        bash
 
-		else
+                else
 
-			echo "Continuing boot..."
+                        echo "Continuing boot..."
 
-			umount $new_root
+                        umount $new_root
 
-			mount --mkdir -o subvolid=256 ${root} $new_root
-   		mount --uuid $ESP_UUID $new_root/efi
+                        mount --mkdir -o subvolid=256 ${root} $new_root
+                mount --uuid $ESP_UUID $new_root/efi
 
-		fi
+                fi
 
-	else
+        else
 
-		echo -e "Running default option..."
-   	mount --uuid $ESP_UUID $new_root/efi
+                echo -e "Running default option..."
+        mount --uuid $ESP_UUID $new_root/efi
 
-	fi
+        fi
 
-}' > $mnt/usr/lib/initcpio/hooks/liveroot
+
+}' > /usr/lib/initcpio/hooks/liveroot
 
 	cat $mnt/usr/lib/initcpio/hooks/liveroot
 
@@ -1947,6 +1952,7 @@ CONFIG_FILES=".config/baloofilerc
 .config/kscreenlockerrc
 .config/ksplashrc
 .config/ksmserverrc
+.config/kwinoutputconfig.json
 .config/kwinrc
 .config/kwinrulesrc
 .config/okularrc
