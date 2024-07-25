@@ -94,6 +94,17 @@ wifi_pass="13FDC4A93E3C"
 dirty_threshold=0
 
 
+check_pkg () {
+
+
+	if [ ! "$(pacman -Q $1)" ]; then
+		echo -e "\nInstalling program required to run command: $1...\n"
+		pacman --noconfirm -S $1
+		echo
+	fi
+
+}
+
 
 check_viable_disk () {
 
@@ -233,9 +244,9 @@ delete_partitions () {
 
 	echo -e "\nWiping disk...\n"
 
-	wipefs -af $disk 
+	wipefs -af $disk
 
-	[ ! "$(pacman -Qs $package)" ] && pacman -S gptfdisk
+	check_pkg gptfdisk
 
 	sgdisk -Zo $disk
 
@@ -250,6 +261,8 @@ create_partitions () {
 	
 	systemctl daemon-reload
 
+	check_pkg parted
+	
 	parted -s $disk mklabel gpt \
 			mkpart ESP fat32 1Mib 512Mib \
 			set $espPartNum esp on \
@@ -257,13 +270,15 @@ create_partitions () {
 			set $swapPartNum swap on \
 			mkpart ROOT $fstype 8512Mib 100% \
 
+	check_pkg dosfstools
+
 	mkfs.fat -F 32 -n EFI $disk$espPart 
 	mkswap -L SWAP $disk$swapPart
 
 	if [ "$fstype" = "btrfs" ]; then
+		check_pkg btrfs-progs
 		mkfs.btrfs -f -L ROOT $disk$rootPart
 	else
-		#pacman -S dosfstools
 		mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart
 	fi
 
@@ -361,7 +376,7 @@ Server = file:///var/cache/pacman/pkg/
 	reset_keys
 
 
-	packages="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar man-db"
+	packages="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar man-db dosfstools"
 	#packages="linux vi arch-install-scripts pacman-contrib tar man-db"
 
 	[ "$root_only" ] && packages="$packages sudo"
