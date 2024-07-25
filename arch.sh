@@ -12,6 +12,19 @@
 #graphical.target reached after 1.495s in userspace.
 
 
+
+# btrfs on ssd
+
+#dd if=/dev/zero of=tempfile bs=4M count=4096 conv=fdatasync,notrunc
+#17179869184 bytes (17 GB, 16 GiB) copied, 13.5097 s, 1.3 GB/s
+
+#dd if=/dev/zero of=tempfile bs=512 count=1000000 conv=fdatasync,notrunc
+#512000000 bytes (512 MB, 488 MiB) copied, 3.49716 s, 146 MB/s
+
+#Startup finished in 1.864s (firmware) + 3.116s (loader) + 3.486s (kernel) + 1.473s (userspace) = 9.941s 
+#graphical.target reached after 1.457s in userspace.
+
+
 #ext4 on external drive
 
 #Startup finished in 4.437s (firmware) + 4.192s (loader) + 5.760s (kernel) + 3.342s (userspace) = 17.731s
@@ -86,7 +99,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype=btrfs
+fstype=ext4
 subvols=()
 efi_path=/efi
 
@@ -732,8 +745,7 @@ general_setup () {
 	check_on_root
 	mount_disk
 
-	rm -rf $mnt/var/log && ln -s $mnt/run/user/1000/ $mnt/var/log
-	rm -rf $mnt/var/tmp && ln -s $mnt/tmp $mnt/var/tmp
+	#rm -rf $mnt/var/tmp && ln -s $mnt/tmp $mnt/var/tmp
 
 	arch-chroot $mnt printf "$password\n$password\n" | passwd
 	
@@ -804,9 +816,8 @@ setup_user () {
 EOF
 
 
-	rm -rf $mnt/home/$user/.cache
-
-	sudo -u $user ln -s $mnt/run/user/1000/ $mnt/home/$user/.cache
+	#rm -rf $mnt/home/$user/.cache
+	#sudo -u $user ln -s $mnt/run/user/1000/ $mnt/home/$user/.cache
 
 
 	mkdir -p -m 750 $mnt/etc/sudoers.d
