@@ -313,6 +313,8 @@ create_partitions () {
 		ext4)			mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart ;;
 		xfs)			check_pkg xfsprogs			
 						mkfs.xfs -f -L ROOT $disk$rootPart ;;
+		f2fs)			check_pkg f2fs-tools
+						mkfs.f2fs -f -l ROOT -i -O extra_attr,inode_checksum,sb_checksum $disk$rootPart ;;
 	esac
 
 
@@ -416,8 +418,10 @@ Server = file:///var/cache/pacman/pkg/
 	#packages="linux vi arch-install-scripts pacman-contrib tar man-db"
 
 	[ "$root_only" ] && packages="$packages sudo"
+
 	[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs"
 	[ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
+	[ "$fstype" = "f2fs" ] && packages="$packages f2fs-tools"
 
 	pacstrap_install $packages
 
@@ -1718,10 +1722,10 @@ auto_install_root () {
 	setup_fstab
 
 	# TODO make grub work with btrfs
-	if [ "$fstype" = "btrfs" ]; then
-		install_REFIND
-	else
+	if [ "$fstype" = "ext4" ] ; then
 		install_GRUB
+	else
+		install_REFIND
 	fi
 
 	general_setup
