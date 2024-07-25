@@ -99,7 +99,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype=ext4
+fstype=xfs
 subvols=()
 efi_path=/efi
 
@@ -306,12 +306,15 @@ create_partitions () {
 	mkfs.fat -F 32 -n EFI $disk$espPart 
 	mkswap -L SWAP $disk$swapPart
 
-	if [ "$fstype" = "btrfs" ]; then
-		check_pkg btrfs-progs
-		mkfs.btrfs -f -L ROOT $disk$rootPart
-	else
-		mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart
-	fi
+	case $fstype in
+
+		btrfs)		check_pkg btrfs-progs
+						mkfs.btrfs -f -L ROOT $disk$rootPart ;;
+		ext4)			mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart ;;
+		xfs)			check_pkg xfsprogs			
+						mkfs.xfs -f -L ROOT $disk$rootPart ;;
+	esac
+
 
 	parted -s $disk print
 
@@ -414,6 +417,7 @@ Server = file:///var/cache/pacman/pkg/
 
 	[ "$root_only" ] && packages="$packages sudo"
 	[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs"
+	[ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
 
 	pacstrap_install $packages
 
