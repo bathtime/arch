@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ext4
+# ext4 on ssd
 
 #dd if=/dev/zero of=tempfile bs=4M count=4096 conv=fdatasync,notrunc
 #17179869184 bytes (17 GB, 16 GiB) copied, 10.9708 s, 1.6 GB/s
@@ -12,7 +12,10 @@
 #graphical.target reached after 1.495s in userspace.
 
 
+#ext4 on external drive
 
+#Startup finished in 4.437s (firmware) + 4.192s (loader) + 5.760s (kernel) + 3.342s (userspace) = 17.731s
+#graphical.target reached after 3.341s in userspace
 
 
 
@@ -332,7 +335,8 @@ mount_disk () {
 
 			echo -e "\nMounting...\n"
 
-			mountopts="nodatacow,nodatasum,noatime,compress-force=zstd:1,discard=async"
+			#mountopts="nodatacow,nodatasum,noatime,compress-force=zstd:1,discard=async"
+			mountopts="nodatacow,nodatasum,noatime,discard=async"
 
 			for subvol in '' "${subvols[@]}"; do
 				mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
