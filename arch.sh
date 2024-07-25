@@ -8,8 +8,8 @@
 #dd if=/dev/zero of=tempfile bs=512 count=1000000 conv=fdatasync,notrunc
 #512000000 bytes (512 MB, 488 MiB) copied, 2.1858 s, 234 MB/s
 
-#Startup finished in 1.861s (firmware) + 1.554s (loader) + 3.604s (kernel) + 1.497s (userspace) = 8.517s 
-#graphical.target reached after 1.495s in userspace.
+#Startup finished in 1.834s (firmware) + 1.557s (loader) + 3.517s (kernel) + 1.469s (userspace) = 8.378s - 3s
+#graphical.target reached after 1.461s in userspace.
 
 
 
@@ -349,7 +349,8 @@ mount_disk () {
 			echo -e "\nMounting...\n"
 
 			#mountopts="nodatacow,nodatasum,noatime,compress-force=zstd:1,discard=async"
-			mountopts="nodatacow,nodatasum,noatime,discard=async"
+			#mountopts="nodatacow,nodatasum,noatime,discard=async"
+			mountopts="noatime,discard=async"
 
 			for subvol in '' "${subvols[@]}"; do
 				mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
@@ -603,7 +604,7 @@ GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
 GRUB_CMDLINE_LINUX="nowatchdog loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
 GRUB_DISABLE_RECOVERY="true"
-GRUB_HIDDEN_TIMEOUT=2
+GRUB_HIDDEN_TIMEOUT=1
 GRUB_RECORDFAIL_TIMEOUT=1
 GRUB_TIMEOUT=0
  
@@ -834,7 +835,7 @@ Type=simple
 ExecStart=
 ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin $user --noclear %I 38400 linux" > $mnt/etc/systemd/system/getty@tty1.service.d/autologin.conf
 
-	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/user/.cache')" ] && echo "tmpfs    /home/user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> $mnt/etc/fstab
+	#[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/user/.cache')" ] && echo "tmpfs    /home/user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> $mnt/etc/fstab
 
 	arch-chroot $mnt sudo -u $user mkdir -p /home/$user/.local/bin
 
