@@ -1,5 +1,21 @@
 #!/bin/bash
 
+# ext4
+
+#dd if=/dev/zero of=tempfile bs=4M count=4096 conv=fdatasync,notrunc
+#17179869184 bytes (17 GB, 16 GiB) copied, 10.9708 s, 1.6 GB/s
+
+#dd if=/dev/zero of=tempfile bs=512 count=1000000 conv=fdatasync,notrunc
+#512000000 bytes (512 MB, 488 MiB) copied, 2.1858 s, 234 MB/s
+
+#Startup finished in 1.861s (firmware) + 1.554s (loader) + 3.604s (kernel) + 1.497s (userspace) = 8.517s 
+#graphical.target reached after 1.495s in userspace.
+
+
+
+
+
+
 : << DOCS
 
 To run on the fly:
@@ -67,7 +83,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype=ext4
+fstype=btrfs
 subvols=()
 efi_path=/efi
 
@@ -83,8 +99,7 @@ timezone=Canada/Eastern
 offline=0
 reinstall=0
 root_only=0
-#copy_on_host=1
-copy_on_host=0
+copy_on_host=1
 
 initramfs=mkinitcpio
 
@@ -317,7 +332,7 @@ mount_disk () {
 
 			echo -e "\nMounting...\n"
 
-			mountopts="noatime,compress-force=zstd:1,discard=async"
+			mountopts="nodatacow,nodatasum,noatime,compress-force=zstd:1,discard=async"
 
 			for subvol in '' "${subvols[@]}"; do
 				mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
