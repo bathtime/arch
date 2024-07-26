@@ -1,4 +1,5 @@
-This program is in alpha! You're been warned.
+This program is in alpha!
+
 
 # Run the script via:
 
