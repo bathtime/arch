@@ -6,9 +6,11 @@ Run live:
 
 bash <(curl -sL https://bit.ly/a-install)
 
+
 Copy to system and run:
 
 curl -sL https://bit.ly/a-install > arch.sh && chmod +x arch.sh && ./arch.sh
+
 
 # Features:
 
@@ -21,10 +23,12 @@ curl -sL https://bit.ly/a-install > arch.sh && chmod +x arch.sh && ./arch.sh
 - Copy/clone/sync/update to/from another system
 - Error detection (set -e) activated
 
+
 # Requirements:
 
 - Arch linux (Must be run on an Arch-based system!)
 - Internet
+
 
 # Bugs:
 
