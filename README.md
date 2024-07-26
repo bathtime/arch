@@ -1,14 +1,14 @@
 This program is in alpha!
 
 
-# Run the script via:
+# Run the script:
 
-Run live:
+Live:
 
 bash <(curl -sL https://bit.ly/a-install)
 
 
-Copy to system and run:
+Copy to system:
 
 curl -sL https://bit.ly/a-install > arch.sh && chmod +x arch.sh && ./arch.sh
 
