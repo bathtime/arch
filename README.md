@@ -3,9 +3,11 @@ This program is in alpha! You're been warned.
 # Run the script via:
 
 Run live:
+
 bash <(curl -sL https://bit.ly/a-install)
 
 Copy to system and run:
+
 curl -sL https://bit.ly/a-install > arch.sh && chmod +x arch.sh && ./arch.sh
 
 # Features:
