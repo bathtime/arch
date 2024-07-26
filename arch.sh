@@ -115,7 +115,7 @@ timezone=Canada/Eastern
 offline=0
 reinstall=0
 root_only=0
-copy_on_host=1
+copy_on_host=0
 
 initramfs=mkinitcpio
 
@@ -413,6 +413,7 @@ Server = file:///var/cache/pacman/pkg/
 
 	reset_keys
 
+	check_pkg arch-install-scripts
 
 	packages="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar man-db dosfstools"
 	#packages="linux vi arch-install-scripts pacman-contrib tar man-db"
