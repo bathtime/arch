@@ -99,7 +99,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype=xfs
+fstype=btrfs
 subvols=()
 efi_path=/efi
 
@@ -561,10 +561,11 @@ install_REFIND () {
 		rootflags=/
 	fi
 
-	echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw rootflags=$rootflags quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" > $mnt/boot/refind_linux.conf
-	echo "\"Boot nomodeset\"  \"root=UUID=$ROOT_UUID rw rootflags=$rootflags quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold systemd.unit=multi-user.target nomodeset\"" >> $mnt/boot/refind_linux.conf
-	echo "\"Boot acpi=off\"  \"root=UUID=$ROOT_UUID rw rootflags=$rootflags quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold systemd.unit=multi-user.target acpi=off\"" >> $mnt/boot/refind_linux.conf
-	echo "\"Boot read only\"  \"root=UUID=$ROOT_UUID ro rootflags=$rootflags quiet nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" >> $mnt/boot/refind_linux.conf
+	echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw rootflags=$rootflags quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" > $mnt/boot/refind_linux.conf
+	echo "\"Boot nomodeset\"  \"root=UUID=$ROOT_UUID rw rootflags=$rootflags quiet nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold systemd.unit=multi-user.target nomodeset\"" >> $mnt/boot/refind_linux.conf
+	echo "\"Boot acpi=off\"  \"root=UUID=$ROOT_UUID rw rootflags=$rootflags quiet nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold systemd.unit=multi-user.target acpi=off\"" >> $mnt/boot/refind_linux.conf
+	echo "\"Boot read only\"  \"root=UUID=$ROOT_UUID ro rootflags=$rootflags quiet nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" >> $mnt/boot/refind_linux.conf
+	echo "\"Boot no options\"  \"root=UUID=$ROOT_UUID ro rootflags=$rootflags resume=UUID=$SWAP_UUID\"" >> $mnt/boot/refind_linux.conf
 
 #	sed -i 's/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g; s/#scan_all_linux_kernels false/scan_all_linux_kernels false/g' $mnt$efi_path/EFI/BOOT/refind.conf
 
@@ -755,7 +756,7 @@ general_setup () {
 	check_on_root
 	mount_disk
 
-	#rm -rf $mnt/var/tmp && ln -s $mnt/tmp $mnt/var/tmp
+	rm -rf $mnt/var/tmp && ln -s $mnt/tmp $mnt/var/tmp
 
 	arch-chroot $mnt printf "$password\n$password\n" | passwd
 	
@@ -826,8 +827,8 @@ setup_user () {
 EOF
 
 
-	#rm -rf $mnt/home/$user/.cache
-	#sudo -u $user ln -s $mnt/run/user/1000/ $mnt/home/$user/.cache
+	rm -rf $mnt/home/$user/.cache
+	sudo -u $user ln -s $mnt/run/user/1000/ $mnt/home/$user/.cache
 
 
 	mkdir -p -m 750 $mnt/etc/sudoers.d
@@ -1022,14 +1023,9 @@ EOF
 
 }
 
+acpid () {
 
-
-install_tweaks () {
-
-	check_on_root
-	mount_disk
-
-	echo '[Unit]
+		echo '[Unit]
 Description=AC user power service
 
 [Service]
@@ -1056,7 +1052,6 @@ case $1/$2 in
 esac' > $mnt/usr/lib/systemd/system-sleep/sleep.sh 
 
 
-	exit
 
 	pacstrap_install pacman -S acpid
 
@@ -1079,18 +1074,25 @@ WantedBy=multi-user.target' > $mnt/usr/lib/systemd/system/acpid.service
 	# Manually enable it
 	ln -s $mnt/usr/lib/systemd/system/acpid.service $mnt/etc/systemd/system/multi-user.target.wants/acpid.service
 
-	exit
+}
 
 
+install_tweaks () {
 
+	check_on_root
+	mount_disk
 
-	#cmd || { printf "%b" "FAILED.\n" ; exit 1 ; }
 	
-	pacstrap_install terminus-font ncdu
+	#pacstrap_install terminus-font ncdu
 
-	[ ! $(cat $mnt/etc/vconsole.conf | grep 'FONT=ter-132b') ] && echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
+	#[ ! $(cat $mnt/etc/vconsole.conf | grep 'FONT=ter-132b') ] && echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
+
+
 	echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
 	echo 'vm.vfs_cache_pressure=50' > $mnt/etc/sysctl.d/99-cache-pressure.conf
+	echo 'net.ipv4.tcp_fin_timeout = 30' > $mnt/etc/sysctl.d/99-net-timeout.conf
+	echo 'net.ipv4.tcp_keepalive_time = 120' > $mnt/etc/sysctl.d/99-net-keepalive.conf
+	
 
 	systemctl --root=$mnt enable systemd-oomd
 
@@ -1723,14 +1725,15 @@ auto_install_root () {
 	setup_fstab
 
 	# TODO make grub work with btrfs
-	if [ "$fstype" = "ext4" ] ; then
-		install_GRUB
-	else
+	#if [ "$fstype" = "ext4" ] ; then
+	#	install_GRUB
+	#else
 		install_REFIND
-	fi
+	#fi
 
 	general_setup
 	setup_iwd
+	install_tweaks
 	install_liveroot
 	copy_script
 	copy_pkgs
