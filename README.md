@@ -15,6 +15,7 @@ curl -sL https://bit.ly/a-install > arch.sh && chmod +x arch.sh && ./arch.sh
 
 - btrfs filesystem with suspend and hibernation option enabled
 - USB installation option
+- Fully automatic install of Gnome, KDE, or Weston
 - Run in tmpfs, squashfs, overlay, or snapshot mode
 - Captures current firefox/chromium profile from host system
 - Auto-setup installs full-featured OS in one command (kde, gnome, weston...)
@@ -23,8 +24,8 @@ curl -sL https://bit.ly/a-install > arch.sh && chmod +x arch.sh && ./arch.sh
 
 # Requirements:
 
-- Arch linux or Arch-based distro (Only Endeavour OS tested)
 - Internet
+- Arch linux or Arch-based distro (Only Endeavour OS tested)
 
 # Bugs:
 
