@@ -374,7 +374,11 @@ mount_disk () {
 		mount --mkdir $disk$espPart $mnt$efi_path
 	fi
 
-	mkdir -p $mnt/{.snapshots,etc,tmp,root,var/cache/pacman/pkg}
+	#mkdir -p $mnt/{.snapshots,etc,tmp,root,var/cache/pacman/pkg}
+	mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg}
+	
+	[ "$fstype" = "btrfs" ] && mkdir -p $mnt/.snapshots
+
 	chmod 750 $mnt/root
 
 	fstype="$(lsblk -n -o FSTYPE $disk$rootPart)"
@@ -827,8 +831,8 @@ setup_user () {
 EOF
 
 
-	rm -rf $mnt/home/$user/.cache
-	sudo -u $user ln -s $mnt/run/user/1000/ $mnt/home/$user/.cache
+	#rm -rf $mnt/home/$user/.cache
+	#sudo -u $user ln -s $mnt/run/user/1000/ $mnt/home/$user/.cache
 
 
 	mkdir -p -m 750 $mnt/etc/sudoers.d
