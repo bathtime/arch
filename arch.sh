@@ -6,7 +6,7 @@
 #17179869184 bytes (17 GB, 16 GiB) copied, 10.9708 s, 1.6 GB/s
 
 #dd if=/dev/zero of=tempfile bs=512 count=1000000 conv=fdatasync,notrunc
-#512000000 bytes (512 MB, 488 MiB) copied, 2.1858 s, 234 MB/s
+#512000000 bytes (512 MB, 488 MiB) copied, 2.09522 s, 244 MB/s
 
 #Startup finished in 1.834s (firmware) + 1.557s (loader) + 3.517s (kernel) + 1.469s (userspace) = 8.378s - 3s
 #graphical.target reached after 1.461s in userspace.
@@ -99,9 +99,10 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='ext4'		# e.g. btrfs,xfs,ext4
+fstype='btrfs'		# Choices: btrfs,xfs,ext4
 subvols=()
 efi_path=/efi
+kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
 
 user=user
 password=123456
@@ -502,6 +503,10 @@ setup_fstab () {
 	# genfstab will generate a swap drive. we're using a swap file instead
 	sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
 
+	sed -i 's/relatime/noatime/g' $mnt/etc/fstab
+
+	sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,commit=60      0 1/' $mnt/etc/fstab
+
 	# Make /efi read-only
 	#sed -i 's/\/efi.*vfat.*rw/\/efi     vfat     ro/' $mnt/etc/fstab
 
@@ -565,10 +570,11 @@ install_REFIND () {
 		rootflags=''
 	fi
 
-	echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw $rootflags quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" > $mnt/boot/refind_linux.conf
-	echo "\"Boot nomodeset\"  \"root=UUID=$ROOT_UUID rw $rootflags quiet nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold systemd.unit=multi-user.target nomodeset\"" >> $mnt/boot/refind_linux.conf
-	echo "\"Boot acpi=off\"  \"root=UUID=$ROOT_UUID rw $rootflags quiet nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold systemd.unit=multi-user.target acpi=off\"" >> $mnt/boot/refind_linux.conf
-	echo "\"Boot read only\"  \"root=UUID=$ROOT_UUID ro $rootflags quiet nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" >> $mnt/boot/refind_linux.conf
+
+	echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw $rootflags $kernel_ops resume=UUID=$SWAP_UUID\"" > $mnt/boot/refind_linux.conf
+	echo "\"Boot nomodeset\"  \"root=UUID=$ROOT_UUID rw $rootflags $kernel_ops resume=UUID=$SWAP_UUID systemd.unit=multi-user.target nomodeset\"" >> $mnt/boot/refind_linux.conf
+	echo "\"Boot acpi=off\"  \"root=UUID=$ROOT_UUID rw $rootflags $kernel_ops resume=UUID=$SWAP_UUID systemd.unit=multi-user.target acpi=off\"" >> $mnt/boot/refind_linux.conf
+	echo "\"Boot read only\"  \"root=UUID=$ROOT_UUID ro $rootflags $kernel_ops resume=UUID=$SWAP_UUID\"" >> $mnt/boot/refind_linux.conf
 	echo "\"Boot no options\"  \"root=UUID=$ROOT_UUID rw $rootflags resume=UUID=$SWAP_UUID\"" >> $mnt/boot/refind_linux.conf
 
 #	sed -i 's/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g; s/#scan_all_linux_kernels false/scan_all_linux_kernels false/g' $mnt$efi_path/EFI/BOOT/refind.conf
@@ -578,7 +584,7 @@ cat > $mnt$efi_path/EFI/BOOT/refind.conf <<EOF
 timeout 2 
 #scan_all_linux_kernels off
 #also_scan_dirs +,boot,@/boot
-showtools install, shell, bootorder, gdisk, memtest, mok_tool, apple_recovery, windows_recovery, about, hidden_tags, reboot, exit, firmware, fwupdate
+showtools install, shell, bootorder, gdisk, memtest, mok_tool, about, hidden_tags, reboot, exit, firmware, fwupdate
 #enable_touch
 textonly
 EOF
@@ -616,7 +622,7 @@ GRUB_DISTRIBUTOR=""
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
-GRUB_CMDLINE_LINUX="nowatchdog loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
+GRUB_CMDLINE_LINUX="$kernel_ops resume=UUID=$SWAP_UUID"
 GRUB_DISABLE_RECOVERY="true"
 GRUB_HIDDEN_TIMEOUT=1
 GRUB_RECORDFAIL_TIMEOUT=1
@@ -1344,7 +1350,6 @@ run_latehook() {
 build() {
 	add_binary rsync
 	add_binary bash
-	add_binary btrfs
 	add_binary unsquashfs 
 	add_binary mksquashfs
 	add_module overlay
@@ -1359,6 +1364,11 @@ help() {
 Run Arch as tmpfs, overlay, squashfs, or snapshot
 HELPEOF
 }' > $mnt/usr/lib/initcpio/install/liveroot
+
+
+	if [ "$fstype" = "btrfs" ]; then
+		[ "$(cat $mnt/usr/lib/initcpio/install/liveroot | grep 'add_binary btrfs')" ] || sed -i 's/build() {/& \n        add_binary btrfs/g' $mnt/usr/lib/initcpio/install/liveroot
+	fi
 
 
 	echo 'MODULES=(lz4)
