@@ -99,7 +99,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='btrfs'		# Choices: btrfs,xfs,ext4
+fstype='ext4'		# Choices: btrfs,xfs,ext4
 subvols=()
 efi_path=/efi
 kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
@@ -311,7 +311,10 @@ create_partitions () {
 
 		btrfs)		check_pkg btrfs-progs
 						mkfs.btrfs -f -L ROOT $disk$rootPart ;;
-		ext4)			mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart ;;
+		ext4)			mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart 
+						echo "Using tune2fs to create fast commit journal area. Please be patient..." 
+						tune2fs -O fast_commit $disk$rootPart
+						tune2fs -l $disk$rootPart | grep features ;;
 		xfs)			check_pkg xfsprogs			
 						mkfs.xfs -f -L ROOT $disk$rootPart ;;
 		f2fs)			check_pkg f2fs-tools
