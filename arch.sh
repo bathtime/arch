@@ -99,7 +99,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype=ext4
+fstype='ext4'		# e.g. btrfs,xfs,ext4
 subvols=()
 efi_path=/efi
 
@@ -1729,11 +1729,11 @@ auto_install_root () {
 	setup_fstab
 
 	# TODO make grub work with btrfs
-	#if [ "$fstype" = "ext4" ] ; then
-	#	install_GRUB
-	#else
+	if [ "$fstype" = "xfs" ] ; then
+		install_GRUB
+	else
 		install_REFIND
-	#fi
+	fi
 
 	general_setup
 	setup_iwd
