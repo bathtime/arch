@@ -756,7 +756,7 @@ general_setup () {
 	check_on_root
 	mount_disk
 
-	rm -rf $mnt/var/tmp && ln -s $mnt/tmp $mnt/var/tmp
+	#rm -rf $mnt/var/tmp && ln -s $mnt/tmp $mnt/var/tmp
 
 	arch-chroot $mnt printf "$password\n$password\n" | passwd
 	
