@@ -99,7 +99,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype=btrfs
+fstype=ext4
 subvols=()
 efi_path=/efi
 
@@ -556,16 +556,16 @@ install_REFIND () {
 	ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
 
 	if [ "$fstype" = "btrfs" ]; then
-		rootflags='subvol=@'
+		rootflags='rootflags=subvol=@'
 	else
-		rootflags=/
+		rootflags=''
 	fi
 
-	echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw rootflags=$rootflags quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" > $mnt/boot/refind_linux.conf
-	echo "\"Boot nomodeset\"  \"root=UUID=$ROOT_UUID rw rootflags=$rootflags quiet nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold systemd.unit=multi-user.target nomodeset\"" >> $mnt/boot/refind_linux.conf
-	echo "\"Boot acpi=off\"  \"root=UUID=$ROOT_UUID rw rootflags=$rootflags quiet nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold systemd.unit=multi-user.target acpi=off\"" >> $mnt/boot/refind_linux.conf
-	echo "\"Boot read only\"  \"root=UUID=$ROOT_UUID ro rootflags=$rootflags quiet nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" >> $mnt/boot/refind_linux.conf
-	echo "\"Boot no options\"  \"root=UUID=$ROOT_UUID ro rootflags=$rootflags resume=UUID=$SWAP_UUID\"" >> $mnt/boot/refind_linux.conf
+	echo "\"Boot with standard options\"  \"root=UUID=$ROOT_UUID rw $rootflags quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" > $mnt/boot/refind_linux.conf
+	echo "\"Boot nomodeset\"  \"root=UUID=$ROOT_UUID rw $rootflags quiet nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold systemd.unit=multi-user.target nomodeset\"" >> $mnt/boot/refind_linux.conf
+	echo "\"Boot acpi=off\"  \"root=UUID=$ROOT_UUID rw $rootflags quiet nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold systemd.unit=multi-user.target acpi=off\"" >> $mnt/boot/refind_linux.conf
+	echo "\"Boot read only\"  \"root=UUID=$ROOT_UUID ro $rootflags quiet nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off nmi_watchdog=0 loglevel=3 rd.udev.log_level=3 resume=UUID=$SWAP_UUID zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold\"" >> $mnt/boot/refind_linux.conf
+	echo "\"Boot no options\"  \"root=UUID=$ROOT_UUID rw $rootflags resume=UUID=$SWAP_UUID\"" >> $mnt/boot/refind_linux.conf
 
 #	sed -i 's/#textonly/textonly/g; s/timeout .*/timeout 3/g; s/#also_scan_dirs boot,@/also_scan_dirs +,boot,@/g; s/#scan_all_linux_kernels false/scan_all_linux_kernels false/g' $mnt$efi_path/EFI/BOOT/refind.conf
 
