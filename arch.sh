@@ -1173,14 +1173,14 @@ EOF
 
 install_liveroot () {
 
-	check_on_root
-	mount_disk
+	#check_on_root
+	#mount_disk
 
-	touch $mnt/etc/vconsole.conf
+	#touch $mnt/etc/vconsole.conf
 
-	pacstrap_install rsync squashfs-tools
+	#pacstrap_install rsync squashfs-tools
 
-
+mnt=''
    echo '#!/usr/bin/bash
 
    fstype="ext4"
@@ -1220,8 +1220,11 @@ run_latehook() {
    mkdir -p $real_root $new_root
 
    disk=$(mount | grep " on /new_root " | sed "s/[0-9] on \/new_root.*//g")
-   ESP_UUID=$(blkid -s UUID -o value $disk"1")
+	fs_type=$(mount | grep " on /new_root " | sed "s/^.*type //;s/ (.*$//")
 
+	root_part=$(blkid | grep ROOT | sed "s/:.*$//")
+
+   ESP_UUID=$(blkid -s UUID -o value $disk"1")
 
         if read -t 2 -s -n 1; then
 
@@ -1338,14 +1341,19 @@ run_latehook() {
 
         else
 
+				echo "Mounting $fs_type..."
+				if [ "$fs_type" = "ext4" ]; then
+					umount $new_root
+					mount -o noatime,commit=60 "$root_part" $new_root
+				fi
                 echo -e "Running default option..."
-        mount --uuid $ESP_UUID $new_root/efi
+        mount -o rw,noatime,fmask=0022,dmask=0022,codepage=437,iocharset=ascii,shortname=mixed,utf8,errors=remount-ro --uuid $ESP_UUID $new_root/efi
 
         fi
 
 
 }' > $mnt/usr/lib/initcpio/hooks/liveroot
-
+exit
 	cat $mnt/usr/lib/initcpio/hooks/liveroot
 
 	echo '#!/bin/sh
