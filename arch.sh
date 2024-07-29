@@ -11,6 +11,7 @@
 #Startup finished in 1.834s (firmware) + 1.557s (loader) + 3.517s (kernel) + 1.469s (userspace) = 8.378s - 3s
 #graphical.target reached after 1.461s in userspace.
 
+#ext4 install on flash 40 mins
 
 # btrfs on ssd
 
@@ -24,22 +25,16 @@
 #graphical.target reached after 1.457s in userspace.
 
 
+#xfs on ssd
+#Startup finished in 3.477s (firmware) + 1.561s (loader) + 3.742s (kernel) + 1.487s (userspace) = 10.269s 
+#graphical.target reached after 1.474s in userspace.
+
+
+
 #ext4 on external drive
 
 #Startup finished in 4.437s (firmware) + 4.192s (loader) + 5.760s (kernel) + 3.342s (userspace) = 17.731s
 #graphical.target reached after 3.341s in userspace
-
-
-# XFS on flash
-# xfs install on flash 6.5 mins
-#dd if=/dev/zero of=tempfile bs=1M count=4096 conv=fdatasync,notrunc
-# 35.6 MB/s
-
-# ext4 on flash
-#ext4 install on flash 40 mins
-#dd if=/dev/zero of=tempfile bs=1M count=4096 conv=fdatasync,notrunc
-# 6.1 MB/s
-
 
 
 
