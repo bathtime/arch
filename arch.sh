@@ -12,7 +12,6 @@
 #graphical.target reached after 1.461s in userspace.
 
 
-
 # btrfs on ssd
 
 #dd if=/dev/zero of=tempfile bs=4M count=4096 conv=fdatasync,notrunc
@@ -29,6 +28,18 @@
 
 #Startup finished in 4.437s (firmware) + 4.192s (loader) + 5.760s (kernel) + 3.342s (userspace) = 17.731s
 #graphical.target reached after 3.341s in userspace
+
+
+# XFS on flash
+# xfs install on flash 6.5 mins
+#dd if=/dev/zero of=tempfile bs=1M count=4096 conv=fdatasync,notrunc
+# 35.6 MB/s
+
+# ext4 on flash
+#ext4 install on flash 40 mins
+#dd if=/dev/zero of=tempfile bs=1M count=4096 conv=fdatasync,notrunc
+# 6.1 MB/s
+
 
 
 
@@ -99,7 +110,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='ext4'		# Choices: btrfs,xfs,ext4
+fstype='xfs'		# btrfs,xfs,ext4
 subvols=()
 efi_path=/efi
 kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
@@ -1807,6 +1818,7 @@ auto_install_kde () {
 
 	#backup_config
 	install_config	
+	sync_disk
 
 }
 
