@@ -11,9 +11,11 @@
 #Startup finished in 1.834s (firmware) + 1.557s (loader) + 3.517s (kernel) + 1.469s (userspace) = 8.378s - 3s
 #graphical.target reached after 1.461s in userspace.
 
-#ext4 install on flash 40 mins
+#ext4 install on flash 40 mins: boot 14.x seconds
+
 
 # btrfs on ssd
+# btrfs install on flash 6:45 
 
 #dd if=/dev/zero of=tempfile bs=4M count=4096 conv=fdatasync,notrunc
 #17179869184 bytes (17 GB, 16 GiB) copied, 13.5097 s, 1.3 GB/s
@@ -26,9 +28,10 @@
 
 
 #xfs on ssd
+# install on flash 3 minutes
 #Startup finished in 3.477s (firmware) + 1.561s (loader) + 3.742s (kernel) + 1.487s (userspace) = 10.269s 
 #graphical.target reached after 1.474s in userspace.
-
+# xfs install on flash 31mins
 
 
 #ext4 on external drive
@@ -105,7 +108,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='xfs'		# btrfs,xfs,ext4
+fstype='btrfs'		# btrfs,xfs,ext4
 subvols=()
 efi_path=/efi
 kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
@@ -507,12 +510,12 @@ setup_fstab () {
 	sed -i 's/zstd:3/zstd:1/' $mnt/etc/fstab
 
 	# Bad idea to use subids when rolling back 
-	sed -i 's/subvolid=.*,//g' $mnt/etc/fstab
+	#sed -i 's/subvolid=.*,//g' $mnt/etc/fstab
 
 	# genfstab will generate a swap drive. we're using a swap file instead
 	sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
 
-	sed -i 's/relatime/noatime/g' $mnt/etc/fstab
+	#sed -i 's/relatime/noatime/g' $mnt/etc/fstab
 
 	sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,commit=60      0 1/' $mnt/etc/fstab
 
@@ -614,9 +617,9 @@ install_GRUB () {
 
 	pacstrap_install grub os-prober efibootmgr inotify-tools lz4
 
-	if [ "$fstype" = "btrfs" ]; then
-		pacstrap_install grub-btrfs
-	fi
+	#if [ "$fstype" = "btrfs" ]; then
+	#	pacstrap_install grub-btrfs
+	#fi
 
 	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 
@@ -644,10 +647,10 @@ EOF2
 
 
 	# Allows grub to run snapshots
-	if [ "$fstype" = "btrfs" ]; then
-		systemctl --root=$mnt enable grub-btrfsd.service
-		/etc/grub.d/41_snapshots-btrfs
-	fi
+	#if [ "$fstype" = "btrfs" ]; then
+	#	systemctl --root=$mnt enable grub-btrfsd.service
+	#	/etc/grub.d/41_snapshots-btrfs
+	#fi
 
 	# Remove grub os-prober message
 	sed -i 's/grub_warn/#grub_warn/g' /etc/grub.d/30_os-prober
