@@ -11,7 +11,6 @@
 #Startup finished in 1.834s (firmware) + 1.557s (loader) + 3.517s (kernel) + 1.469s (userspace) = 8.378s - 3s
 #graphical.target reached after 1.461s in userspace.
 
-#ext4 install on flash 11:43: boot 14.x seconds: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 11.3 MB/s
 
 
 # btrfs on ssd
@@ -33,13 +32,13 @@
 #graphical.target reached after 1.474s in userspace.
 
 
+#ext4 install on flash 11:15: boot 19.1 seconds: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 14.4 MB/s
 
+# xfs install on flash 13:07 mins: boot in 18.8s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 17.3 MB/s
 
-# xfs install on flash 13 mins: boot in 18.8s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=4096 conv=fdatasync,notrunc = 17.3 MB/s
+# btrfs install on flash 13:03: boot in 17s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 15.3 MB/s
 
-# btrfs install on flash 5:28 rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=4096 conv=fdatasync,notrunc = 10.5 MB/s
-
-
+# jfs install on flash 17:32: boot in 22s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 16 MB/s 
 
 : << DOCS
 
@@ -108,7 +107,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='xfs'		# btrfs,xfs,ext4
+fstype='jfs'		# ext4,btrfs,xfs,jfs   TODO: bcachefs,f2fs
 subvols=()
 efi_path=/efi
 kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
@@ -326,8 +325,12 @@ create_partitions () {
 						tune2fs -l $disk$rootPart | grep features ;;
 		xfs)			check_pkg xfsprogs			
 						mkfs.xfs -f -L ROOT $disk$rootPart ;;
+		jfs)			check_pkg jfsutils			
+						mkfs.jfs -f -L ROOT $disk$rootPart ;;
 		f2fs)			check_pkg f2fs-tools
-						mkfs.f2fs -f -l ROOT -i -O extra_attr,inode_checksum,sb_checksum $disk$rootPart ;;
+						mkfs.f2fs -f -l ROOT $disk$rootPart ;;
+		bcachefs)	check_pkg bcachefs-tools
+						bcachefs format -f -L ROOT $disk$rootPart ;;
 	esac
 
 
@@ -439,7 +442,9 @@ Server = file:///var/cache/pacman/pkg/
 
 	[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs"
 	[ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
+	[ "$fstype" = "jfs" ] && packages="$packages jfsutils"
 	[ "$fstype" = "f2fs" ] && packages="$packages f2fs-tools"
+	[ "$fstype" = "bcachefs" ] && packages="$packages bcachefs-tools"
 
 	pacstrap_install $packages
 
