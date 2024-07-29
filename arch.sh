@@ -2,10 +2,10 @@
 
 # ext4 on ssd
 
-#dd if=/dev/zero of=tempfile bs=4M count=4096 conv=fdatasync,notrunc
+#rm -rf tempfile; dd if=/dev/zero of=tempfile bs=4M count=4096 conv=fdatasync,notrunc
 #17179869184 bytes (17 GB, 16 GiB) copied, 10.9708 s, 1.6 GB/s
 
-#dd if=/dev/zero of=tempfile bs=512 count=1000000 conv=fdatasync,notrunc
+#rm -rf tempfile; dd if=/dev/zero of=tempfile bs=512 count=1000000 conv=fdatasync,notrunc
 #512000000 bytes (512 MB, 488 MiB) copied, 2.09522 s, 244 MB/s
 
 #Startup finished in 1.834s (firmware) + 1.557s (loader) + 3.517s (kernel) + 1.469s (userspace) = 8.378s - 3s
@@ -1340,10 +1340,10 @@ run_latehook() {
 
         else
 
-				echo "Mounting $fs_type..."
 				if [ "$fs_type" = "ext4" ]; then
-					umount $new_root
-					mount -o noatime,commit=60 "$root_part" $new_root
+				echo "Mounting $fs_type..."
+				#	umount $new_root
+				#	mount -o noatime,commit=60 "$root_part" $new_root
 				fi
                 echo -e "Running default option..."
         mount -o rw,noatime,fmask=0022,dmask=0022,codepage=437,iocharset=ascii,shortname=mixed,utf8,errors=remount-ro --uuid $ESP_UUID $new_root/efi
