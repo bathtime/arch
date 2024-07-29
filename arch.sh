@@ -15,7 +15,6 @@
 
 
 # btrfs on ssd
-# btrfs install on flash 5:28 rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=4096 conv=fdatasync,notrunc = 10.5 MB/s
 
 
 #dd if=/dev/zero of=tempfile bs=4M count=4096 conv=fdatasync,notrunc
@@ -29,16 +28,16 @@
 
 
 #xfs on ssd
-# install on flash 3 minutes
+# install 3 minutes
 #Startup finished in 3.477s (firmware) + 1.561s (loader) + 3.742s (kernel) + 1.487s (userspace) = 10.269s 
 #graphical.target reached after 1.474s in userspace.
-# xfs install on flash 31mins
 
 
-#ext4 on external drive
 
-#Startup finished in 4.437s (firmware) + 4.192s (loader) + 5.760s (kernel) + 3.342s (userspace) = 17.731s
-#graphical.target reached after 3.341s in userspace
+
+# xfs install on flash 13 mins: boot in 18.8s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=4096 conv=fdatasync,notrunc = 17.3 MB/s
+
+# btrfs install on flash 5:28 rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=4096 conv=fdatasync,notrunc = 10.5 MB/s
 
 
 
@@ -109,7 +108,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='ext4'		# btrfs,xfs,ext4
+fstype='xfs'		# btrfs,xfs,ext4
 subvols=()
 efi_path=/efi
 kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
