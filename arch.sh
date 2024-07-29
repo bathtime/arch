@@ -116,7 +116,7 @@ timezone=Canada/Eastern
 offline=0
 reinstall=0
 root_only=0
-copy_on_host=0
+copy_on_host=1
 
 initramfs=mkinitcpio
 
@@ -1173,14 +1173,13 @@ EOF
 
 install_liveroot () {
 
-	#check_on_root
-	#mount_disk
+	check_on_root
+	mount_disk
 
-	#touch $mnt/etc/vconsole.conf
+	touch $mnt/etc/vconsole.conf
 
-	#pacstrap_install rsync squashfs-tools
+	pacstrap_install rsync squashfs-tools
 
-mnt=''
    echo '#!/usr/bin/bash
 
    fstype="ext4"
@@ -1353,7 +1352,7 @@ run_latehook() {
 
 
 }' > $mnt/usr/lib/initcpio/hooks/liveroot
-exit
+	
 	cat $mnt/usr/lib/initcpio/hooks/liveroot
 
 	echo '#!/bin/sh
@@ -1750,11 +1749,11 @@ auto_install_root () {
 	setup_fstab
 
 	# TODO make grub work with btrfs
-	if [ "$fstype" = "xfs" ] ; then
+	#if [ "$fstype" = "xfs" ] ; then
 		install_GRUB
-	else
-		install_REFIND
-	fi
+	#else
+#		install_REFIND
+#	fi
 
 	general_setup
 	setup_iwd
@@ -1806,7 +1805,7 @@ auto_install_kde () {
 	# Auto-launch
 	sed -i 's/^:/   startplasma-wayland/g' $mnt/home/$user/.bash_profile
 
-	backup_config
+	#backup_config
 	install_config	
 
 }
