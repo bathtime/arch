@@ -392,11 +392,13 @@ echo "File type: $fstype"
 		mount --mkdir $disk$espPart $mnt$efi_path
 	fi
 
-	mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg}
+	mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg,/var/tmp,/var/log}
 	
 	if [ "$fstype" = "btrfs" ]; then
 		mkdir -p $mnt/.snapshots
-
+		chattr +C -R $mnt/tmp
+		chattr +C -R $mnt/var/tmp
+		chattr +C -R $mnt/var/log
 	fi
 
 	chmod 750 $mnt/root
@@ -443,7 +445,10 @@ Server = file:///var/cache/pacman/pkg/
 
 	[ "$root_only" ] && packages="$packages sudo"
 
-	[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs"
+	if [ "$fstype" = "btrfs" ]; then
+		# xorg-xhost required to run timeshift gui
+		packages="$packages btrfs-progs grub-btrfs xorg-xhost"
+	fi
 	[ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
 	[ "$fstype" = "jfs" ] && packages="$packages jfsutils"
 	[ "$fstype" = "f2fs" ] && packages="$packages f2fs-tools"
@@ -847,10 +852,16 @@ setup_user () {
 
 	pacstrap_install sudo
 
-
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
 		arch-chroot $mnt useradd -m $user -G wheel
 	fi
+	
+	if [ "$fstype" = "btrfs" ]; then
+		mkdir -p $mnt/home/$user/.cache
+		chown -R $user:$user $mnt/home/$user/.cache
+		chattr +C -R $mnt/home/$user/.cache
+	fi
+
 
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
 		echo -e "\nUser was not created. Exiting.\n"
@@ -1828,10 +1839,15 @@ auto_install_kde () {
 	auto_install_user
  
 	pacstrap_install plasma-desktop plasma-pa kscreen dolphin konsole firefox chromium gimp gwenview okular obs-studio ffmpegthumbs bleachbit ncdu
+	
 	copy_pkgs
 
 	# Auto-launch
 	sed -i 's/^:/   startplasma-wayland/g' $mnt/home/$user/.bash_profile
+
+   if [ "$fstype" = "btrfs" ]; then
+   	pacstrap_install timeshift
+	fi
 
 	#backup_config
 	install_config	
@@ -1894,7 +1910,7 @@ backup_config () {
 	rm -rf setup.tar
 
 	sudo -u $user tar -pcf setup.tar $CONFIG_FILES
-	chown $user:$user setup.tar
+	chown $user:$user $mnt/home/$user/setup.tar
 
 	#sudo -u $user gpg --yes -c setup.tar
 	
