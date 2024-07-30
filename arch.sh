@@ -446,8 +446,7 @@ Server = file:///var/cache/pacman/pkg/
 	[ "$root_only" ] && packages="$packages sudo"
 
 	if [ "$fstype" = "btrfs" ]; then
-		# xorg-xhost required to run timeshift gui
-		packages="$packages btrfs-progs grub-btrfs xorg-xhost"
+		packages="$packages btrfs-progs grub-btrfs"
 	fi
 	[ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
 	[ "$fstype" = "jfs" ] && packages="$packages jfsutils"
@@ -1846,7 +1845,7 @@ auto_install_kde () {
 	sed -i 's/^:/   startplasma-wayland/g' $mnt/home/$user/.bash_profile
 
    if [ "$fstype" = "btrfs" ]; then
-   	pacstrap_install timeshift
+   	pacstrap_install timeshift xorg-xhost
 	fi
 
 	#backup_config
