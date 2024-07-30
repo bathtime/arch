@@ -359,6 +359,8 @@ create_partitions () {
 
 mount_disk () {
 
+	fstype="$(lsblk -n -o FSTYPE $disk$rootPart)"
+echo "File type: $fstype"
 	error_check 0
 	check_on_root
 
@@ -390,14 +392,15 @@ mount_disk () {
 		mount --mkdir $disk$espPart $mnt$efi_path
 	fi
 
-	#mkdir -p $mnt/{.snapshots,etc,tmp,root,var/cache/pacman/pkg}
 	mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg}
 	
-	[ "$fstype" = "btrfs" ] && mkdir -p $mnt/.snapshots
+	if [ "$fstype" = "btrfs" ]; then
+		mkdir -p $mnt/.snapshots
+
+	fi
 
 	chmod 750 $mnt/root
 
-	fstype="$(lsblk -n -o FSTYPE $disk$rootPart)"
 
 	error_check 1
 
@@ -672,11 +675,12 @@ EOF2
 	sed -i 's/\"\$title\"/\"\$title \(nomodeset\)\"/g' /etc/grub.d/10_linux-nomodeset
 	sed -i 's/ rw / rw nomodeset /g' /etc/grub.d/10_linux-nomodeset
 
-	# So systemd won't remount as 'rw'
 
 	grub-mkconfig -o /boot/grub/grub.cfg
 
 EOF
+
+	# So systemd won't remount as 'rw'
 	systemctl --root=$mnt mask systemd-remount-fs.service
 
 	echo -e "\nYou should have a fully bootable system now. Feel free to test it.\n"
