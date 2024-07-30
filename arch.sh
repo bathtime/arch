@@ -107,7 +107,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='jfs'		# ext4,btrfs,xfs,jfs   TODO: bcachefs,f2fs
+fstype='btrfs'		# ext4,btrfs,xfs,jfs   TODO: bcachefs,f2fs
 subvols=()
 efi_path=/efi
 kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
@@ -663,10 +663,14 @@ EOF2
 
 
 	###  Offer readonly grub booting option  ###
-	mkdir -p $mnt/etc/grub.d/
-	#cp $mnt/etc/grub.d/10_linux /etc/grub.d/10_linux-readonly
-	#sed -i 's/\"\$title\"/\"\$title \(readonly\)\"/g' $mnt/etc/grub.d/10_linux-readonly
-	#sed -i 's/ rw / ro /g' $mnt/etc/grub.d/10_linux-readonly
+	mkdir -p /etc/grub.d/
+	cp /etc/grub.d/10_linux /etc/grub.d/10_linux-readonly
+	sed -i 's/\"\$title\"/\"\$title \(readonly\)\"/g' /etc/grub.d/10_linux-readonly
+	sed -i 's/ rw / ro /g' /etc/grub.d/10_linux-readonly
+
+	cp /etc/grub.d/10_linux /etc/grub.d/10_linux-nomodeset
+	sed -i 's/\"\$title\"/\"\$title \(nomodeset\)\"/g' /etc/grub.d/10_linux-nomodeset
+	sed -i 's/ rw / rw nomodeset /g' /etc/grub.d/10_linux-nomodeset
 
 	# So systemd won't remount as 'rw'
 
@@ -1196,7 +1200,7 @@ install_liveroot () {
 
    echo '#!/usr/bin/bash
 
-   fstype="ext4"
+   #fstype="ext4"
    fsroot=""
 
 create_archive() {
@@ -1238,6 +1242,11 @@ run_latehook() {
 	root_part=$(blkid | grep ROOT | sed "s/:.*$//")
 
    ESP_UUID=$(blkid -s UUID -o value $disk"1")
+
+			if [ "$fs_type" = "btrfs" ]; then
+   			fsroot="@/"
+				echo "Mounting $fs_type with $fsroot..."
+			fi
 
         if read -t 2 -s -n 1; then
 
@@ -1348,7 +1357,7 @@ run_latehook() {
                         umount $new_root
 
                         mount --mkdir -o subvolid=256 ${root} $new_root
-                mount --uuid $ESP_UUID $new_root/efi
+                			mount --uuid $ESP_UUID $new_root/efi
 
                 fi
 
@@ -1398,14 +1407,15 @@ HELPEOF
 	echo 'MODULES=(lz4)
 BINARIES=()
 FILES=()
-HOOKS=(base udev keyboard autodetect kms modconf sd-vconsole block filesystems liveroot resume)
+#HOOKS=(base udev keyboard autodetect kms modconf sd-vconsole block filesystems liveroot resume)
+HOOKS=(base udev keyboard autodetect kms modconf block filesystems liveroot resume)
 COMPRESSION="lz4"
 #COMPRESSION_OPTIONS=()
 MODULES_DECOMPRESS="yes"' > $mnt/etc/mkinitcpio.conf
 
 	echo 'ALL_config="/etc/mkinitcpio.conf"
 ALL_kver="/boot/vmlinuz-linux"
-ALL_microcode=(/boot/*-ucode.img)
+#ALL_microcode=(/boot/*-ucode.img)
 
 PRESETS=("default")
 
