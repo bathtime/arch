@@ -1202,6 +1202,18 @@ EOF
 }
 
 
+install_timeshift () {
+
+  	pacstrap_install timeshift xorg-xhost
+
+	$mnt/usr/share/applications/timeshift-gtk.desktop $mnt/home/user/.local/share/applications/
+
+	# Required to start the application under wayland
+	var='pkexec env $(env) timeshift-launcher'
+	sed -i "s/Exec=.*$/Exec=$var/" $mnt/home/$user/.local/share/applications/timeshift-gtk.desktop
+
+}
+
 
 install_liveroot () {
 
@@ -1845,7 +1857,7 @@ auto_install_kde () {
 	sed -i 's/^:/   startplasma-wayland/g' $mnt/home/$user/.bash_profile
 
    if [ "$fstype" = "btrfs" ]; then
-   	pacstrap_install timeshift xorg-xhost
+		install_timeshift
 	fi
 
 	#backup_config
