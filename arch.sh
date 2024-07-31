@@ -522,7 +522,7 @@ setup_fstab () {
 	sed -i 's/zstd:3/zstd:1/' $mnt/etc/fstab
 
 	# Bad idea to use subids when rolling back 
-	#sed -i 's/subvolid=.*,//g' $mnt/etc/fstab
+	sed -i 's/subvolid=.*,//g' $mnt/etc/fstab
 
 	# genfstab will generate a swap drive. we're using a swap file instead
 	sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
@@ -1434,7 +1434,8 @@ HELPEOF
 BINARIES=()
 FILES=()
 #HOOKS=(base udev keyboard autodetect kms modconf sd-vconsole block filesystems liveroot resume)
-HOOKS=(base udev keyboard autodetect kms modconf block filesystems liveroot resume)
+#HOOKS=(base udev keyboard autodetect kms modconf block filesystems liveroot resume)
+HOOKS=(autodetect base keyboard block udev filesystems fsck liveroot resume)
 COMPRESSION="lz4"
 #COMPRESSION_OPTIONS=()
 MODULES_DECOMPRESS="yes"' > $mnt/etc/mkinitcpio.conf
@@ -1451,10 +1452,10 @@ default_image="/boot/initramfs-linux.img"' > $mnt/etc/mkinitcpio.d/linux.preset
 	arch-chroot $mnt mkinitcpio -P 
 
 	# So systemd won't remount as 'rw'
-	systemctl --root=$mnt mask systemd-remount-fs.service
+	#systemctl --root=$mnt mask systemd-remount-fs.service
 
 	# Don't remount /efi either
-	systemctl --root=$mnt mask efi.mount
+	#systemctl --root=$mnt mask efi.mount
 
 }
 
@@ -1907,7 +1908,8 @@ clean_system () {
 
 	cd /home/$user/.config/chromium
 
-	rm -rf Safe\ Browsing component_crx_cache WidevineCdm IndexedDB GrShaderCache OnDeviceHeadSuggestModel hyphen-data ZxcvbnData ShaderCache Default/{Service\ Worker/,IndexedDB,History,GPUCache,Sessions,DawnCache,Extension\ State,Web\ Data,Visited\ Links}
+	#rm -rf Safe\ Browsing component_crx_cache WidevineCdm IndexedDB GrShaderCache OnDeviceHeadSuggestModel hyphen-data ZxcvbnData ShaderCache Default/{Service\ Worker/,IndexedDB,History,GPUCache,Sessions,DawnCache,Extension\ State,Web\ Data,Visited\ Links}
+	#rm -rf Safe\ Browsing component_crx_cache WidevineCdm GrShaderCache OnDeviceHeadSuggestModel hyphen-data ZxcvbnData ShaderCache Default/{Service\ Worker/,History,GPUCache,Sessions,DawnCache,Extension\ State,Web\ Data,Visited\ Links}
 
 }
 
