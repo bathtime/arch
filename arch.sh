@@ -112,6 +112,8 @@ subvols=()
 efi_path=/efi
 kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
 
+# systemd.gpt_auto=0
+
 user=user
 password=123456
 aur_app=paru
@@ -685,7 +687,7 @@ EOF2
 EOF
 
 	# So systemd won't remount as 'rw'
-	systemctl --root=$mnt mask systemd-remount-fs.service
+	#systemctl --root=$mnt mask systemd-remount-fs.service
 
 	echo -e "\nYou should have a fully bootable system now. Feel free to test it.\n"
 
@@ -1206,7 +1208,7 @@ install_timeshift () {
 
   	pacstrap_install timeshift xorg-xhost
 
-	$mnt/usr/share/applications/timeshift-gtk.desktop $mnt/home/user/.local/share/applications/
+	cp $mnt/usr/share/applications/timeshift-gtk.desktop $mnt/home/$user/.local/share/applications/
 
 	# Required to start the application under wayland
 	var='pkexec env $(env) timeshift-launcher'
@@ -1395,7 +1397,7 @@ run_latehook() {
 				#	mount -o noatime,commit=60 "$root_part" $new_root
 				fi
                 echo -e "Running default option..."
-        mount -o rw,noatime,fmask=0022,dmask=0022,codepage=437,iocharset=ascii,shortname=mixed,utf8,errors=remount-ro --uuid $ESP_UUID $new_root/efi
+        #mount -o rw,noatime,fmask=0022,dmask=0022,codepage=437,iocharset=ascii,shortname=mixed,utf8,errors=remount-ro --uuid $ESP_UUID $new_root/efi
 
         fi
 
