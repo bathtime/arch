@@ -32,16 +32,13 @@
 #graphical.target reached after 1.474s in userspace.
 
 
-# ext4 install on flash 11:15: boot 19.1 seconds: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 14.4 MB/s
+#ext4 install on flash 11:15: boot 19.1 seconds: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 14.4 MB/s
 
 # xfs install on flash 13:07 mins: boot in 18.8s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 17.3 MB/s
 
 # btrfs install on flash 13:03: boot in 17s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 15.3 MB/s
 
 # jfs install on flash 17:32: boot in 22s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 16 MB/s 
-
-# bcachefs install on flash : boot in 31s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 9 MB/s
-
 
 : << DOCS
 
@@ -312,6 +309,7 @@ create_partitions () {
 	delete_partitions
 	
 	systemctl daemon-reload
+
 	check_pkg parted
 	
 	parted -s $disk mklabel gpt \
@@ -319,10 +317,10 @@ create_partitions () {
 			set $espPartNum esp on \
 			mkpart BOOT $bootPartType 512Mib 2048Mib \
 			mkpart SWAP linux-swap 2048Mib 10048Mib \
-			set $swapPartNum swap on
+			set $swapPartNum swap on \
 
 	
-	if [ "$fstype" = "bcachefs" ] || [ "$fstype" = "f2fs" ]; then
+	if [ "$fstype" = "bcachefs" ]; then
 		parted -s $disk mkpart ROOT ext4 10048Mib 100%
 	else
 		parted -s $disk mkpart ROOT $fstype 10048Mib 100%
@@ -349,26 +347,22 @@ create_partitions () {
 		f2fs)			check_pkg f2fs-tools
 						mkfs.f2fs -f -l ROOT $disk$rootPart ;;
 		bcachefs)	check_pkg bcachefs-tools
-
-						if [ "$encrypt" = "true" ]; then
-							bcachefs format --encrypted --compression=lz4 -f -L ROOT $disk$rootPart
-						else
-							bcachefs format -f -L ROOT $disk$rootPart
-						fi ;;
-	esac
+	               if [ "$encrypt" = "true" ]; then
+                     bcachefs format --encrypted --compression=lz4 -f -L ROOT $disk$rootPart
+      bcachefs unlock -k session $disk$rootPart
+                  else
+                     bcachefs format -f -L ROOT $disk$rootPart
+                  fi
+                  ;;
+esac
 
 
 	parted -s $disk print
 
 
 	echo -e "\nMounting $mnt..."
+	mount --mkdir $disk$rootPart $mnt
 
-	if [ "$encrypt" = "true" ] || [ "fstype" = "bcachefs" ]; then
-		bcachefs unlock -k session $disk$rootPart
-	else
-		mount --mkdir $disk$rootPart $mnt
-	fi
-		
 	cd $mnt
 
 	if [ "$fstype" = "btrfs" ]; then
@@ -410,9 +404,14 @@ echo "File type: $fstype"
 
 		else
 
+
+			if [ "$encrypt" = "true" ]; then
+      		bcachefs unlock -k session $disk$rootPart
+			fi
+
 			mount --mkdir $disk$rootPart $mnt
 
-		fi
+   	fi
 
 
 	fi
