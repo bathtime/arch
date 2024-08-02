@@ -35,6 +35,8 @@
 #bcachefs on ssd
 # install 3 mins
 #Startup (with fsck hook on) finished in 3.476s (firmware) + 1.459s (loader) + 6.057s (kernel) + 1.701s (userspace) = 12.695s
+#Startup (without fsck hook) finished in 4.244s (firmware) + 1.465s (loader) + 3.220s (kernel) + 1.685s (userspace) = 10.617s 
+#graphical.target reached after 1.685s in userspace.
 #rm -rf tempfile; dd if=/dev/zero of=tempfile bs=4M count=4096 conv=fdatasync,notrunc
 #17179869184 bytes (17 GB, 16 GiB) copied, 16.2975 s, 1.1 GB/s
 
@@ -705,9 +707,9 @@ GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
 GRUB_CMDLINE_LINUX="$kernel_ops resume=UUID=$SWAP_UUID"
 GRUB_DISABLE_RECOVERY="true"
-GRUB_HIDDEN_TIMEOUT=1
+#GRUB_HIDDEN_TIMEOUT=1
 GRUB_RECORDFAIL_TIMEOUT=1
-GRUB_TIMEOUT=0
+GRUB_TIMEOUT=2
  
 # Update grub with:
 # grub-mkconfig -o /boot/grub/grub.cfg
@@ -1498,7 +1500,8 @@ BINARIES=()
 FILES=()
 #HOOKS=(base udev keyboard autodetect kms modconf sd-vconsole block filesystems liveroot resume)
 #HOOKS=(base udev keyboard autodetect kms modconf block filesystems liveroot resume)
-HOOKS=(autodetect base keyboard block udev filesystems fsck liveroot resume)
+#HOOKS=(autodetect base keyboard block udev filesystems fsck liveroot resume)
+HOOKS=(autodetect base keyboard block udev filesystems liveroot resume)
 COMPRESSION="lz4"
 #COMPRESSION_OPTIONS=()
 MODULES_DECOMPRESS="yes"' > $mnt/etc/mkinitcpio.conf
