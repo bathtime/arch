@@ -13,7 +13,8 @@ curl -sL https://bit.ly/a-install > arch.sh && chmod +x arch.sh && ./arch.sh
 
 # Features:
 
-- btrfs filesystem with suspend and hibernation option enabled
+- Supported filesystems: ext4, btrfs, xfs, jfs, bcachefs (with encryption) TODO: f2fs
+- suspend and hibernation option enabled
 - USB installation option
 - Run in tmpfs, squashfs, overlay, or snapshot mode
 - Captures current firefox/chromium profile from host system
