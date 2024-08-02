@@ -375,7 +375,7 @@ echo "File type: $fstype"
 
 			#mountopts="nodatacow,nodatasum,noatime,compress-force=zstd:1,discard=async"
 			#mountopts="nodatacow,nodatasum,noatime,discard=async"
-			mountopts="noatime,discard=async"
+			mountopts="defaults,noatime,discard=async"
 
 			for subvol in '' "${subvols[@]}"; do
 				mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
@@ -397,10 +397,11 @@ echo "File type: $fstype"
 	mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg,/var/tmp,/var/log}
 	
 	if [ "$fstype" = "btrfs" ]; then
-		mkdir -p $mnt/.snapshots
+		mkdir -p $mnt/.snapshots $mnt/run/timeshift
 		chattr +C -R $mnt/tmp
 		chattr +C -R $mnt/var/tmp
 		chattr +C -R $mnt/var/log
+		chattr +C -R $mnt/run/timeshift
 	fi
 
 	chmod 750 $mnt/root
@@ -1923,8 +1924,8 @@ backup_config () {
 	cd /home/$user
 	rm -rf setup.tar
 
-	chown $user:$user $mnt/home/$user/setup.tar
 	sudo -u $user tar -pcf setup.tar $CONFIG_FILES
+	chown $user:$user /home/$user/setup.tar
 
 	#sudo -u $user gpg --yes -c setup.tar
 	
