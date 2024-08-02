@@ -109,7 +109,7 @@ espPart=$espPartNum
 bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='bcachefs'		# ext4,btrfs,xfs,jfs,bcachefs,f2fs
+fstype='btrfs'		# ext4,btrfs,xfs,jfs,bcachefs,f2fs
 bootPartType='ext4'
 subvols=()
 efi_path=/efi
@@ -335,7 +335,19 @@ create_partitions () {
 	case $fstype in
 
 		btrfs)		check_pkg btrfs-progs
-						mkfs.btrfs -f -L ROOT $disk$rootPart ;;
+						mkfs.btrfs -f -L ROOT $disk$rootPart
+
+						echo -e "\nMounting $mnt..."
+						mount --mkdir $disk$rootPart $mnt
+
+						cd $mnt
+
+						for subvol in '' "${subvols[@]}"; do
+							btrfs su cr /mnt/@"$subvol"
+						done
+	
+						unmount_disk ;;
+
 		ext4)			mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart 
 						echo "Using tune2fs to create fast commit journal area. Please be patient..." 
 						tune2fs -O fast_commit $disk$rootPart
@@ -349,31 +361,16 @@ create_partitions () {
 		bcachefs)	check_pkg bcachefs-tools
 	               if [ "$encrypt" = "true" ]; then
                      bcachefs format --encrypted --compression=lz4 -f -L ROOT $disk$rootPart
-      bcachefs unlock -k session $disk$rootPart
+      					#bcachefs unlock -k session $disk$rootPart
+							#unmount_disk
                   else
                      bcachefs format -f -L ROOT $disk$rootPart
                   fi
                   ;;
 esac
 
-
 	parted -s $disk print
 
-
-	echo -e "\nMounting $mnt..."
-	mount --mkdir $disk$rootPart $mnt
-
-	cd $mnt
-
-	if [ "$fstype" = "btrfs" ]; then
-
-		for subvol in '' "${subvols[@]}"; do
-			btrfs su cr /mnt/@"$subvol"
-		done
-
-	fi
-	
-	unmount_disk
 	mount_disk
 
 }
@@ -404,15 +401,13 @@ echo "File type: $fstype"
 
 		else
 
-
-			if [ "$encrypt" = "true" ]; then
+			if [ "$fstype" = "bcachefs" ] && [ "$encrypt" = "true" ]; then
       		bcachefs unlock -k session $disk$rootPart
 			fi
 
 			mount --mkdir $disk$rootPart $mnt
 
    	fi
-
 
 	fi
 	
