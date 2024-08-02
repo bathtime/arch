@@ -32,6 +32,12 @@
 #graphical.target reached after 1.474s in userspace.
 
 
+#bcachefs on ssd
+# install 3 mins
+#Startup (with fsck hook on) finished in 3.476s (firmware) + 1.459s (loader) + 6.057s (kernel) + 1.701s (userspace) = 12.695s
+#rm -rf tempfile; dd if=/dev/zero of=tempfile bs=4M count=4096 conv=fdatasync,notrunc
+#17179869184 bytes (17 GB, 16 GiB) copied, 16.2975 s, 1.1 GB/s
+
 #ext4 install on flash 11:15: boot 19.1 seconds: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 14.4 MB/s
 
 # xfs install on flash 13:07 mins: boot in 18.8s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 17.3 MB/s
@@ -119,7 +125,7 @@ bootPartType='ext4'
 subvols=()
 efi_path=/efi
 boot_path=/boot
-encrypt=false
+encrypt=true
 
 kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
 
@@ -427,7 +433,6 @@ echo "File type: $fstype"
 
 				#decrypt bcachefs volume while using systemd:
 				bcachefs unlock -k session $disk$rootPart
-
 			fi
 
 			mount --mkdir $disk$rootPart $mnt
