@@ -40,6 +40,11 @@
 
 # jfs install on flash 17:32: boot in 22s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 16 MB/s 
 
+# bcachefs install on flash 19:36: boot in 30s (with fsck flag) 20.7s (without fsck flag): rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 46-106 MB/s 
+
+# bcachefs (encrypted) install on flash 19:36: boot in 32s (with fsck flag) 20.7s (without fsck flag): rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 46-106 MB/s 
+
+
 : << DOCS
 
 To run on the fly:
@@ -109,12 +114,12 @@ espPart=$espPartNum
 bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='btrfs'		# ext4,btrfs,xfs,jfs,bcachefs,f2fs
+fstype='bcachefs'		# ext4,btrfs,xfs,jfs,bcachefs,f2fs
 bootPartType='ext4'
 subvols=()
 efi_path=/efi
 boot_path=/boot
-encrypt=true
+encrypt=false
 
 kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
 
@@ -361,14 +366,27 @@ create_partitions () {
 		f2fs)			check_pkg f2fs-tools
 						mkfs.f2fs -f -l ROOT $disk$rootPart ;;
 		bcachefs)	check_pkg bcachefs-tools
+
 	               if [ "$encrypt" = "true" ]; then
-                     bcachefs format --encrypted --compression=lz4 -f -L ROOT $disk$rootPart
-      					#bcachefs unlock -k session $disk$rootPart
-							#unmount_disk
-                  else
+                     #bcachefs format --encrypted --compression=lz4 -f -L ROOT $disk$rootPart
+                     bcachefs format --encrypted --compression=none -f -L ROOT $disk$rootPart
+							bcachefs unlock -k session $disk$rootPart
+      				else
                      bcachefs format -f -L ROOT $disk$rootPart
                   fi
-                  ;;
+
+						echo -e "\nMounting $mnt..."
+                 	mount --mkdir $disk$rootPart $mnt
+
+						mkdir -p $mnt/{.snapshots,var/{log,tmp}}
+
+						bcachefs setattr $mnt/{.snapshots,var/{log,tmp}} --nocow
+
+						getfattr -d -m 'bcachefs_effective\.' $mnt/{.snapshots,var/{log,tmp}}
+
+						unmount_disk
+
+						;;
 esac
 
 	parted -s $disk print
@@ -403,7 +421,13 @@ echo "File type: $fstype"
 		else
 
 			if [ "$fstype" = "bcachefs" ] && [ "$encrypt" = "true" ]; then
-      		bcachefs unlock -k session $disk$rootPart
+
+				#simplest way to decrypt a bcachefs volume (or pool):
+				#bcachefs unlock $disk$rootPart
+
+				#decrypt bcachefs volume while using systemd:
+				bcachefs unlock -k session $disk$rootPart
+
 			fi
 
 			mount --mkdir $disk$rootPart $mnt
@@ -889,6 +913,12 @@ setup_user () {
 		chattr +C -R $mnt/home/$user/.cache
 	fi
 
+	if [ "$fstype" = "bcachefs" ]; then
+		mkdir -p $mnt/home/$user/.cache
+		chown -R $user:$user $mnt/home/$user/.cache
+		bcachefs setattr $mnt/home/$user/.cache  --nocow
+		getfattr -d -m 'bcachefs_effective\.' $mnt/home/user/.cache
+	fi
 
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
 		echo -e "\nUser was not created. Exiting.\n"
@@ -1981,10 +2011,10 @@ install_config () {
 	#read -p "Press any key when ready to enter password."
 	#echo "Decrypting setup file..."
 	#gpg --yes --output /home/$user/setup.tar --decrypt /home/$user/setup.tar.gpg
-
-
 	#cp /home/$user/setup.tar{,.gpg} $mnt/home/$user/
+
 	cp /home/$user/setup.tar $mnt/home/$user/
+	chown $user:$user $mnt/home/$user/setup.tar
 
 	echo "Extracting setup file..."
 	arch-chroot -u $user $mnt tar xvf /home/$user/setup.tar --directory /home/$user
