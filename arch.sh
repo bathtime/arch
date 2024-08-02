@@ -109,7 +109,7 @@ espPart=$espPartNum
 bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='bcachefs'		# ext4,btrfs,xfs,jfs,bcachefs,f2fs
+fstype='btrfs'		# ext4,btrfs,xfs,jfs,bcachefs,f2fs
 bootPartType='ext4'
 subvols=()
 efi_path=/efi
@@ -319,7 +319,7 @@ create_partitions () {
 			mkpart SWAP linux-swap 2048Mib 10048Mib \
 			set $swapPartNum swap on \
 
-	
+	# parted doesn't recognise bcachefs	
 	if [ "$fstype" = "bcachefs" ]; then
 		parted -s $disk mkpart ROOT ext4 10048Mib 100%
 	else
@@ -346,7 +346,9 @@ create_partitions () {
 							btrfs su cr /mnt/@"$subvol"
 						done
 	
-						unmount_disk ;;
+						unmount_disk
+
+						;;
 
 		ext4)			mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart 
 						echo "Using tune2fs to create fast commit journal area. Please be patient..." 
@@ -392,7 +394,6 @@ echo "File type: $fstype"
 			echo -e "\nMounting...\n"
 
 			#mountopts="nodatacow,nodatasum,noatime,compress-force=zstd:1,discard=async"
-			#mountopts="nodatacow,nodatasum,noatime,discard=async"
 			mountopts="noatime,discard=async"
 
 			for subvol in '' "${subvols[@]}"; do
