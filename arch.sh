@@ -32,14 +32,6 @@
 #graphical.target reached after 1.474s in userspace.
 
 
-#bcachefs on ssd
-# install 3 mins
-#Startup (with fsck hook on) finished in 3.476s (firmware) + 1.459s (loader) + 6.057s (kernel) + 1.701s (userspace) = 12.695s
-#Startup (without fsck hook) finished in 4.244s (firmware) + 1.465s (loader) + 3.220s (kernel) + 1.685s (userspace) = 10.617s 
-#graphical.target reached after 1.685s in userspace.
-#rm -rf tempfile; dd if=/dev/zero of=tempfile bs=4M count=4096 conv=fdatasync,notrunc
-#17179869184 bytes (17 GB, 16 GiB) copied, 16.2975 s, 1.1 GB/s
-
 #ext4 install on flash 11:15: boot 19.1 seconds: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 14.4 MB/s
 
 # xfs install on flash 13:07 mins: boot in 18.8s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 17.3 MB/s
@@ -47,11 +39,6 @@
 # btrfs install on flash 13:03: boot in 17s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 15.3 MB/s
 
 # jfs install on flash 17:32: boot in 22s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 16 MB/s 
-
-# bcachefs install on flash 19:36: boot in 30s (with fsck flag) 20.7s (without fsck flag): rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 46-106 MB/s 
-
-# bcachefs (encrypted) install on flash 19:36: boot in 32s (with fsck flag) 20.7s (without fsck flag): rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 46-106 MB/s 
-
 
 : << DOCS
 
@@ -115,20 +102,14 @@ arch_path=$(dirname "$0")
 
 mnt=/mnt
 espPartNum=1
-bootPartNum=2
-swapPartNum=3
-rootPartNum=4
+swapPartNum=2
+rootPartNum=3
 espPart=$espPartNum
-bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='bcachefs'		# ext4,btrfs,xfs,jfs,bcachefs,f2fs
-bootPartType='ext4'
+fstype='btrfs'		# ext4,btrfs,xfs,jfs   TODO: bcachefs,f2fs
 subvols=()
 efi_path=/efi
-boot_path=/boot
-encrypt=true
-
 kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
 
 # systemd.gpt_auto=0
@@ -290,7 +271,6 @@ choose_disk () {
 
 	if [ "$(echo $disk | grep nvme)" ]; then
 		espPart="p$espPartNum"
-		bootPart="p$bootPartNum"
 		swapPart="p$swapPartNum"
 		rootPart="p$rootPartNum"
 	fi
@@ -328,41 +308,19 @@ create_partitions () {
 	parted -s $disk mklabel gpt \
 			mkpart ESP fat32 1Mib 512Mib \
 			set $espPartNum esp on \
-			mkpart BOOT $bootPartType 512Mib 2048Mib \
-			mkpart SWAP linux-swap 2048Mib 10048Mib \
+			mkpart SWAP linux-swap 512Mib 8512Mib \
 			set $swapPartNum swap on \
-
-	# parted doesn't recognise bcachefs	
-	if [ "$fstype" = "bcachefs" ]; then
-		parted -s $disk mkpart ROOT ext4 10048Mib 100%
-	else
-		parted -s $disk mkpart ROOT $fstype 10048Mib 100%
-	fi
+			mkpart ROOT $fstype 8512Mib 100% \
 
 	check_pkg dosfstools
 
 	mkfs.fat -F 32 -n EFI $disk$espPart 
-	mkfs.ext4 -F -q -t ext4 -L BOOT $disk$bootPart
 	mkswap -L SWAP $disk$swapPart
 
 	case $fstype in
 
 		btrfs)		check_pkg btrfs-progs
-						mkfs.btrfs -f -L ROOT $disk$rootPart
-
-						echo -e "\nMounting $mnt..."
-						mount --mkdir $disk$rootPart $mnt
-
-						cd $mnt
-
-						for subvol in '' "${subvols[@]}"; do
-							btrfs su cr /mnt/@"$subvol"
-						done
-	
-						unmount_disk
-
-						;;
-
+						mkfs.btrfs -f -L ROOT $disk$rootPart ;;
 		ext4)			mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart 
 						echo "Using tune2fs to create fast commit journal area. Please be patient..." 
 						tune2fs -O fast_commit $disk$rootPart
@@ -374,31 +332,27 @@ create_partitions () {
 		f2fs)			check_pkg f2fs-tools
 						mkfs.f2fs -f -l ROOT $disk$rootPart ;;
 		bcachefs)	check_pkg bcachefs-tools
+						bcachefs format -f -L ROOT $disk$rootPart ;;
+	esac
 
-	               if [ "$encrypt" = "true" ]; then
-                     #bcachefs format --encrypted --compression=lz4 -f -L ROOT $disk$rootPart
-                     bcachefs format --encrypted --compression=none -f -L ROOT $disk$rootPart
-							bcachefs unlock -k session $disk$rootPart
-      				else
-                     bcachefs format -f -L ROOT $disk$rootPart
-                  fi
-
-						echo -e "\nMounting $mnt..."
-                 	mount --mkdir $disk$rootPart $mnt
-
-						mkdir -p $mnt/{.snapshots,var/{log,tmp}}
-
-						bcachefs setattr $mnt/{.snapshots,var/{log,tmp}} --nocow
-
-						getfattr -d -m 'bcachefs_effective\.' $mnt/{.snapshots,var/{log,tmp}}
-
-						unmount_disk
-
-						;;
-esac
 
 	parted -s $disk print
 
+
+	echo -e "\nMounting $mnt..."
+	mount --mkdir $disk$rootPart $mnt
+
+	cd $mnt
+
+	if [ "$fstype" = "btrfs" ]; then
+
+		for subvol in '' "${subvols[@]}"; do
+			btrfs su cr /mnt/@"$subvol"
+		done
+
+	fi
+	
+	unmount_disk
 	mount_disk
 
 }
@@ -420,6 +374,7 @@ echo "File type: $fstype"
 			echo -e "\nMounting...\n"
 
 			#mountopts="nodatacow,nodatasum,noatime,compress-force=zstd:1,discard=async"
+			#mountopts="nodatacow,nodatasum,noatime,discard=async"
 			mountopts="noatime,discard=async"
 
 			for subvol in '' "${subvols[@]}"; do
@@ -428,18 +383,10 @@ echo "File type: $fstype"
 
 		else
 
-			if [ "$fstype" = "bcachefs" ] && [ "$encrypt" = "true" ]; then
-
-				#simplest way to decrypt a bcachefs volume (or pool):
-				#bcachefs unlock $disk$rootPart
-
-				#decrypt bcachefs volume while using systemd:
-				bcachefs unlock -k session $disk$rootPart
-			fi
-
 			mount --mkdir $disk$rootPart $mnt
 
-   	fi
+		fi
+
 
 	fi
 	
@@ -447,14 +394,10 @@ echo "File type: $fstype"
 		mount --mkdir $disk$espPart $mnt$efi_path
 	fi
 
-	if [[ ! $(mount | grep -E $disk$bootPart | grep -E "on $mnt$boot_path") ]]; then
-		mount --mkdir $disk$bootPart $mnt$boot_path
-	fi
-
 	mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg,/var/tmp,/var/log}
 	
 	if [ "$fstype" = "btrfs" ]; then
-		#mkdir -p $mnt/.snapshots
+		mkdir -p $mnt/.snapshots
 		chattr +C -R $mnt/tmp
 		chattr +C -R $mnt/var/tmp
 		chattr +C -R $mnt/var/log
@@ -584,7 +527,7 @@ setup_fstab () {
 	sed -i 's/subvolid=.*,//g' $mnt/etc/fstab
 
 	# genfstab will generate a swap drive. we're using a swap file instead
-	#sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
+	sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
 
 	#sed -i 's/relatime/noatime/g' $mnt/etc/fstab
 
@@ -707,9 +650,9 @@ GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
 GRUB_CMDLINE_LINUX="$kernel_ops resume=UUID=$SWAP_UUID"
 GRUB_DISABLE_RECOVERY="true"
-#GRUB_HIDDEN_TIMEOUT=1
+GRUB_HIDDEN_TIMEOUT=1
 GRUB_RECORDFAIL_TIMEOUT=1
-GRUB_TIMEOUT=2
+GRUB_TIMEOUT=0
  
 # Update grub with:
 # grub-mkconfig -o /boot/grub/grub.cfg
@@ -920,12 +863,6 @@ setup_user () {
 		chattr +C -R $mnt/home/$user/.cache
 	fi
 
-	if [ "$fstype" = "bcachefs" ]; then
-		mkdir -p $mnt/home/$user/.cache
-		chown -R $user:$user $mnt/home/$user/.cache
-		bcachefs setattr $mnt/home/$user/.cache  --nocow
-		getfattr -d -m 'bcachefs_effective\.' $mnt/home/user/.cache
-	fi
 
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
 		echo -e "\nUser was not created. Exiting.\n"
@@ -1271,7 +1208,7 @@ install_timeshift () {
 
   	pacstrap_install timeshift xorg-xhost
 
-	cp $mnt/usr/share/applications/timeshift-gtk.desktop $mnt/home/$user/.local/share/applications/
+	$mnt/usr/share/applications/timeshift-gtk.desktop $mnt/home/user/.local/share/applications/
 
 	# Required to start the application under wayland
 	var='pkexec env $(env) timeshift-launcher'
@@ -1500,8 +1437,7 @@ BINARIES=()
 FILES=()
 #HOOKS=(base udev keyboard autodetect kms modconf sd-vconsole block filesystems liveroot resume)
 #HOOKS=(base udev keyboard autodetect kms modconf block filesystems liveroot resume)
-#HOOKS=(autodetect base keyboard block udev filesystems fsck liveroot resume)
-HOOKS=(autodetect base keyboard block udev filesystems liveroot resume)
+HOOKS=(autodetect base keyboard block udev filesystems fsck liveroot resume)
 COMPRESSION="lz4"
 #COMPRESSION_OPTIONS=()
 MODULES_DECOMPRESS="yes"' > $mnt/etc/mkinitcpio.conf
@@ -2019,10 +1955,10 @@ install_config () {
 	#read -p "Press any key when ready to enter password."
 	#echo "Decrypting setup file..."
 	#gpg --yes --output /home/$user/setup.tar --decrypt /home/$user/setup.tar.gpg
-	#cp /home/$user/setup.tar{,.gpg} $mnt/home/$user/
 
+
+	#cp /home/$user/setup.tar{,.gpg} $mnt/home/$user/
 	cp /home/$user/setup.tar $mnt/home/$user/
-	chown $user:$user $mnt/home/$user/setup.tar
 
 	echo "Extracting setup file..."
 	arch-chroot -u $user $mnt tar xvf /home/$user/setup.tar --directory /home/$user
