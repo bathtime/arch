@@ -102,14 +102,19 @@ arch_path=$(dirname "$0")
 
 mnt=/mnt
 espPartNum=1
-swapPartNum=2
-rootPartNum=3
+bootPartNum=2
+swapPartNum=3
+rootPartNum=4
 espPart=$espPartNum
+bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='btrfs'		# ext4,btrfs,xfs,jfs   TODO: bcachefs,f2fs
+fstype='bcachefs'		# ext4,btrfs,xfs,jfs,bcachefs,f2fs
+bootPartType='ext4'
 subvols=()
 efi_path=/efi
+boot_path=/boot
+
 kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
 
 # systemd.gpt_auto=0
@@ -271,6 +276,7 @@ choose_disk () {
 
 	if [ "$(echo $disk | grep nvme)" ]; then
 		espPart="p$espPartNum"
+		bootPart="p$bootPartNum"
 		swapPart="p$swapPartNum"
 		rootPart="p$rootPartNum"
 	fi
@@ -308,13 +314,21 @@ create_partitions () {
 	parted -s $disk mklabel gpt \
 			mkpart ESP fat32 1Mib 512Mib \
 			set $espPartNum esp on \
-			mkpart SWAP linux-swap 512Mib 8512Mib \
+			mkpart BOOT $bootPartType 512Mib 2048Mib \
+			mkpart SWAP linux-swap 2048Mib 10048Mib \
 			set $swapPartNum swap on \
-			mkpart ROOT $fstype 8512Mib 100% \
+
+	
+	if [ "$fstype" = "bcachefs" ]; then
+		parted -s $disk mkpart ROOT ext4 10048Mib 100%
+	else
+		parted -s $disk mkpart ROOT $fstype 10048Mib 100%
+	fi
 
 	check_pkg dosfstools
 
 	mkfs.fat -F 32 -n EFI $disk$espPart 
+	mkfs.ext4 -F -q -t ext4 -L BOOT $disk$bootPart
 	mkswap -L SWAP $disk$swapPart
 
 	case $fstype in
@@ -394,10 +408,14 @@ echo "File type: $fstype"
 		mount --mkdir $disk$espPart $mnt$efi_path
 	fi
 
+	if [[ ! $(mount | grep -E $disk$bootPart | grep -E "on $mnt$boot_path") ]]; then
+		mount --mkdir $disk$bootPart $mnt$boot_path
+	fi
+
 	mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg,/var/tmp,/var/log}
 	
 	if [ "$fstype" = "btrfs" ]; then
-		mkdir -p $mnt/.snapshots
+		#mkdir -p $mnt/.snapshots
 		chattr +C -R $mnt/tmp
 		chattr +C -R $mnt/var/tmp
 		chattr +C -R $mnt/var/log
@@ -527,7 +545,7 @@ setup_fstab () {
 	sed -i 's/subvolid=.*,//g' $mnt/etc/fstab
 
 	# genfstab will generate a swap drive. we're using a swap file instead
-	sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
+	#sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
 
 	#sed -i 's/relatime/noatime/g' $mnt/etc/fstab
 
