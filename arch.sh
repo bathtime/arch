@@ -107,7 +107,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='btrfs'		# ext4,btrfs,xfs,jfs   TODO: bcachefs,f2fs
+fstype='btrfs'		# ext4,btrfs,xfs,jfs,f2fs   TODO: bcachefs
 subvols=()
 efi_path=/efi
 
@@ -398,7 +398,7 @@ echo "File type: $fstype"
 	mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg,/var/tmp,/var/log}
 	
 	if [ "$fstype" = "btrfs" ]; then
-		mkdir -p $mnt/.snapshots
+		#mkdir -p $mnt/.snapshots
 		chattr +C -R $mnt/tmp
 		chattr +C -R $mnt/var/tmp
 		chattr +C -R $mnt/var/log
