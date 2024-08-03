@@ -399,9 +399,9 @@ echo "File type: $fstype"
 	
 	if [ "$fstype" = "btrfs" ]; then
 		mkdir -p $mnt/.snapshots
-		#chattr +C -R $mnt/tmp
-		#chattr +C -R $mnt/var/tmp
-		#chattr +C -R $mnt/var/log
+		chattr +C -R $mnt/tmp
+		chattr +C -R $mnt/var/tmp
+		chattr +C -R $mnt/var/log
 	fi
 
 	chmod 750 $mnt/root
@@ -528,9 +528,9 @@ setup_fstab () {
 	#sed -i 's/subvolid=.*,//g' $mnt/etc/fstab
 
 	# genfstab will generate a swap drive. we're using a swap file instead
-	#sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
+	sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
 
-	#sed -i 's/relatime/noatime/g' $mnt/etc/fstab
+	sed -i 's/relatime/noatime/g' $mnt/etc/fstab
 
 	sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,commit=60      0 1/' $mnt/etc/fstab
 
