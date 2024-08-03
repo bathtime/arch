@@ -36,7 +36,7 @@
 
 # xfs install on flash 13:07 mins: boot in 18.8s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 17.3 MB/s
 
-# btrfs install on flash 13:03: boot in 17s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 15.3 MB/s
+# btrfs install on flash 6:48: boot in 17s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 15.3 MB/s
 
 # jfs install on flash 17:32: boot in 22s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 16 MB/s 
 
@@ -110,6 +110,7 @@ rootPart=$rootPartNum
 fstype='btrfs'		# ext4,btrfs,xfs,jfs   TODO: bcachefs,f2fs
 subvols=()
 efi_path=/efi
+
 kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
 
 # systemd.gpt_auto=0
@@ -524,10 +525,10 @@ setup_fstab () {
 	sed -i 's/zstd:3/zstd:1/' $mnt/etc/fstab
 
 	# Bad idea to use subids when rolling back 
-	sed -i 's/subvolid=.*,//g' $mnt/etc/fstab
+	#sed -i 's/subvolid=.*,//g' $mnt/etc/fstab
 
 	# genfstab will generate a swap drive. we're using a swap file instead
-	sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
+	#sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
 
 	#sed -i 's/relatime/noatime/g' $mnt/etc/fstab
 
@@ -643,17 +644,16 @@ install_GRUB () {
 
 	cat > /etc/default/grub << EOF2
 
-GRUB_TIMEOUT=0
 GRUB_DISTRIBUTOR=""
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
 GRUB_CMDLINE_LINUX="$kernel_ops resume=UUID=$SWAP_UUID"
 GRUB_DISABLE_RECOVERY="true"
-GRUB_HIDDEN_TIMEOUT=1
+#GRUB_HIDDEN_TIMEOUT=1
 GRUB_RECORDFAIL_TIMEOUT=1
-GRUB_TIMEOUT=0
- 
+GRUB_TIMEOUT=2
+
 # Update grub with:
 # grub-mkconfig -o /boot/grub/grub.cfg
 
@@ -1203,18 +1203,6 @@ EOF
 
 }
 
-
-install_timeshift () {
-
-  	pacstrap_install timeshift xorg-xhost
-
-	$mnt/usr/share/applications/timeshift-gtk.desktop $mnt/home/user/.local/share/applications/
-
-	# Required to start the application under wayland
-	var='pkexec env $(env) timeshift-launcher'
-	sed -i "s/Exec=.*$/Exec=$var/" $mnt/home/$user/.local/share/applications/timeshift-gtk.desktop
-
-}
 
 
 install_liveroot () {
@@ -1860,7 +1848,7 @@ auto_install_kde () {
 	sed -i 's/^:/   startplasma-wayland/g' $mnt/home/$user/.bash_profile
 
    if [ "$fstype" = "btrfs" ]; then
-		install_timeshift
+  		pacstrap_install timeshift xorg-xhost
 	fi
 
 	#backup_config
