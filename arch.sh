@@ -375,7 +375,7 @@ echo "File type: $fstype"
 
 			#mountopts="nodatacow,nodatasum,noatime,compress-force=zstd:1,discard=async"
 			#mountopts="nodatacow,nodatasum,noatime,discard=async"
-			mountopts="defaults,noatime,discard=async"
+			mountopts="noatime,discard=async"
 
 			for subvol in '' "${subvols[@]}"; do
 				mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
@@ -397,11 +397,10 @@ echo "File type: $fstype"
 	mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg,/var/tmp,/var/log}
 	
 	if [ "$fstype" = "btrfs" ]; then
-		mkdir -p $mnt/.snapshots $mnt/run/timeshift
+		mkdir -p $mnt/.snapshots
 		chattr +C -R $mnt/tmp
 		chattr +C -R $mnt/var/tmp
 		chattr +C -R $mnt/var/log
-		chattr +C -R $mnt/run/timeshift
 	fi
 
 	chmod 750 $mnt/root
@@ -522,17 +521,17 @@ setup_fstab () {
 	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 
 	# Changing compression
-	#sed -i 's/zstd:3/zstd:1/' $mnt/etc/fstab
+	sed -i 's/zstd:3/zstd:1/' $mnt/etc/fstab
 
 	# Bad idea to use subids when rolling back 
-	#sed -i 's/subvolid=.*,//g' $mnt/etc/fstab
+	sed -i 's/subvolid=.*,//g' $mnt/etc/fstab
 
 	# genfstab will generate a swap drive. we're using a swap file instead
-	#sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
+	sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
 
 	#sed -i 's/relatime/noatime/g' $mnt/etc/fstab
 
-	sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,defaults,noatime,commit=60      0 1/' $mnt/etc/fstab
+	sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,commit=60      0 1/' $mnt/etc/fstab
 
 	# Make /efi read-only
 	#sed -i 's/\/efi.*vfat.*rw/\/efi     vfat     ro/' $mnt/etc/fstab
@@ -644,15 +643,16 @@ install_GRUB () {
 
 	cat > /etc/default/grub << EOF2
 
+GRUB_TIMEOUT=0
 GRUB_DISTRIBUTOR=""
 GRUB_DEFAULT=saved
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
 GRUB_CMDLINE_LINUX="$kernel_ops resume=UUID=$SWAP_UUID"
 GRUB_DISABLE_RECOVERY="true"
-#GRUB_HIDDEN_TIMEOUT=1
+GRUB_HIDDEN_TIMEOUT=1
 GRUB_RECORDFAIL_TIMEOUT=1
-GRUB_TIMEOUT=2
+GRUB_TIMEOUT=0
  
 # Update grub with:
 # grub-mkconfig -o /boot/grub/grub.cfg
@@ -1208,7 +1208,7 @@ install_timeshift () {
 
   	pacstrap_install timeshift xorg-xhost
 
-	cp $mnt/usr/share/applications/timeshift-gtk.desktop $mnt/home/user/.local/share/applications/
+	$mnt/usr/share/applications/timeshift-gtk.desktop $mnt/home/user/.local/share/applications/
 
 	# Required to start the application under wayland
 	var='pkexec env $(env) timeshift-launcher'
@@ -1925,7 +1925,7 @@ backup_config () {
 	rm -rf setup.tar
 
 	sudo -u $user tar -pcf setup.tar $CONFIG_FILES
-	chown $user:$user /home/$user/setup.tar
+	chown $user:$user $mnt/home/$user/setup.tar
 
 	#sudo -u $user gpg --yes -c setup.tar
 	
@@ -1959,7 +1959,6 @@ install_config () {
 
 	#cp /home/$user/setup.tar{,.gpg} $mnt/home/$user/
 	cp /home/$user/setup.tar $mnt/home/$user/
-	chown $user:$user $mnt/home/$user/setup.tar
 
 	echo "Extracting setup file..."
 	arch-chroot -u $user $mnt tar xvf /home/$user/setup.tar --directory /home/$user
