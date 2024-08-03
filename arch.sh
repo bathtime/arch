@@ -398,10 +398,10 @@ echo "File type: $fstype"
 	mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg,/var/tmp,/var/log}
 	
 	if [ "$fstype" = "btrfs" ]; then
-		#mkdir -p $mnt/.snapshots
-		chattr +C -R $mnt/tmp
-		chattr +C -R $mnt/var/tmp
-		chattr +C -R $mnt/var/log
+		mkdir -p $mnt/.snapshots
+		#chattr +C -R $mnt/tmp
+		#chattr +C -R $mnt/var/tmp
+		#chattr +C -R $mnt/var/log
 	fi
 
 	chmod 750 $mnt/root
