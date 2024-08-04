@@ -36,9 +36,10 @@
 
 # xfs install on flash 13:07 mins: boot in 18.8s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 17.3 MB/s
 
-# btrfs install on flash 6:48: boot in 17s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 15.3 MB/s
+# btrfs install on flash 5:46: boot in 17s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 15.3 MB/s
 
 # jfs install on flash 17:32: boot in 22s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 16 MB/s 
+
 
 : << DOCS
 
@@ -119,6 +120,16 @@ user=user
 password=123456
 aur_app=paru
 aur_path=/home/$user
+
+base_install="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar man-db dosfstools"
+
+user_install="sudo"
+
+weston_install="wireplumber pipewire pipewire-pulse weston firefox"
+
+gnome_install="gnome-shell nautilus gnome-terminal xdg-user-dirs firefox"
+
+kde_install="plasma-desktop plasma-pa kscreen dolphin konsole firefox chromium ffmpegthumbs bleachbit ncdu"
 
 ucode=intel-ucode
 hostname=Arch
@@ -417,7 +428,7 @@ install_base () {
 
 	check_on_root
 	mount_disk
-	
+
 	echo '[options]
 HoldPkg     = pacman glibc
 Architecture = auto
@@ -443,14 +454,13 @@ Server = file:///var/cache/pacman/pkg/
 
 	check_pkg arch-install-scripts
 
-	packages="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar man-db dosfstools"
+	packages="$base_install"
+
 	#packages="linux vi arch-install-scripts pacman-contrib tar man-db"
 
 	[ "$root_only" ] && packages="$packages sudo"
 
-	if [ "$fstype" = "btrfs" ]; then
-		packages="$packages btrfs-progs grub-btrfs"
-	fi
+	[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs grub-btrfs"
 	[ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
 	[ "$fstype" = "jfs" ] && packages="$packages jfsutils"
 	[ "$fstype" = "f2fs" ] && packages="$packages f2fs-tools"
@@ -851,7 +861,7 @@ setup_user () {
 	mount_disk
 
 
-	pacstrap_install sudo
+	pacstrap_install "$install_user" 
 
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
 		arch-chroot $mnt useradd -m $user -G wheel
@@ -915,9 +925,25 @@ export XDG_RUNTIME_DIR=/run/$USER/1000
 export RUNLEVEL=3
 export QT_LOGGING_RULES="*=false"
 
-if [[ ! ${DISPLAY} && ${XDG_VTNR} == 1 ]]; then
-:
-fi' > $mnt/home/$user/.bash_profile
+manager=none
+
+if [[ -z $DISPLAY && $(tty) == /dev/tty1 && $XDG_SESSION_TYPE == tty ]]; then
+
+        if [ "$manager" = "choice" ]; then
+                echo -e "Choose a window manager:\n1. none\n2. weston\n3. kde\n4. gnome\n"
+                read manager
+        fi
+
+        case $manager in
+                1|none)         ;;
+                2|weston)       exec weston --shell=desktop ;;
+                3|kde)          startplasma-wayland ;;
+                4|gnome)        MOZ_ENABLE_WAYLAND=1 QT_QPA_PLATFORM=wayland XDG_SESSION_TYPE=wayland exec dbus-run-session gnome-session ;;
+        esac
+
+fi
+
+' > $mnt/home/$user/.bash_profile
 	arch-chroot $mnt chown user:user /home/$user/.bash_profile
 
 	touch $mnt/home/$user/.hushlogin
@@ -1724,7 +1750,6 @@ restore_snapshot () {
 
 	echo "TODO!"
 
-
 }
 
 
@@ -1788,14 +1813,7 @@ auto_install_root () {
 	create_partitions
 	install_base
 	setup_fstab
-
-	# TODO make grub work with btrfs
-	#if [ "$fstype" = "xfs" ] ; then
-		install_GRUB
-	#else
-#		install_REFIND
-#	fi
-
+	install_GRUB
 	general_setup
 	setup_iwd
 	install_tweaks
@@ -1824,12 +1842,13 @@ auto_install_weston () {
 
 	auto_install_user
 
-	pacstrap_install wireplumber pipewire pipewire-pulse weston firefox foliate brightnessctl
+	pacstrap_install $weston_install
+
 	copy_pkgs
 	
-	sed -i 's/^:/  exec weston --shell=desktop/g' $mnt/home/$user/.bash_profile
+	sed -i 's/manager=.*$/manager=weston/g' $mnt/home/$user/.bash_profile
 
-	backup_config
+	#backup_config
 	install_config
 
 }
@@ -1840,18 +1859,18 @@ auto_install_kde () {
 
 	auto_install_user
  
-	pacstrap_install plasma-desktop plasma-pa kscreen dolphin konsole firefox chromium gimp gwenview okular obs-studio ffmpegthumbs bleachbit ncdu
+	if [ "$fstype" = "btrfs" ]; then
+  		pacstrap_install timeshift xorg-xhost $kde_install
+	else
+		pacstrap_install $kde_install
+	fi
 	
 	copy_pkgs
 
 	# Auto-launch
-	sed -i 's/^:/   startplasma-wayland/g' $mnt/home/$user/.bash_profile
+	sed -i 's/manager=.*$/manager=kde/g' $mnt/home/$user/.bash_profile
 
-   if [ "$fstype" = "btrfs" ]; then
-  		pacstrap_install timeshift xorg-xhost
-	fi
-
-	#backup_config
+   #backup_config
 	install_config	
 	sync_disk
 
@@ -1861,16 +1880,34 @@ auto_install_kde () {
 auto_install_gnome () {
 
 	auto_install_user
+	
+	pacstrap_install $gnome_install
 
-	pacstrap_install gnome-shell nautilus gnome-terminal xdg-user-dirs firefox
+	copy_pkgs
+
+	# Auto launch
+	sed -i 's/manager=.*$/manager=gnome/g' $mnt/home/$user/.bash_profile
+
+	#backup_config
+	install_config
+	sync_disk
+}
+
+auto_install_all () {
+
+	auto_install_user
+	
+	pacstrap_install $gnome_install $kde_install $weston_install
+
 	copy_pkgs
 
 	# Customize system
 
-	sed -i 's/^:/   MOZ_ENABLE_WAYLAND=1 QT_QPA_PLATFORM=wayland XDG_SESSION_TYPE=wayland gnome-shell --session=wayland/g' $mnt/home/$user/.bash_profile
+	sed -i 's/manager=.*$/manager=choice/g' $mnt/home/$user/.bash_profile
 
-	backup_config
+	#backup_config
 	install_config
+	sync_disk
 }
 
 
@@ -1898,7 +1935,7 @@ clean_system () {
 
 	cd /home/$user/.config/chromium
 
-	#rm -rf Safe\ Browsing component_crx_cache WidevineCdm IndexedDB GrShaderCache OnDeviceHeadSuggestModel hyphen-data ZxcvbnData ShaderCache Default/{Service\ Worker/,IndexedDB,History,GPUCache,Sessions,DawnCache,Extension\ State,Web\ Data,Visited\ Links}
+	rm -rf Safe\ Browsing component_crx_cache WidevineCdm IndexedDB GrShaderCache OnDeviceHeadSuggestModel hyphen-data ZxcvbnData ShaderCache Default/{Service\ Worker/,IndexedDB,History,GPUCache,Sessions,DawnCache,Extension\ State,Web\ Data,Visited\ Links}
 	#rm -rf Safe\ Browsing component_crx_cache WidevineCdm GrShaderCache OnDeviceHeadSuggestModel hyphen-data ZxcvbnData ShaderCache Default/{Service\ Worker/,History,GPUCache,Sessions,DawnCache,Extension\ State,Web\ Data,Visited\ Links}
 
 }
@@ -2226,7 +2263,8 @@ echo
 3. User
 4. Weston
 5. KDE
-6. Gnome")
+6. Gnome
+7. All")
 										echo
 										echo "${config_os[@]}" | column
 										echo  
@@ -2240,6 +2278,7 @@ echo
                 						weston|4)	time auto_install_weston ;;
                 						kde|5)		time auto_install_kde ;;
                 						gnome|6)		time auto_install_gnome ;;
+                						all|7)		time auto_install_all ;;
                 						'')			;;
 	              						*)				echo -e "\nInvalid option ($config_os)!\n" ;;
 										esac ;;
