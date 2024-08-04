@@ -1938,6 +1938,13 @@ clean_system () {
 	rm -rf Safe\ Browsing component_crx_cache WidevineCdm IndexedDB GrShaderCache OnDeviceHeadSuggestModel hyphen-data ZxcvbnData ShaderCache Default/{Service\ Worker/,IndexedDB,History,GPUCache,Sessions,DawnCache,Extension\ State,Web\ Data,Visited\ Links}
 	#rm -rf Safe\ Browsing component_crx_cache WidevineCdm GrShaderCache OnDeviceHeadSuggestModel hyphen-data ZxcvbnData ShaderCache Default/{Service\ Worker/,History,GPUCache,Sessions,DawnCache,Extension\ State,Web\ Data,Visited\ Links}
 
+	if [ "$fstype" = "btrfs" ]; then
+
+	echo TODO	
+
+
+	fi
+
 }
 
 
@@ -1950,7 +1957,7 @@ backup_config () {
 	rm -rf setup.tar
 
 	sudo -u $user tar -pcf setup.tar $CONFIG_FILES
-	chown $user:$user $mnt/home/$user/setup.tar
+	chown $user:$user /home/$user/setup.tar
 
 	#sudo -u $user gpg --yes -c setup.tar
 	
@@ -2094,7 +2101,7 @@ sync_disk () {
 		if [ $stall_count -gt 10 ]; then
 			sync &
 			stall_count=0
-			echo "Resyncing..."
+			#echo "Resyncing..."
 		fi
 
 		sleep .1
