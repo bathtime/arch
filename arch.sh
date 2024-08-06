@@ -108,7 +108,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='btrfs'		# ext4,btrfs,xfs,jfs,f2fs   TODO: bcachefs
+fstype='f2fs'		# ext4,btrfs,xfs,jfs,f2fs   TODO: bcachefs
 subvols=()
 efi_path=/efi
 
@@ -407,6 +407,7 @@ echo "File type: $fstype"
 	fi
 
 	mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg,/var/tmp,/var/log}
+	mkdir -p /mnt/{dev,proc,run,sys}
 	
 	if [ "$fstype" = "btrfs" ]; then
 		mkdir -p $mnt/.snapshots
@@ -1554,7 +1555,20 @@ clone () {
 
 	rsync $2 --exclude=/efi --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
 
-	echo -e "\nNOTE: You may need to update fstab!\n"
+	[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs grub-btrfs"
+   [ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
+   [ "$fstype" = "jfs" ] && packages="$packages jfsutils"
+   [ "$fstype" = "f2fs" ] && packages="$packages f2fs-tools"
+   [ "$fstype" = "bcachefs" ] && packages="$packages bcachefs-tools"
+      
+   pacstrap_install $packages
+	
+	setup_fstab
+	install_GRUB
+	mkinitcpio -P
+
+	#echo -e "\nNOTE: You may need to update fstab and run mkinitcpio -P!\n"
+
 }
 
 
