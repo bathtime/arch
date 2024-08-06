@@ -127,6 +127,8 @@ base_install="base linux linux-firmware vim parted gptfdisk arch-install-scripts
 
 user_install="sudo"
 
+cage_install="cage fire"
+
 weston_install="wireplumber pipewire pipewire-pulse weston firefox"
 
 gnome_install="gnome-shell nautilus gnome-terminal xdg-user-dirs firefox"
@@ -1857,7 +1859,21 @@ auto_install_user () {
 
 }
 
+auto_install_cage () {
 
+	auto_install_user
+	
+	pacstrap_install $cage_install
+
+	copy_pkgs
+
+	# Auto launch
+	sed -i 's/manager=.*$/manager=cage/g' $mnt/home/$user/.bash_profile
+
+	#backup_config
+	install_config
+	sync_disk
+}
 
 auto_install_weston () {
 
@@ -2301,7 +2317,8 @@ echo
 5. KDE
 6. Gnome
 7. Phosh
-8. All")
+8. Cage
+9. All")
 										echo
 										echo "${config_os[@]}" | column
 										echo  
@@ -2316,7 +2333,8 @@ echo
                 						kde|5)		time auto_install_kde ;;
                 						gnome|6)		time auto_install_gnome ;;
                 						phosh|7)		time auto_install_phosh ;;
-                						all|8)		time auto_install_all ;;
+                						phosh|8)		time auto_install_cage ;;
+                						all|9)		time auto_install_all ;;
                 						'')			;;
 	              						*)				echo -e "\nInvalid option ($config_os)!\n" ;;
 										esac ;;
