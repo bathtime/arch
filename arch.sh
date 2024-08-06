@@ -6,7 +6,7 @@
 #17179869184 bytes (17 GB, 16 GiB) copied, 10.9708 s, 1.6 GB/s
 
 #rm -rf tempfile; dd if=/dev/zero of=tempfile bs=512 count=1000000 conv=fdatasync,notrunc
-#512000000 bytes (512 MB, 488 MiB) copied, 2.09522 s, 244 MB/s
+#512000000 bytes (512 MB, 488 MiB) copied, 2.09522 s, 253 MB/s
 
 #Startup finished in 1.834s (firmware) + 1.557s (loader) + 3.517s (kernel) + 1.469s (userspace) = 8.378s - 3s
 #graphical.target reached after 1.461s in userspace.
@@ -20,7 +20,7 @@
 #17179869184 bytes (17 GB, 16 GiB) copied, 13.5097 s, 1.3 GB/s
 
 #dd if=/dev/zero of=tempfile bs=512 count=1000000 conv=fdatasync,notrunc
-#512000000 bytes (512 MB, 488 MiB) copied, 3.49716 s, 146 MB/s
+#512000000 bytes (512 MB, 488 MiB) copied, 3.49716 s, 263 MB/s
 
 #Startup finished in 1.864s (firmware) + 3.116s (loader) + 3.486s (kernel) + 1.473s (userspace) = 9.941s 
 #graphical.target reached after 1.457s in userspace.
@@ -39,6 +39,8 @@
 # btrfs install on flash 5:46: boot in 17s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 15.3 MB/s
 
 # jfs install on flash 17:32: boot in 22s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 16 MB/s 
+
+# nilfs2 install on flash : boot in 20.9s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 11.2 MB/s 
 
 
 : << DOCS
@@ -108,7 +110,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='f2fs'		# ext4,btrfs,xfs,jfs,f2fs   TODO: bcachefs
+fstype='btrfs'		# ext4,btrfs,xfs,jfs,f2fs,nilfs22   TODO: bcachefs
 subvols=()
 efi_path=/efi
 
@@ -129,7 +131,9 @@ weston_install="wireplumber pipewire pipewire-pulse weston firefox"
 
 gnome_install="gnome-shell nautilus gnome-terminal xdg-user-dirs firefox"
 
-kde_install="plasma-desktop plasma-pa kscreen dolphin konsole firefox chromium ffmpegthumbs bleachbit ncdu"
+phosh_install="phosh phoc phosh-mobile-settings squeekboard firefox"
+
+kde_install="plasma-desktop plasma-pa kscreen dolphin konsole firefox ffmpegthumbs bleachbit ncdu"
 
 ucode=intel-ucode
 hostname=Arch
@@ -343,6 +347,8 @@ create_partitions () {
 						mkfs.jfs -f -L ROOT $disk$rootPart ;;
 		f2fs)			check_pkg f2fs-tools
 						mkfs.f2fs -f -l ROOT $disk$rootPart ;;
+		nilfs2)		check_pkg nilfs-utils
+						mkfs.nilfs2 -f -L ROOT $disk$rootPart ;;
 		bcachefs)	check_pkg bcachefs-tools
 						bcachefs format -f -L ROOT $disk$rootPart ;;
 	esac
@@ -465,6 +471,7 @@ Server = file:///var/cache/pacman/pkg/
 	[ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
 	[ "$fstype" = "jfs" ] && packages="$packages jfsutils"
 	[ "$fstype" = "f2fs" ] && packages="$packages f2fs-tools"
+	[ "$fstype" = "nilfs2" ] && packages="$packages nilfs-utils"
 	[ "$fstype" = "bcachefs" ] && packages="$packages bcachefs-tools"
 
 	pacstrap_install $packages
@@ -1907,6 +1914,22 @@ auto_install_gnome () {
 	sync_disk
 }
 
+auto_install_phosh () {
+
+	auto_install_user
+	
+	pacstrap_install $phosh_install
+
+	copy_pkgs
+
+	# Auto launch
+	sed -i 's/manager=.*$/manager=phosh/g' $mnt/home/$user/.bash_profile
+
+	#backup_config
+	install_config
+	sync_disk
+}
+
 auto_install_all () {
 
 	auto_install_user
@@ -1945,19 +1968,12 @@ clean_system () {
 	rm -rf crashes minidumps datareporting sessionstore-backups saved-telemetry-pings storage browser-extension-data security_state gmp-gmpopenh264 synced-tabs.db-wal places.sqlite favicons.sqlite cert9.db places.sqlite-wal storage-sync-v2.sqlite-wal webappsstore.sqlite gmp-widevinecdm
 
 
-	echo "Cleaning chromium..."
+	#echo "Cleaning chromium..."
 
-	cd /home/$user/.config/chromium
+	#cd /home/$user/.config/chromium
 
-	rm -rf Safe\ Browsing component_crx_cache WidevineCdm IndexedDB GrShaderCache OnDeviceHeadSuggestModel hyphen-data ZxcvbnData ShaderCache Default/{Service\ Worker/,IndexedDB,History,GPUCache,Sessions,DawnCache,Extension\ State,Web\ Data,Visited\ Links}
+	#rm -rf Safe\ Browsing component_crx_cache WidevineCdm IndexedDB GrShaderCache OnDeviceHeadSuggestModel hyphen-data ZxcvbnData ShaderCache Default/{Service\ Worker/,IndexedDB,History,GPUCache,Sessions,DawnCache,Extension\ State,Web\ Data,Visited\ Links}
 	#rm -rf Safe\ Browsing component_crx_cache WidevineCdm GrShaderCache OnDeviceHeadSuggestModel hyphen-data ZxcvbnData ShaderCache Default/{Service\ Worker/,History,GPUCache,Sessions,DawnCache,Extension\ State,Web\ Data,Visited\ Links}
-
-	if [ "$fstype" = "btrfs" ]; then
-
-	echo TODO	
-
-
-	fi
 
 }
 
@@ -2129,7 +2145,6 @@ sync_disk () {
 
 
 CONFIG_FILES=".config/baloofilerc
-.config/chromium
 .config/dolphinrc
 .config/epy/*
 .config/fontconfig/fonts.conf
@@ -2285,7 +2300,8 @@ echo
 4. Weston
 5. KDE
 6. Gnome
-7. All")
+7. Phosh
+8. All")
 										echo
 										echo "${config_os[@]}" | column
 										echo  
@@ -2299,7 +2315,8 @@ echo
                 						weston|4)	time auto_install_weston ;;
                 						kde|5)		time auto_install_kde ;;
                 						gnome|6)		time auto_install_gnome ;;
-                						all|7)		time auto_install_all ;;
+                						phosh|7)		time auto_install_phosh ;;
+                						all|8)		time auto_install_all ;;
                 						'')			;;
 	              						*)				echo -e "\nInvalid option ($config_os)!\n" ;;
 										esac ;;
