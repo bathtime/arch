@@ -110,7 +110,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='btrfs'		# ext4,btrfs,xfs,jfs,f2fs,nilfs22   TODO: bcachefs
+fstype='ext4'		# ext4,btrfs,xfs,jfs,f2fs,nilfs22   TODO: bcachefs
 subvols=()
 efi_path=/efi
 
@@ -127,9 +127,9 @@ base_install="base linux linux-firmware vim parted gptfdisk arch-install-scripts
 
 user_install="sudo"
 
-cage_install="cage fire"
+cage_install="cage firefox"
 
-weston_install="wireplumber pipewire pipewire-pulse weston firefox"
+weston_install="brightnessctl wireplumber pipewire pipewire-pulse weston firefox"
 
 gnome_install="gnome-shell nautilus gnome-terminal xdg-user-dirs firefox"
 
@@ -196,7 +196,10 @@ unmount_disk () {
 	sync_disk
 
 	error_check 0 
-		
+
+	[ "$mnt" = '/' ] && return
+
+
 	if [[ $(mount | grep -E $disk$espPart | grep -E "on $mnt$efi_path") ]]; then
 		echo "Unmounting $mnt$efi_path..."
 		umount -n -R $mnt$efi_path
@@ -269,9 +272,9 @@ choose_disk () {
 		do
 			case $disk in
 				$)				sudo -u $user bash ;;
-				\#)				bash ;;
+				\#)			bash ;;
 				update)		pacman -Syu --noconfirm ;;
-				/)				disk=$host; search_disks=0 ; break ;;
+				/)				mnt='/'; disk=$host; search_disks=0 ; break ;;
 				refresh) 	break;	;;
 				poweroff)	poweroff ;;
 				suspend)		echo mem > /sys/power/state ;;
@@ -381,6 +384,8 @@ create_partitions () {
 
 mount_disk () {
 
+	[ "$mnt" = "/" ] && return
+
 	fstype="$(lsblk -n -o FSTYPE $disk$rootPart)"
 echo "File type: $fstype"
 	error_check 0
@@ -435,7 +440,7 @@ echo "File type: $fstype"
 
 install_base () {
 
-	check_on_root
+	#check_on_root
 	mount_disk
 
 	echo '[options]
@@ -450,14 +455,20 @@ Color
 SigLevel = Optional TrustAll
 Server = file:///var/cache/pacman/pkg/
 ' > /etc/pacman-offline.conf
-	cp /etc/pacman-offline.conf $mnt/etc/pacman-offline.conf
+	
+	if [ ! "$mnt" = "/" ]; then
+
+		cp /etc/pacman-offline.conf $mnt/etc/pacman-offline.conf
 
 
-	if [ "$offline" -eq 1 ]; then
-		echo "Copying database files..."
-		mkdir -p $mnt/var/lib/pacman/sync
-		cp -r /var/lib/pacman/sync/*.db $mnt/var/lib/pacman/sync/
+		if [ "$offline" -eq 1 ]; then
+			echo "Copying database files..."
+			mkdir -p $mnt/var/lib/pacman/sync
+			cp -r /var/lib/pacman/sync/*.db $mnt/var/lib/pacman/sync/
+		fi
+
 	fi
+
 
 	reset_keys
 
@@ -504,7 +515,6 @@ EOF
 hypervisor_setup () {
 
 	echo -e "\nNot tested. Run at your own risk!\n"
-	exit
 
 	hypervisor=$(systemd-detect-virt)
 
@@ -529,7 +539,7 @@ hypervisor_setup () {
 
 setup_fstab () {
 
-	check_on_root
+	#check_on_root
 	mount_disk
 
 	echo -e "\nCreating new /etc/fstab file...\n"
@@ -551,6 +561,9 @@ setup_fstab () {
 	sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
 
 	sed -i 's/relatime/noatime/g' $mnt/etc/fstab
+	
+
+	sed -i '/portal/d' $mnt/etc/fstab
 
 	sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,commit=60      0 1/' $mnt/etc/fstab
 
@@ -562,6 +575,7 @@ setup_fstab () {
 	#[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/log')" ]   && echo "tmpfs    /var/log    tmpfs   rw,nodev,nosuid,mode=1775,size=2G   0 0" >> $mnt/etc/fstab
 	#[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/tmp')" ]   && echo "tmpfs    /var/tmp    tmpfs   rw,nodev,nosuid,mode=1777,size=2G   0 0" >> $mnt/etc/fstab
 	#[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/user/.cache')" ]   && echo "tmpfs    /home/user/.cache    tmpfs  rw,size=1G,nr_inodes=5k,noexec,nodev,nosuid,uid=user,mode=1777 0 0" >> $mnt/etc/fstab
+
 	systemctl daemon-reload
 
 	cat $mnt/etc/fstab
@@ -1569,6 +1583,7 @@ clone () {
    [ "$fstype" = "jfs" ] && packages="$packages jfsutils"
    [ "$fstype" = "f2fs" ] && packages="$packages f2fs-tools"
    [ "$fstype" = "bcachefs" ] && packages="$packages bcachefs-tools"
+	[ "$fstype" = "nilfs2" ] && packages="$packages nilfs-utils"
       
    pacstrap_install $packages
 	
@@ -1596,7 +1611,7 @@ extract_archive () {
 create_archive () {
 
 
-	#pacstrap_install squashfs-tools
+	check_pkg squashfs-tools
 
 
 	echo "Creating archive file..."
@@ -1670,25 +1685,6 @@ copy_script () {
 	fi
 
 }
-
-
-
-install_host_packages () {
-
-packages=("arch-install-scripts
-gptfdisk
-less
-pactree
-squashfs-tools
-terminus-font
-vim")
-
-for package in $packages; do
-	pacman -Qi $package &>/dev/null || pacstrap -K $mnt $package
-done
-
-}
-
 
 
 pacstrap_install () {
@@ -2114,7 +2110,11 @@ disk_info () {
 
 	echo -ne "\nDisk: $(lsblk --output=PATH,SIZE,MODEL,TRAN -dn $disk) "
 
-	[[ $(lsblk -no MOUNTPOINT $disk$rootPart) ]] && echo "(mounted)" || echo "(unmounted)"
+	if [[ $(lsblk -no MOUNTPOINT $disk$rootPart) ]]; then
+		echo "(mounted on $(lsblk -no MOUNTPOINT $disk$rootPart))"
+	else
+		echo "(unmounted)"
+	fi
 
 }
 
@@ -2250,7 +2250,6 @@ choices=("1. Quit
 21. Create squashfs image
 22. Connect wireless
 23. Download script
-24. Install host packages
 25. Reset pacman keys
 26. Copy packages
 27. Auto-install
@@ -2307,7 +2306,6 @@ echo
 		squashfs|21)			create_archive ;;
 		connect|iwd|22)		connect_wireless ;;
 		script|23)				download_script; exit ;;
-		host|24)			 		install_host_packages ;;
 		reset|keys|25)			reset_keys ;;
 		pkgs|26)					copy_pkgs ;;
 		root|27)					config_os=("1. Quit
@@ -2385,11 +2383,12 @@ echo
 		wipe|41)					wipe_disk zero ;;
 		wipe|42)					wipe_disk urandom ;;
 		wipe-free|43)			wipe_freespace ;;
-		'')						disk_info ;;
+		'')						;; #disk_info ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
 	sync_disk
+	disk_info
 
 done
 
