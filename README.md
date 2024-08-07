@@ -13,14 +13,14 @@ curl -sL https://bit.ly/a-install > arch.sh && chmod +x arch.sh && ./arch.sh
 
 # Features:
 
-- Supported filesystems: ext4, btrfs, xfs, jfs, bcachefs (with encryption) TODO: f2fs
+- Supported filesystems: ext4, btrfs, xfs, jfs, nilfs2, f2fs (TODO: bcachefs)
 - suspend and hibernation option enabled
 - USB installation option
-- Run in tmpfs, squashfs, overlay, or snapshot mode
+- Boot root system into tmpfs, squashfs, overlay, or snapshot mode
 - Captures current firefox/chromium profile from host system
 - Auto-setup installs full-featured OS in one command (kde, gnome, weston...)
 - Copy/clone/sync/update to/from another system
-- Error detection (set -e) activated
+- Error detection (set -e) activated (TODO: verification)
 
 # Requirements:
 
@@ -29,10 +29,7 @@ curl -sL https://bit.ly/a-install > arch.sh && chmod +x arch.sh && ./arch.sh
 
 # Bugs:
 
-- Ext4 and XFS file systems not correctly installing with bootloader
+- Only grub bootloader is working
 - No offline mode
-- Issues with unmounting after invoking chroot
-
-
-
-- 
+- Issues with unmounting after partitioning
+- Resume error on USB devices
