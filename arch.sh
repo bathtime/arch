@@ -43,6 +43,7 @@
 # nilfs2 install on flash : boot in 20.9s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 11.2 MB/s 
 
 
+
 : << DOCS
 
 To run on the fly:
@@ -50,8 +51,9 @@ bash <(curl -sL bit.ly/a-install)
 
 DOCS
 
+
+
 ###  Set error detection  ###
- 
 error() {
 
 	local sourcefile=$1
@@ -96,6 +98,8 @@ error_check () {
 
 }
 
+
+
 # Used to temporarily disable at certain points in script (eg., as in the mount_disk function)
 error_check 1
 
@@ -110,7 +114,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='ext4'		# ext4,btrfs,xfs,jfs,f2fs,nilfs22   TODO: bcachefs
+fstype='btrfs'		# ext4,btrfs,xfs,jfs,f2fs,nilfs22   TODO: bcachefs
 subvols=()
 efi_path=/efi
 
@@ -154,6 +158,7 @@ wifi_pass="13FDC4A93E3C"
 dirty_threshold=0
 
 
+
 check_pkg () {
 
 
@@ -164,6 +169,7 @@ check_pkg () {
 	fi
 
 }
+
 
 
 check_viable_disk () {
@@ -179,6 +185,8 @@ check_viable_disk () {
 	fi
 
 }
+
+
 
 check_on_root () {
   
@@ -728,6 +736,7 @@ EOF
 }
 
 
+
 install_EFISTUB () {
 
 	echo "TODO."
@@ -1120,6 +1129,8 @@ EOF
 
 }
 
+
+
 setup_acpid () {
 
 	mount_disk
@@ -1173,6 +1184,7 @@ WantedBy=multi-user.target' > $mnt/usr/lib/systemd/system/acpid.service
 	ln -f -s $mnt/usr/lib/systemd/system/acpid.service $mnt/etc/systemd/system/multi-user.target.wants/acpid.service
 
 }
+
 
 
 install_tweaks () {
@@ -1688,6 +1700,7 @@ copy_script () {
 }
 
 
+
 pacstrap_install () {
 
 
@@ -1727,6 +1740,8 @@ pacstrap_install () {
 
 	fi
 }
+
+
 
 custom_install () {
 
@@ -1858,6 +1873,8 @@ auto_install_user () {
 
 }
 
+
+
 auto_install_cage () {
 
 	auto_install_user
@@ -1873,6 +1890,8 @@ auto_install_cage () {
 	install_config
 	sync_disk
 }
+
+
 
 auto_install_weston () {
 
@@ -1913,6 +1932,7 @@ auto_install_kde () {
 }
 
 
+
 auto_install_gnome () {
 
 	auto_install_user
@@ -1928,6 +1948,8 @@ auto_install_gnome () {
 	install_config
 	sync_disk
 }
+
+
 
 auto_install_phosh () {
 
@@ -1945,6 +1967,8 @@ auto_install_phosh () {
 	sync_disk
 }
 
+
+
 auto_install_all () {
 
 	auto_install_user
@@ -1961,6 +1985,7 @@ auto_install_all () {
 	install_config
 	sync_disk
 }
+
 
 
 clean_system () {
@@ -2043,6 +2068,7 @@ install_config () {
 }
 
 
+
 last_modified () {
 
 	cd /home/$user
@@ -2086,6 +2112,7 @@ wipe_disk () {
 }
 
 
+
 wipe_freespace () {
 
 
@@ -2113,10 +2140,14 @@ disk_info () {
 
 	echo -ne "\nDisk: $(lsblk --output=PATH,SIZE,MODEL,TRAN -dn $disk) "
 
-	if [[ $(lsblk -no MOUNTPOINT $disk$rootPart) ]]; then
-		echo "(mounted on $(lsblk -no MOUNTPOINT $disk$rootPart))"
-	else
+	mounted_on="$(lsblk -no MOUNTPOINT $disk$rootPart)"
+
+	if [[ "$mounted_on" = "" ]]; then
 		echo "(unmounted)"
+	elif [[ "$mounted_on" = "/" ]]; then
+		echo "(host)"
+	else
+		echo "(mounted on $(lsblk -no MOUNTPOINT $disk$rootPart))"
 	fi
 
 }
@@ -2161,6 +2192,7 @@ sync_disk () {
 	sleep .5
 
 }
+
 
 
 CONFIG_FILES=".config/baloofilerc
@@ -2230,7 +2262,7 @@ if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ]; then
 fi
 
 
-choices=("1. Quit
+choices=("1. Back to main menu 
 2. Edit $arch_file
 3. Chroot
 4. Change disk ($disk)
@@ -2287,7 +2319,7 @@ read choice
 echo
 
 	case $choice in
-		Quit|quit|q|exit|1)	break; exit ;;
+		Quit|quit|q|exit|1)	choose_disk ;;
 		arch|2)					edit_arch ;;
 		Chroot|chroot|3)		do_chroot ;;
 		disk|4)					choose_disk ;;
