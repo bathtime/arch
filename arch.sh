@@ -1120,7 +1120,11 @@ EOF
 
 }
 
-acpid () {
+setup_acpid () {
+
+	mount_disk
+	
+	pacstrap_install acpid cpupower htop
 
 		echo '[Unit]
 Description=AC user power service
@@ -1131,7 +1135,7 @@ ExecStart=/home/user/.local/bin/power.sh
 [Install]
 WantedBy=multi-user.target' > $mnt/etc/systemd/system/user-power.service
 
-	ln -s $mnt/etc/systemd/system/user-power.service $mnt/etc/systemd/system/multi-user.target.wants/user-power.service
+	ln -s -f $mnt/etc/systemd/system/user-power.service $mnt/etc/systemd/system/multi-user.target.wants/user-power.service
 
 
 # Needs to be reimplimented after hibernation
@@ -1148,9 +1152,6 @@ case $1/$2 in
     ;;
 esac' > $mnt/usr/lib/systemd/system-sleep/sleep.sh 
 
-
-
-	pacstrap_install pacman -S acpid
 
 	# TODO find a way to activate sysd service
 	arch-chroot $mnt systemctl enable acpid.service
@@ -1169,7 +1170,7 @@ ExecStart=/usr/bin/acpid --foreground --netlink
 WantedBy=multi-user.target' > $mnt/usr/lib/systemd/system/acpid.service
 
 	# Manually enable it
-	ln -s $mnt/usr/lib/systemd/system/acpid.service $mnt/etc/systemd/system/multi-user.target.wants/acpid.service
+	ln -f -s $mnt/usr/lib/systemd/system/acpid.service $mnt/etc/systemd/system/multi-user.target.wants/acpid.service
 
 }
 
@@ -1850,6 +1851,8 @@ auto_install_user () {
 
 	auto_install_root
 	setup_user
+	setup_acpid
+
 	#install_tweaks
 	copy_pkgs
 
@@ -2250,6 +2253,7 @@ choices=("1. Quit
 21. Create squashfs image
 22. Connect wireless
 23. Download script
+24. Setup acpid
 25. Reset pacman keys
 26. Copy packages
 27. Auto-install
@@ -2306,6 +2310,7 @@ echo
 		squashfs|21)			create_archive ;;
 		connect|iwd|22)		connect_wireless ;;
 		script|23)				download_script; exit ;;
+		acpid|24)				setup_acpid ;;
 		reset|keys|25)			reset_keys ;;
 		pkgs|26)					copy_pkgs ;;
 		root|27)					config_os=("1. Quit
