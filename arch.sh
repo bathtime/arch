@@ -1309,9 +1309,6 @@ create_archive() {
    echo -e "Creating archive file...\n"
 
    cd $real_root/"$fsroot"
-#   mksquashfs . $real_root/"$fsroot"root.squashfs -noappend -no-recovery -mem-percent 20 -e root.squashfs -e boot/* -e efi/* -e dev/* -e proc/* -e sys/* -e tmp/* -e run/* -e mnt/ -e .snapshots/ -e var/tmp/* -e var/log/* -e etc/pacman.d/gnupg/ -e var/lib/systemd/random-seed
-
-#	mksquashfs . $real_root/"$fsroot"root.squashfs -noappend -no-recovery -mem-percent 20 -e boot/* -e efi/* -e root.squashfs -e dev/* -e proc/* -e sys* -e tmp* -e run* -e mnt/* -e .snapshots/* -e home/$user/.cache/* -e var/cache/pacman/* -e root/.cache/* -e run/timeshift/* -e var/tmp/* -e var/log/* -e etc/pacman.d/gnupg/* -e home/$user/.local/share/Trash/*
 
 mksquashfs . $real_root/"$fsroot"root.squashfs -noappend -no-recovery -mem-percent 20 -e boot/ -e efi/ -e root.squashfs -e dev/ -e proc/ -e sys -e tmp/ -e run -e mnt -e .snapshots/ -e home/user/.cache/ -e home/user/setup.tar -e var/cache/pacman/ -e root/.cache/ -e run/timeshift/ -e var/tmp/ -e var/log/ -e etc/pacman.d/gnupg/ -e home/user/.local/share/Trash/ -e usr/share/doc/ -e usr/share/man/ -e usr/share/wallpapers -e usr/share/gtk-doc -e usr/share/icons/breeze-dark -e usr/share/icons/Breeze_Light -e usr/share/icons/Adwaita -e usr/share/icons/AdwaitaLegacy -e usr/share/fonts/noto -e usr/lib/firmware/nvidia -e usr/lib/firmware/amdgpu
 	
@@ -1444,11 +1441,6 @@ run_latehook() {
                         mount -t tmpfs -o size=80% none $new_root
 
                         echo "Copying root filesystem to RAM. Please be patient..."
-
-#                        rsync --info=progress2 -a --exclude=root.squashfs --exclude=/efi/ --exclude=/boot/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ /real_root/"$fsroot" $new_root
-
-
-#rsync --info=progress2 -a --exclude=/boot/ --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/var/cache/pacman/ --exclude=/run/timeshift/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* /real_root/"$fsroot" $new_root
 
 rsync --info=progress2 -a --exclude=/boot/ --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/user/.cache/ --exclude /home/user/setup.tar --exclude /home/user/.local/share/Trash/ --exclude=/dev/ --exclude=/var/cache/pacman/ --exclude=/run/timeshift/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=/usr/share/doc/ --exclude=/usr/share/man/ --exclude=/usr/share/wallpapers --exclude=/usr/share/gtk-doc --exclude=/usr/share/icons/breeze-dark --exclude=/usr/share/icons/Breeze_Light --exclude=/usr/share/icons/Adwaita --exclude=/usr/share/icons/AdwaitaLegacy --exclude=/usr/share/fonts/noto --exclude=/usr/lib/firmware/nvidia --exclude=/usr/lib/firmware/amdgpu --exclude=/etc/pacman.d/gnupg/ /real_root/"$fsroot" $new_root
 
@@ -1665,10 +1657,6 @@ create_archive () {
 	cd / 
 	rm -rf /root.squashfs
 	
-	#time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp -e /run -e /mnt -e /.snapshots/ -e /home/$user/.cache/ -e /var/cache/pacman/pkg/ -e /root/.cache/ -e /run/timeshift/ -e /var/tmp/ -e /var/log/ -e /etc/pacman.d/gnupg/ -e /home/$user/.local/share/Trash/ -comp lz4  
-	
-	#time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp/ -e /run -e /mnt -e /.snapshots/ -e /home/$user/.cache/ -e /var/cache/pacman/ -e /root/.cache/ -e /run/timeshift/ -e /var/tmp/ -e /var/log/ -e /etc/pacman.d/gnupg/ -e /home/$user/.local/share/Trash/ -e /usr/share/doc/ -e /usr/share/man/ -e /usr/share/wallpapers -e /usr/share/gtk-doc -e /usr/share/icons/breeze-dark -e /usr/share/icons/Breeze_Light -e /usr/share/icons/Adwaita -e /usr/share/icons/AdwaitaLegacy -e /usr/share/icons/ -e /usr/share/fonts/noto -comp lz4  
-	
 	time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp/ -e /run -e /mnt -e /.snapshots/ -e /home/$user/.cache/ -e /home/$user/setup.tar -e /var/cache/pacman/ -e /root/.cache/ -e /run/timeshift/ -e /var/tmp/ -e /var/log/ -e /etc/pacman.d/gnupg/ -e /home/$user/.local/share/Trash/ -e /usr/share/doc/ -e /usr/share/man/ -e /usr/share/wallpapers -e /usr/share/gtk-doc -e /usr/share/icons/breeze-dark -e /usr/share/icons/Breeze_Light -e /usr/share/icons/Adwaita -e /usr/share/icons/AdwaitaLegacy -e /usr/share/fonts/noto -e /usr/lib/firmware/nvidia -e /usr/lib/firmware/amdgpu -comp lz4  
 
 	ls -lah root.squashfs
@@ -1681,14 +1669,14 @@ install_network () {
 
 	echo -e "\nWhich network manager would you like to install?\n"
 		
-	net_choices=(iwd wpa_supplicant quit) 
+	net_choices=(quit iwd wpa_supplicant) 
 	select net_choice in "${net_choices[@]}"
 	do
 		case $net_choice in
+			"quit")				break ;;
 			"iwd")				setup_iwd; break ;;
 			"dhcp")				setup_dhcp; break ;;
 			"wpa_supplicant")	setup_wpa; break ;;
-			"quit")				break ;;
 			'')					echo -e "\nInvalid option!\n" ;;
 		esac
 	done
@@ -1794,7 +1782,6 @@ custom_install () {
 		echo "No packages will be installed."
 	fi
 
-
 	copy_pkgs
 
 }
@@ -1843,7 +1830,6 @@ copy_pkgs () {
 update_mirrorlist () {
 
 	#check_pkg reflector
-
 	#echo -e "\nRunning reflector...\n"
 	#reflector > /etc/pacman.d/mirrorlist
 	
@@ -1895,7 +1881,6 @@ auto_install_user () {
 	auto_install_root
 	setup_user
 	#setup_acpid
-
 	#install_tweaks
 	copy_pkgs
 
@@ -1914,9 +1899,7 @@ auto_install_cage () {
 	# Auto launch
 	sed -i 's/manager=.*$/manager=cage/g' $mnt/home/$user/.bash_profile
 
-	#backup_config
 	install_config
-	sync_disk
 }
 
 
@@ -1931,7 +1914,6 @@ auto_install_weston () {
 	
 	sed -i 's/manager=.*$/manager=weston/g' $mnt/home/$user/.bash_profile
 
-	#backup_config
 	install_config
 
 }
@@ -1953,9 +1935,7 @@ auto_install_kde () {
 	# Auto-launch
 	sed -i 's/manager=.*$/manager=kde/g' $mnt/home/$user/.bash_profile
 
-   #backup_config
 	install_config	
-	sync_disk
 
 }
 
@@ -1972,9 +1952,7 @@ auto_install_gnome () {
 	# Auto launch
 	sed -i 's/manager=.*$/manager=gnome/g' $mnt/home/$user/.bash_profile
 
-	#backup_config
 	install_config
-	sync_disk
 }
 
 
@@ -1990,9 +1968,7 @@ auto_install_phosh () {
 	# Auto launch
 	sed -i 's/manager=.*$/manager=phosh/g' $mnt/home/$user/.bash_profile
 
-	#backup_config
 	install_config
-	sync_disk
 }
 
 
@@ -2009,9 +1985,7 @@ auto_install_all () {
 
 	sed -i 's/manager=.*$/manager=choice/g' $mnt/home/$user/.bash_profile
 
-	#backup_config
 	install_config
-	sync_disk
 }
 
 
