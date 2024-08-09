@@ -490,25 +490,15 @@ Server = file:///var/cache/pacman/pkg/
 
 	reset_keys
 
-	check_pkg arch-install-scripts reflector
+	#check_pkg arch-install-scripts reflector
+	check_pkg arch-install-scripts
 
+	#echo -e "\nRunning reflector...\n"
+	#reflector > /etc/pacman.d/mirrorlist
 	
-	echo -e "\nRunning reflector...\n"
 
-	reflector > /etc/pacman.d/mirrorlist
-	
+	[ "$(cat /etc/pacman.d/mirrorlist)" = "" ] && update_mirrorlist
 
-	if [ "$(cat /etc/pacman.d/mirrorlist)" = "" ]; then
-
-		echo 'Server = http://mirror.quantum5.ca/archlinux/$repo/os/$arch
-Server = https://mirror.aarnet.edu.au/pub/archlinux/$repo/os/$arch
-Server = rsync://mirror.aarnet.edu.au/archlinux/$repo/os/$arch
-Server = http://mir.archlinux.fr/$repo/os/$arch
-Server = http://ftp.tu-chemnitz.de/pub/linux/archlinux/$repo/os/$arch
-Server = http://ftp.hosteurope.de/mirror/ftp.archlinux.org/$repo/os/$arch
-' > /etc/pacman.d/mirrorlist
-
-	fi
 
 	mkdir -p $mnt/etc/pacman.d
 	cp /etc/pacman.d/mirrorlist $mnt/etc/pacman.d/mirrorlist
@@ -1874,6 +1864,22 @@ copy_pkgs () {
 
 
 
+update_mirrorlist () {
+
+	#check_pkg reflector
+
+	#echo -e "\nRunning reflector...\n"
+	#reflector > /etc/pacman.d/mirrorlist
+	
+	echo -e "\nUpdating mirror list. Please be patient...\n"
+
+	curl -s "https://archlinux.org/mirrorlist/?country=CA&country=US&protocol=https&use_mirror_status=on" | sed -e 's/^#Server/Server/' -e '/^#/d' | rankmirrors -n 10 - > /etc/pacman.d/mirrorlist
+
+	cat /etc/pacman.d/mirrorlist
+}
+
+
+
 check_online () {
 
 	curl -Is  http://www.google.com &>/dev/null && online=1 || online=0
@@ -2359,7 +2365,8 @@ choices=("1. Back to main menu
 40. Update / <-> $disk
 41. Wipe (zero)
 42. Wipe (urandom)
-43. Wipe freespace")
+43. Wipe freespace
+44. Update mirrorlist")
 
 
 while :; do
@@ -2475,6 +2482,7 @@ echo
 		wipe|41)					wipe_disk zero ;;
 		wipe|42)					wipe_disk urandom ;;
 		wipe-free|43)			wipe_freespace ;;
+		mirrorlist|44)			update_mirrorlist ;;
 		'')						;; #disk_info ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
