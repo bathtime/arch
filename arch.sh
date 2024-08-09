@@ -1883,7 +1883,7 @@ auto_install_user () {
 
 	auto_install_root
 	setup_user
-	setup_acpid
+	#setup_acpid
 
 	#install_tweaks
 	copy_pkgs
