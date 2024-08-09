@@ -14,7 +14,7 @@
 
 
 # btrfs on ssd
-
+# install in 2:05
 
 #dd if=/dev/zero of=tempfile bs=4M count=4096 conv=fdatasync,notrunc
 #17179869184 bytes (17 GB, 16 GiB) copied, 13.5097 s, 1.3 GB/s
@@ -36,7 +36,7 @@
 
 # xfs install on flash 13:07 mins: boot in 18.8s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 17.3 MB/s
 
-# btrfs install on flash 5:46: boot in 17s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 15.3 MB/s
+# btrfs install on flash 5:16: boot in 17s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 15.3 MB/s
 
 # jfs install on flash 17:32: boot in 22s: rm -rf tempfile; dd if=/dev/zero of=tempfile bs=1M count=1024 conv=fdatasync,notrunc = 16 MB/s 
 
@@ -120,7 +120,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='btrfs'		# ext4,btrfs,xfs,jfs,f2fs,nilfs22   TODO: bcachefs
+fstype='ext4'		# ext4,btrfs,xfs,jfs,f2fs,nilfs22   TODO: bcachefs
 subvols=()
 efi_path=/efi
 
