@@ -167,12 +167,14 @@ dirty_threshold=0
 
 check_pkg () {
 
+	for package in "$@"; do
 
-	if [ ! "$(pacman -Q $1)" ]; then
-		echo -e "\nInstalling program required to run command: $1...\n"
-		pacman --noconfirm -S $1
-		echo
-	fi
+   	if [ ! "$(pacman -Q $package)" ]; then
+      	echo -e "\nInstalling program required to run command: $package...\n"
+      	pacman --noconfirm -S $package
+   	fi
+
+	done
 
 }
 
@@ -490,7 +492,10 @@ Server = file:///var/cache/pacman/pkg/
 
 	check_pkg arch-install-scripts reflector
 
+	#Server = http://mirror.quantum5.ca/archlinux/$repo/os/$arch
+	
 	echo -e "\nRunning reflector...\n"
+
 	reflector > /etc/pacman.d/mirrorlist
 
 	mkdir -p $mnt/etc/pacman.d
