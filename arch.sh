@@ -492,11 +492,23 @@ Server = file:///var/cache/pacman/pkg/
 
 	check_pkg arch-install-scripts reflector
 
-	#Server = http://mirror.quantum5.ca/archlinux/$repo/os/$arch
 	
 	echo -e "\nRunning reflector...\n"
 
 	reflector > /etc/pacman.d/mirrorlist
+	
+
+	if [ "$(cat /etc/pacman.d/mirrorlist)" = "" ]; then
+
+		echo 'Server = http://mirror.quantum5.ca/archlinux/$repo/os/$arch
+Server = https://mirror.aarnet.edu.au/pub/archlinux/$repo/os/$arch
+Server = rsync://mirror.aarnet.edu.au/archlinux/$repo/os/$arch
+Server = http://mir.archlinux.fr/$repo/os/$arch
+Server = http://ftp.tu-chemnitz.de/pub/linux/archlinux/$repo/os/$arch
+Server = http://ftp.hosteurope.de/mirror/ftp.archlinux.org/$repo/os/$arch
+' > /etc/pacman.d/mirrorlist
+
+	fi
 
 	mkdir -p $mnt/etc/pacman.d
 	cp /etc/pacman.d/mirrorlist $mnt/etc/pacman.d/mirrorlist
