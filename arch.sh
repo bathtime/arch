@@ -1610,27 +1610,11 @@ clone () {
 	check_on_root
 	mount_disk
 
-
 	echo -e "\n$1 $3 -> $4. Please be patient...\n"
 
-	rsync $2 --exclude=/efi --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/var/cache/pacman/pkg/ --exclude=/run/timeshift/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
+	#rsync $2 --exclude=/efi/ --exclude=/etc/fstab/ --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
+	rsync $2 --exclude=/etc/fstab/ --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
 	
-
-	[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs grub-btrfs"
-   [ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
-   [ "$fstype" = "jfs" ] && packages="$packages jfsutils"
-   [ "$fstype" = "f2fs" ] && packages="$packages f2fs-tools"
-   [ "$fstype" = "bcachefs" ] && packages="$packages bcachefs-tools"
-	[ "$fstype" = "nilfs2" ] && packages="$packages nilfs-utils"
-      
-   pacstrap_install $packages
-	
-	setup_fstab
-	install_GRUB
-	mkinitcpio -P
-
-	#echo -e "\nNOTE: You may need to update fstab and run mkinitcpio -P!\n"
-
 }
 
 
@@ -2449,8 +2433,19 @@ echo
 											unsquash|2)		extract_archive ;;
 											clone|3)			create_partitions
 																clone Cloning "-av --del" / $mnt/
-																setup_fstab
-																install_GRUB ;;
+
+							[ "$fstype" = "btrfs" ] && pacstrap_install btrfs-progs grub-btrfs
+							[ "$fstype" = "xfs" ] && pacstrap_install xfsprogs
+							[ "$fstype" = "jfs" ] && pacstrap_install jfsutils
+							[ "$fstype" = "f2fs" ] && pacstrap_install f2fs-tools
+							[ "$fstype" = "bcachefs" ] && pacstrap_install bcachefs-tools
+							[ "$fstype" = "nilfs2" ] && pacstrap_install nilfs-utils
+
+   															setup_fstab
+   															install_GRUB
+																mkinitcpio -P
+																;;
+
 											clone|4)			clone Cloning "-av --del" / $mnt/ ;; 
 											clone|5)			clone Cloning "-av --del" $mnt/ / ;;
 											copy|6)			clone Copying -av / $mnt/ ;;
