@@ -120,7 +120,7 @@ rootPartNum=3
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='ext4'		# ext4,btrfs,xfs,jfs,f2fs,nilfs22   TODO: bcachefs
+fstype='btrfs'		# ext4,btrfs,xfs,jfs,f2fs,nilfs22   TODO: bcachefs
 subvols=()
 efi_path=/efi
 
@@ -282,7 +282,7 @@ choose_disk () {
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g"
 		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-		disks=$(echo -e "\nquit\nedit\n$\n#\n$disks\n/\nupdate\nrefresh\nreboot\nsuspend\nhibernate\npoweroff\nhtop")
+		disks=$(echo -e "\nquit\nedit\n$\n#\n$disks\n/\nupdate\nrefresh\nlogout\nreboot\nsuspend\nhibernate\npoweroff")
 
 		echo -e "\nWhich drive?\n"
 
@@ -294,6 +294,7 @@ choose_disk () {
 				update)		pacman -Syu --noconfirm ;;
 				/)				mnt='/'; disk=$host; search_disks=0 ; break ;;
 				refresh) 	break;	;;
+				logout)		killall systemd ;;
 				poweroff)	poweroff ;;
 				suspend)		echo mem > /sys/power/state ;;
 				hibernate)	echo disk > /sys/power/state ;;
@@ -2301,7 +2302,7 @@ fi
 choices=("1. Back to main menu 
 2. Edit $arch_file
 3. Chroot
-4. Packages
+4. Packages/script
 5. Partition disk
 6. Install base
 7. Hypervisor setup
@@ -2319,9 +2320,7 @@ choices=("1. Back to main menu
 19. Mount $mnt
 20. Unmount $mnt
 22. Connect wireless
-23. Download script
 27. Auto-install
-28. Copy script
 30. Custom install
 31. Setup ~ files
 32. Copy/sync/update/wipe ->")
@@ -2344,8 +2343,10 @@ echo
 		Chroot|chroot|3)		do_chroot ;;
 		packages|4)				config_choices=("1. Quit to main menu
 2. Reset pacman keys
-3. Update mirror list     
-4. Copy packages")
+3. Update mirror list
+4. Copy packages
+5. Download script
+6. Copy script")
 
 									config_choice=0
 									while [ ! "$config_choice" = "1" ]; do
@@ -2361,6 +2362,8 @@ echo
 											reset|keys|2)	reset_keys ;;
 											mirrorlist|3)	update_mirrorlist ;;
 											pkgs|4)			copy_pkgs ;;
+											script|5)		download_script ;;
+											copy_script|6)	copy_script ;;
               							'')				last_modified ;;
                 						*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 										esac
@@ -2384,7 +2387,6 @@ echo
       mount|19)				mount_disk  ;;
       unmount|20)				unmount_disk  ;;
 		connect|iwd|22)		connect_wireless ;;
-		script|23)				download_script; exit ;;
 	root|27)					config_os=("1. Quit
 2. Root
 3. User
@@ -2414,7 +2416,6 @@ echo
 	              						*)				echo -e "\nInvalid option ($config_os)!\n" ;;
 										esac ;;
 
-		copy_script|28)		copy_script ;;
 		custom|30)				custom_install ;;
 		setup|31)			config_choices=("1. Quit
 2. Backup config
