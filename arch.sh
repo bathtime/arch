@@ -618,17 +618,17 @@ choose_initramfs () {
 	if [ "$1" ]; then
 		choiceInitramfs=$1
 	else
-		choiceInitramfs="mkinitcpio dracut booster quit"
+		choiceInitramfs="quit mkinitcpio dracut booster"
 		echo -e "\nWhich initramfs would you like to install?"
 	fi
 
 	select choice in $choiceInitramfs
 	do
 		case $choice in
-			mkinitcpio|1)	pacstrap_install mkinitcpio; break ;;
-			dracut|2)		pacstrap_install dracut; break ;;
-			booster|3)		pacstrap_install booster; break ;;
-			quit|4)			break ;;
+			quit|1)			break ;;
+			mkinitcpio|2)	pacstrap_install mkinitcpio; break ;;
+			dracut|3)		pacstrap_install dracut; break ;;
+			booster|4)		pacstrap_install booster; break ;;
 			'')				echo -e "\nInvalid option!\n" ;;
 		esac
 	done
@@ -2315,13 +2315,13 @@ choices=("1. Back to main menu
 15. Install mksh
 16. Install liveroot
 17. Setup acpid
+18. Choose initramfs
 19. Mount $mnt
 20. Unmount $mnt
 22. Connect wireless
 23. Download script
 27. Auto-install
 28. Copy script
-29. Choose initramfs
 30. Custom install
 31. Setup ~ files
 32. Copy/sync/update/wipe ->")
@@ -2380,6 +2380,7 @@ echo
       mksh|15)					install_mksh ;;
 		liveroot|16)			install_liveroot ;;
 		acpid|17)				setup_acpid ;;
+		initramfs|18)			choose_initramfs ;;
       mount|19)				mount_disk  ;;
       unmount|20)				unmount_disk  ;;
 		connect|iwd|22)		connect_wireless ;;
@@ -2414,7 +2415,6 @@ echo
 										esac ;;
 
 		copy_script|28)		copy_script ;;
-		initramfs|29)			choose_initramfs ;;
 		custom|30)				custom_install ;;
 		setup|31)			config_choices=("1. Quit
 2. Backup config
