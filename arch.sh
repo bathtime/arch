@@ -69,7 +69,12 @@ error() {
 
 		echo -e "What now?\n\n[e] edit (last position)\n[n] edit (error position)\n[c] continue\n[x] exit\n"
 
-		read -p "Choice: " -n 2 choice
+		if [[ "$error_bypass" = '1' ]]; then
+			choice=c
+			echo -e "\nSkipping error.\n"
+		else
+			read -p "Choice: " -n 2 choice
+		fi
 
 		case $choice in
 				e)		vim $arch_path/$arch_file; exit ;;
@@ -103,6 +108,7 @@ error_check () {
 # Used to temporarily disable at certain points in script (eg., as in the mount_disk function)
 error_check 1
 
+error_bypass=0
 
 arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
@@ -203,7 +209,8 @@ unmount_disk () {
 
 	sync_disk
 
-	error_check 0 
+	#error_check 0 
+	error_bypass=1
 
 	[ "$mnt" = '/' ] && return
 
@@ -255,7 +262,8 @@ unmount_disk () {
 		echo -e "\nDisk already unmounted!\n"
 	fi
 
-	error_check 1
+	#error_check 1
+	error_bypass=0
 
 }
 
@@ -396,7 +404,7 @@ mount_disk () {
 
 	fstype="$(lsblk -n -o FSTYPE $disk$rootPart)"
 echo "File type: $fstype"
-	error_check 0
+	#error_check 0
 	check_on_root
 
 	if [[ ! $(mount | grep -E $disk$rootPart | grep -E "on $mnt") ]]; then
@@ -440,7 +448,7 @@ echo "File type: $fstype"
 	chmod 750 $mnt/root
 
 
-	error_check 1
+	#error_check 1
 
 }
 
@@ -1589,7 +1597,9 @@ clone () {
 
 	echo -e "\n$1 $3 -> $4. Please be patient...\n"
 
-	rsync $2 --exclude=/efi --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
+	#rsync $2 --exclude=/efi --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/var/cache/pacman/pkg/ --exclude=/run/timeshift/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
+	
+	rsync $2 --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/var/cache/pacman/pkg/ --exclude=/run/timeshift/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
 
 	[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs grub-btrfs"
    [ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
@@ -2005,7 +2015,11 @@ clean_system () {
 	profile=$(ls /home/user/.mozilla/firefox/ | grep .*.default-release)
 	cd $profile
 
-	rm -rf crashes minidumps datareporting sessionstore-backups saved-telemetry-pings storage browser-extension-data security_state gmp-gmpopenh264 synced-tabs.db-wal places.sqlite favicons.sqlite cert9.db places.sqlite-wal storage-sync-v2.sqlite-wal webappsstore.sqlite gmp-widevinecdm
+	#rm -rf crashes minidumps datareporting sessionstore-backups saved-telemetry-pings storage browser-extension-data security_state gmp-gmpopenh264 synced-tabs.db-wal places.sqlite favicons.sqlite cert9.db places.sqlite-wal storage-sync-v2.sqlite-wal webappsstore.sqlite gmp-widevinecdm
+	
+
+	# Bleachbit options
+	rm -rf storage/default 'Crash Reports/events' webappsstore.sqlite formhistory.sqlite sessionCheckpoints.json sessionstore.jsonlz4 sessionstore-backups content-prefs.sqlite places.sqlite favicons.sqlite storage.sqlite storage-sync-v2.sqlite bounce-tracking-protection.sqlite permissions.sqlite protections.sqlite cookies.sqlite cookies.sqlite-wal 
 
 
 	#echo "Cleaning chromium..."
@@ -2101,9 +2115,11 @@ wipe_disk () {
 
 		echo -e "\nWiping $disk using $1 method. Please be patient...\n"
 
-		error_check 0
+		error_bypass=1
+		#error_check 0
 		time dd if=/dev/$1 of=$disk bs=1M status=progress
-		error_check 1
+		error_bypass=0
+		#error_check 1
 
 	else
 		echo -e "\nNot wiping.\n"
@@ -2119,7 +2135,8 @@ wipe_freespace () {
 	echo -e "\nWiping freespace on $disk using zero method. Please be patient...\n"
 	echo -e "Run 'watch -n 1 -x df / --sync' in another terminal to see progress.\n"
 
-	error_check 0
+	#error_check 0
+	error_bypass=1
 
 	cd /
 
@@ -2130,7 +2147,8 @@ wipe_freespace () {
 	sync ; sleep 60 ; sync
 	rm $file $file.small
 
-	error_check 1
+	#error_check 1
+	error_bypass=0
 
 }
 
@@ -2196,6 +2214,7 @@ sync_disk () {
 
 
 CONFIG_FILES=".config/baloofilerc
+.config/bleachbit/bleachbit.ini
 .config/dolphinrc
 .config/epy/*
 .config/fontconfig/fonts.conf
