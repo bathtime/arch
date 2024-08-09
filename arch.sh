@@ -2022,7 +2022,7 @@ clean_system () {
 	profile=$(ls /home/user/.mozilla/firefox/ | grep .*.default-release)
 	cd $profile
 
-	#rm -rf crashes minidumps datareporting sessionstore-backups saved-telemetry-pings storage browser-extension-data security_state gmp-gmpopenh264 synced-tabs.db-wal places.sqlite favicons.sqlite cert9.db places.sqlite-wal storage-sync-v2.sqlite-wal webappsstore.sqlite gmp-widevinecdm
+	rm -rf crashes minidumps datareporting sessionstore-backups saved-telemetry-pings storage browser-extension-data security_state gmp-gmpopenh264 synced-tabs.db-wal places.sqlite favicons.sqlite cert9.db places.sqlite-wal storage-sync-v2.sqlite-wal webappsstore.sqlite gmp-widevinecdm
 	
 
 	# Bleachbit options
@@ -2042,7 +2042,7 @@ clean_system () {
 
 backup_config () {
 
-	clean_system
+	echo -e "\nYou may wish to clean your system first!\n"
 
 	cd /home/$user
 	rm -rf setup.tar
@@ -2051,8 +2051,8 @@ backup_config () {
 	chown $user:$user /home/$user/setup.tar
 
 	#sudo -u $user gpg --yes -c setup.tar
-	
 	#ls -lah setup.tar setup.tar.gpg
+	
 	ls -lah setup.tar
 
 }
