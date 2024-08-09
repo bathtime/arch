@@ -1800,31 +1800,6 @@ custom_install () {
 
 
 
-create_snapshot () {
-
-	btrfs subvolume list -t /
-
-	echo -e "\nWhat would you like to name the snapshot?\n"
-	read snapshot 
-
-	if [ "$snapshot" ]; then
-		btrfs subvolume snapshot / /.snapshots/"$snapshot"
-	else
-		echo "No name give. Exiting."
-	fi
-
-}
-
-
-
-restore_snapshot () {
-
-	echo "TODO!"
-
-}
-
-
-
 copy_pkgs () {
 
 	check_on_root
@@ -2326,7 +2301,7 @@ fi
 choices=("1. Back to main menu 
 2. Edit $arch_file
 3. Chroot
-4. Change disk ($disk)
+4. Packages
 5. Partition disk
 6. Install base
 7. Hypervisor setup
@@ -2339,34 +2314,17 @@ choices=("1. Back to main menu
 14. Install tweaks
 15. Install mksh
 16. Install liveroot
-17. Create snapshot /
-18. Restore snapshot /
+17. Setup acpid
 19. Mount $mnt
 20. Unmount $mnt
-21. Create squashfs image
 22. Connect wireless
 23. Download script
-24. Setup acpid
-25. Reset pacman keys
-26. Copy packages
 27. Auto-install
 28. Copy script
 29. Choose initramfs
 30. Custom install
-31. Setup files
-32. Unsquash to target
-33. Part + Clone / -> $disk
-34. Clone / -> $disk
-35. Clone $disk -> /
-36. Copy / -> $disk
-37. Copy $disk -> /
-38. Copy /home -> $disk$rootPart/
-39. Copy $disk$rootPart/home -> /
-40. Update / <-> $disk
-41. Wipe (zero)
-42. Wipe (urandom)
-43. Wipe freespace
-44. Update mirrorlist")
+31. Setup ~ files
+32. Copy/sync/update/wipe ->")
 
 
 while :; do
@@ -2384,7 +2342,31 @@ echo
 		Quit|quit|q|exit|1)	choose_disk ;;
 		arch|2)					edit_arch ;;
 		Chroot|chroot|3)		do_chroot ;;
-		disk|4)					choose_disk ;;
+		packages|4)				config_choices=("1. Quit to main menu
+2. Reset pacman keys
+3. Update mirror list     
+4. Copy packages")
+
+									config_choice=0
+									while [ ! "$config_choice" = "1" ]; do
+
+										echo
+										echo "${config_choices[@]}" | column
+										echo  
+
+										read -p "Which option? " config_choice
+
+        								case $config_choice in
+                						quit|1)			echo "Quitting!"; break ;;
+											reset|keys|2)	reset_keys ;;
+											mirrorlist|3)	update_mirrorlist ;;
+											pkgs|4)			copy_pkgs ;;
+              							'')				last_modified ;;
+                						*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
+										esac
+
+									done ;;
+
 		partition|5)			create_partitions ;;
 		base|6)					install_base ;;
 		hypervisor|7)			hypervisor_setup ;;
@@ -2397,17 +2379,12 @@ echo
 		tweaks|14)				install_tweaks ;;
       mksh|15)					install_mksh ;;
 		liveroot|16)			install_liveroot ;;
-		create_snapshot|17)	create_snapshot ;;
-		restore_snapshot|18)	restore_snapshot ;;
+		acpid|17)				setup_acpid ;;
       mount|19)				mount_disk  ;;
       unmount|20)				unmount_disk  ;;
-		squashfs|21)			create_archive ;;
 		connect|iwd|22)		connect_wireless ;;
 		script|23)				download_script; exit ;;
-		acpid|24)				setup_acpid ;;
-		reset|keys|25)			reset_keys ;;
-		pkgs|26)					copy_pkgs ;;
-		root|27)					config_os=("1. Quit
+	root|27)					config_os=("1. Quit
 2. Root
 3. User
 4. Weston
@@ -2466,23 +2443,57 @@ echo
 										esac
 
 									done ;;
-	
-		unsquash|32)			extract_archive ;;
-		clone|33)				create_partitions
-									clone Cloning "-av --del" / $mnt/
-									setup_fstab
-									install_REFIND ;;
-		clone|34)				clone Cloning "-av --del" / $mnt/ ;; 
-		clone|35)				clone Cloning "-av --del" $mnt/ / ;;
-		copy|36)					clone Copying -av / $mnt/ ;;
-		copy|37)					clone Copying -av $mnt/ / ;;
-		copy|38)					clone Copying -av /home $mnt/ ;;
-		copy|39)					clone Copying -av $mnt/home / ;;
-		update|40)				clone Updating -auv / $mnt/ ; clone Updating -auv $mnt/ / ;;
-		wipe|41)					wipe_disk zero ;;
-		wipe|42)					wipe_disk urandom ;;
-		wipe-free|43)			wipe_freespace ;;
-		mirrorlist|44)			update_mirrorlist ;;
+
+		copy|32)			config_choices=("1. Quit to main menu
+2. Unsquash to target
+3. Part + Clone / -> $disk
+4. Clone / -> $disk
+5. Clone $disk -> /
+6. Copy / -> $disk
+7. Copy $disk -> /
+8. Copy /home -> $disk$rootPart/
+9. Copy $disk$rootPart/home -> /
+10. Update / <-> $disk
+11. Wipe (zero)
+12. Wipe (urandom)
+13. Wipe freespace     
+14. Create squashfs image")
+
+
+									config_choice=0
+									while [ ! "$config_choice" = "1" ]; do
+
+										echo
+										echo "${config_choices[@]}" | column
+										echo  
+
+										read -p "Which option? " config_choice
+
+        								case $config_choice in
+                						quit|1)			echo "Quitting!"; break ;;
+											unsquash|2)		extract_archive ;;
+											clone|3)			create_partitions
+																clone Cloning "-av --del" / $mnt/
+																setup_fstab
+																install_GRUB ;;
+											clone|4)			clone Cloning "-av --del" / $mnt/ ;; 
+											clone|5)			clone Cloning "-av --del" $mnt/ / ;;
+											copy|6)			clone Copying -av / $mnt/ ;;
+											copy|7)			clone Copying -av $mnt/ / ;;
+											copy|8)			clone Copying -av /home $mnt/ ;;
+											copy|9)			clone Copying -av $mnt/home / ;;
+											update|10)		clone Updating -auv / $mnt/
+																clone Updating -auv $mnt/ / ;;
+											wipe|11)			wipe_disk zero ;;
+											wipe|12)			wipe_disk urandom ;;
+											wipe-free|13)	wipe_freespace ;;
+											squashfs|14)	create_archive ;;
+              							'')				last_modified ;;
+                						*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
+										esac
+
+									done ;;
+
 		'')						;; #disk_info ;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
