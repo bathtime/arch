@@ -210,7 +210,7 @@ unmount_disk () {
 	sync_disk
 
 	#error_check 0 
-	error_bypass=1
+	#error_bypass=1
 
 	[ "$mnt" = '/' ] && return
 
@@ -263,7 +263,7 @@ unmount_disk () {
 	fi
 
 	#error_check 1
-	error_bypass=0
+	#error_bypass=0
 
 }
 
@@ -488,7 +488,13 @@ Server = file:///var/cache/pacman/pkg/
 
 	reset_keys
 
-	check_pkg arch-install-scripts
+	check_pkg arch-install-scripts reflector
+
+	echo -e "\nRunning reflector...\n"
+	reflector > /etc/pacman.d/mirrorlist
+
+	mkdir -p $mnt/etc/pacman.d
+	cp /etc/pacman.d/mirrorlist $mnt/etc/pacman.d/mirrorlist
 
 	packages="$base_install"
 
