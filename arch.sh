@@ -696,9 +696,6 @@ install_GRUB () {
 
 	pacstrap_install grub os-prober efibootmgr inotify-tools lz4
 
-	#if [ "$fstype" = "btrfs" ]; then
-	#	pacstrap_install grub-btrfs
-	#fi
 
 	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 
@@ -733,10 +730,7 @@ EOF2
 	# Remove grub os-prober message
 	sed -i 's/grub_warn/#grub_warn/g' /etc/grub.d/30_os-prober
 
-
-
 	###  Offer readonly grub booting option  ###
-	mkdir -p /etc/grub.d/
 	cp /etc/grub.d/10_linux /etc/grub.d/10_linux-readonly
 	sed -i 's/\"\$title\"/\"\$title \(readonly\)\"/g' /etc/grub.d/10_linux-readonly
 	sed -i 's/ rw / ro /g' /etc/grub.d/10_linux-readonly
@@ -1614,7 +1608,7 @@ clone () {
 
 	#rsync $2 --exclude=/boot/ --exclude=/efi/ --exclude=/etc/fstab/ --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
 	
-	rsync $2 --exclude=/etc/default/grub --exclude=/etc/grub.d/ --exclude=/boot/ --exclude=/efi/ --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
+	rsync $2 --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
 
 	echo -e "\nYou may need to generate /etc/fstab and install a bootloader at this point!\n"
 
