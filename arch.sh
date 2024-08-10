@@ -1610,7 +1610,11 @@ clone () {
 	
 	rsync $2 --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
 
-	echo -e "\nYou may need to generate /etc/fstab and install a bootloader at this point!\n"
+	setup_fstab
+  	install_GRUB
+	mkinitcpio -P
+
+	#echo -e "\nYou may need to generate /etc/fstab and install a bootloader at this point!\n"
 
 }
 
@@ -1725,7 +1729,7 @@ pacstrap_install () {
 			if [ ! "$(pacman --sysroot $mnt -Q $package 2>/dev/null)" ]; then
 				packages="$package $packages"	
 			else
-				echo "Package: $package already installed. Not installing."
+				echo "Package: $package already installed."
 			fi
 
 		done
@@ -2438,10 +2442,7 @@ echo
 							[ "$fstype" = "bcachefs" ] && pacstrap_install bcachefs-tools
 							[ "$fstype" = "nilfs2" ] && pacstrap_install nilfs-utils
 
-   															setup_fstab
-   															install_GRUB
-																mkinitcpio -P
-																;;
+   														;;
 
 											clone|4)			clone Cloning "-av --del" / $mnt/ ;; 
 											clone|5)			clone Cloning "-av --del" $mnt/ / ;;
