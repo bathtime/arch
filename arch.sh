@@ -1612,9 +1612,12 @@ clone () {
 
 	echo -e "\n$1 $3 -> $4. Please be patient...\n"
 
-	#rsync $2 --exclude=/efi/ --exclude=/etc/fstab/ --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
-	rsync $2 --exclude=/etc/fstab/ --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
+	#rsync $2 --exclude=/boot/ --exclude=/efi/ --exclude=/etc/fstab/ --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
 	
+	rsync $2 --exclude=/etc/default/grub --exclude=/etc/grub.d/ --exclude=/boot/ --exclude=/efi/ --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
+
+	echo -e "\nYou may need to generate /etc/fstab and install a bootloader at this point!\n"
+
 }
 
 
@@ -1673,13 +1676,13 @@ install_bootloader () {
 
 	echo -e "\nWhich boot manager would you like to install?\n"
 
-	choiceBoot=(rEFInd grub EFISTUB uki systemD quit) 
+	choiceBoot=(grub rEFInd EFISTUB uki systemD quit) 
 				
 	select choiceBoot in "${choiceBoot[@]}"
 	do
 		case $choiceBoot in
-			"rEFInd")	install_REFIND; break ;;
 			"grub")		install_GRUB; break ;;
+			"rEFInd")	install_REFIND; break ;;
 			"EFISTUB")	install_EFISTUB; break ;;
 			"uki")		install_uki; break ;;
 			"systemD")	install_SYSTEMDBOOT; break ;;
