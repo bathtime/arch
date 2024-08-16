@@ -467,7 +467,7 @@ HoldPkg     = pacman glibc
 Architecture = auto
 
 CheckSpace
-ParallelDownloads = 1
+ParallelDownloads = 5
 Color
 
 [custom]
@@ -487,7 +487,13 @@ Server = file:///var/cache/pacman/pkg/
 		fi
 
 	fi
+	
+	sed -i 's/#Color/Color/' /etc/pacman.conf
+	sed -i 's/CheckSpace/#CheckSpace/' /etc/pacman.conf
+	sed -i 's/#ParallelDownloads.*$/ParallelDownloads = 5/' /etc/pacman.conf
+	sed -i 's/SigLevel    = .*$/SigLevel    = TrustAll/' /etc/pacman.conf
 
+	cp /etc/pacman.conf $mnt/etc/pacman.conf
 
 	reset_keys
 
@@ -1342,7 +1348,7 @@ run_latehook() {
 
 			if [ "$fs_type" = "btrfs" ]; then
    			fsroot="@/"
-				echo "Mounting $fs_type with $fsroot..."
+#				echo "Mounting $fs_type with $fsroot..."
 			fi
 
         if read -t 2 -s -n 1; then
@@ -1451,20 +1457,20 @@ rsync --info=progress2 -a --exclude=/boot/ --exclude=/etc/fstab --exclude=/boot/
 
                         echo "Continuing boot..."
 
-                        umount $new_root
+                        #umount $new_root
 
-                        mount --mkdir -o subvolid=256 ${root} $new_root
-                			mount --uuid $ESP_UUID $new_root/efi
+                        #mount --mkdir -o subvolid=256 ${root} $new_root
+                			#mount --uuid $ESP_UUID $new_root/efi
 
                 fi
 
         else
 
-				if [ "$fs_type" = "ext4" ]; then
-				echo "Mounting $fs_type..."
+				#if [ "$fs_type" = "ext4" ]; then
+				#echo "Mounting $fs_type..."
 				#	umount $new_root
 				#	mount -o noatime,commit=60 "$root_part" $new_root
-				fi
+				#fi
                 echo -e "Running default option..."
         #mount -o rw,noatime,fmask=0022,dmask=0022,codepage=437,iocharset=ascii,shortname=mixed,utf8,errors=remount-ro --uuid $ESP_UUID $new_root/efi
 
