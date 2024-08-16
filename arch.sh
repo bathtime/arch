@@ -448,8 +448,11 @@ echo "File type: $fstype"
 		chattr +C -R $mnt/var/log
 	fi
 
-	chmod 750 $mnt/root
+	chmod -R 750 $mnt/root
+	chmod -R 1777 $mnt/var/tmp
 
+#warning: directory permissions differ on /mnt/var/tmp/
+#filesystem: 755  package: 1777
 
 	#error_check 1
 
@@ -487,13 +490,6 @@ Server = file:///var/cache/pacman/pkg/
 		fi
 
 	fi
-	
-	sed -i 's/#Color/Color/' /etc/pacman.conf
-	sed -i 's/CheckSpace/#CheckSpace/' /etc/pacman.conf
-	sed -i 's/#ParallelDownloads.*$/ParallelDownloads = 5/' /etc/pacman.conf
-	sed -i 's/SigLevel    = .*$/SigLevel    = TrustAll/' /etc/pacman.conf
-
-	cp /etc/pacman.conf $mnt/etc/pacman.conf
 
 	reset_keys
 
@@ -524,6 +520,12 @@ Server = file:///var/cache/pacman/pkg/
 	[ "$fstype" = "bcachefs" ] && packages="$packages bcachefs-tools"
 
 	pacstrap_install $packages
+	
+	sed -i 's/#Color/Color/' /etc/pacman.conf
+	sed -i 's/CheckSpace/#CheckSpace/' /etc/pacman.conf
+	sed -i 's/#ParallelDownloads.*$/ParallelDownloads = 5/' /etc/pacman.conf
+	sed -i 's/SigLevel    = .*$/SigLevel    = TrustAll/' /etc/pacman.conf
+
 
 	###  Prepare auto-login  ###
 
