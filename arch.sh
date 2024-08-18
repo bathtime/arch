@@ -1367,6 +1367,7 @@ run_latehook() {
 <t> squashfs + tmpfs\n\
 <n> create + run squashfs + overlay\n\
 <r> rsync / to tmpfs\n\
+<h> rsync ~ to tmpfs\n\
 <d> emergency shell\n\n\
 <enter> continue boot\n"
 
@@ -1451,6 +1452,16 @@ rsync --info=progress2 -a --exclude=/boot/ --exclude=/etc/fstab --exclude=/boot/
 
                         echo -e "\nYou may now safely remove your USB stick.\n"
                         sleep 1
+
+					elif [[ "$key" = "h" ]]; then
+
+                        mount ${root} $real_root
+                        mount -t tmpfs -o size=80% none $new_root/home/user/
+
+                        echo "Copying ~ filesystem to RAM. Please be patient..."
+
+                        rsync --info=progress2 -a --exclude Downloads/* --exclude=.cache/* --exclude setup.tar --exclude .local/share/Trash/* /real_root/"$fsroot"/home/user $new_root/home
+
 
                 elif [[ "$key" = "d" ]]; then
 
