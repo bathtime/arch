@@ -1368,6 +1368,7 @@ run_latehook() {
 <n> create + run squashfs + overlay\n\
 <r> rsync / to tmpfs\n\
 <h> rsync ~ to tmpfs\n\
+<H> blank ~ to tmpfs\n\
 <d> emergency shell\n\n\
 <enter> continue boot\n"
 
@@ -1462,6 +1463,10 @@ rsync --info=progress2 -a --exclude=/boot/ --exclude=/etc/fstab --exclude=/boot/
 
                         rsync --info=progress2 -a --exclude Downloads/* --exclude=.cache/* --exclude setup.tar --exclude .local/share/Trash/* /real_root/"$fsroot"/home/user $new_root/home
 
+               elif [[ "$key" = "H" ]]; then
+
+                        mount ${root} $real_root
+                        mount -t tmpfs -o size=80% none $new_root/home/user/
 
                 elif [[ "$key" = "d" ]]; then
 
