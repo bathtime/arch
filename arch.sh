@@ -282,7 +282,7 @@ choose_disk () {
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g"
 		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-		disks=$(echo -e "\nquit\nedit\n$\n#\n$disks\n/\nupdate\nrefresh\nlogout\nreboot\nsuspend\nhibernate\npoweroff")
+		disks=$(echo -e "\nquit\nedit\n$\n#\n$disks\n/\nclean\nupdate\nrefresh\nlogout\nreboot\nsuspend\nhibernate\npoweroff")
 
 		echo -e "\nWhich drive?\n"
 
@@ -291,6 +291,15 @@ choose_disk () {
 			case $disk in
 				$)				sudo -u $user bash ;;
 				\#)			bash ;;
+				clean)		echo -e "\nCleaning files...\n"
+								rm -rfv /var/log /var/tmp /tmp/{*,.*} /home/$user/.cache/{*,.*}
+								echo
+								echo -e "\nClearing pagecache, dentries, and inodes...\n\nBefore:"
+								free -h
+								sudo sync; echo 3 > /proc/sys/vm/drop_caches
+								echo -e "\nAfter:"
+								free -h
+								;;
 				update)		pacman -Syu --noconfirm ;;
 				/)				mnt='/'; disk=$host; search_disks=0 ; break ;;
 				refresh) 	break;	;;
