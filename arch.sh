@@ -292,7 +292,10 @@ choose_disk () {
 				$)				sudo -u $user bash ;;
 				\#)			bash ;;
 				clean)		echo -e "\nCleaning files...\n"
-								rm -rfv /var/log /var/tmp /tmp/{*,.*} /home/$user/.cache/{*,.*}
+								rm -rfv /var/log /var/tmp /tmp/{*,.*} /home/$user/.cache/{*,.*} \
+								/root/.cache/{*,.*} /root/.bash_history 
+								
+
 								echo
 								echo -e "\nClearing pagecache, dentries, and inodes...\n\nBefore:"
 								free -h
@@ -1324,7 +1327,7 @@ create_archive() {
 
    cd $real_root/"$fsroot"
 
-mksquashfs . $real_root/"$fsroot"root.squashfs -noappend -no-recovery -mem-percent 20 -e boot/ -e efi/ -e root.squashfs -e dev/ -e proc/ -e sys -e tmp/ -e run -e mnt -e .snapshots/ -e home/user/.cache/ -e home/user/setup.tar -e var/cache/pacman/ -e root/.cache/ -e run/timeshift/ -e var/tmp/ -e var/log/ -e etc/pacman.d/gnupg/ -e home/user/.local/share/Trash/ -e usr/share/doc/ -e usr/share/man/ -e usr/share/wallpapers -e usr/share/gtk-doc -e usr/share/icons/breeze-dark -e usr/share/icons/Breeze_Light -e usr/share/icons/Adwaita -e usr/share/icons/AdwaitaLegacy -e usr/share/fonts/noto -e usr/lib/firmware/nvidia -e usr/lib/firmware/amdgpu
+mksquashfs . $real_root/"$fsroot"root.squashfs -noappend -no-recovery -mem-percent 20 -e boot/ -e efi/ -e root.squashfs -e dev/ -e proc/ -e sys -e tmp/ -e run -e mnt -e .snapshots/ -e home/user/.cache/ -e home/user/setup.tar -e var/cache/pacman/ -e root/.cache/ -e run/timeshift/ -e var/tmp/ -e var/log/ -e etc/pacman.d/gnupg/ -e home/user/.local/share/Trash/ -e usr/share/doc/ -e usr/share/man/ -e usr/share/wallpapers -e usr/share/gtk-doc -e usr/share/icons/breeze-dark -e usr/share/icons/Breeze_Light -e usr/share/icons/Adwaita* -e usr/share/icons/Crule* -e usr/share/fonts/noto -e usr/lib/firmware/nvidia -e usr/lib/firmware/amdgpu
 	
 	ls -lah $real_root/"$fsroot"root.squashfs
 
@@ -1458,7 +1461,9 @@ run_latehook() {
 
                         echo "Copying root filesystem to RAM. Please be patient..."
 
-rsync --info=progress2 -a --exclude=/boot/ --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/user/.cache/ --exclude /home/user/setup.tar --exclude /home/user/.local/share/Trash/ --exclude=/dev/ --exclude=/var/cache/pacman/ --exclude=/run/timeshift/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=/usr/share/doc/ --exclude=/usr/share/man/ --exclude=/usr/share/wallpapers --exclude=/usr/share/gtk-doc --exclude=/usr/share/icons/breeze-dark --exclude=/usr/share/icons/Breeze_Light --exclude=/usr/share/icons/Adwaita --exclude=/usr/share/icons/AdwaitaLegacy --exclude=/usr/share/fonts/noto --exclude=/usr/lib/firmware/nvidia --exclude=/usr/lib/firmware/amdgpu --exclude=/etc/pacman.d/gnupg/ /real_root/"$fsroot" $new_root
+#rsync --info=progress2 -a --exclude=/boot/ --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/user/.cache/ --exclude=/home/user/setup.tar --exclude /home/user/.local/share/Trash/ --exclude=/dev/ --exclude=/var/cache/pacman/ --exclude=/run/timeshift/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=/usr/share/doc/ --exclude=/usr/share/man/ --exclude=/usr/share/wallpapers --exclude=/usr/share/gtk-doc --exclude=/usr/share/icons/breeze-dark --exclude=/usr/share/icons/Breeze_Light --exclude=/usr/share/icons/Adwaita --exclude=/usr/share/icons/AdwaitaLegacy --exclude=/usr/share/icons/Crule*   --exclude=/usr/share/fonts/noto --exclude=/usr/lib/firmware/nvidia --exclude=/usr/lib/firmware/amdgpu --exclude=/etc/pacman.d/gnupg/ /real_root/"$fsroot" $new_root
+
+rsync --info=progress2 -a --exclude=/boot/ --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/user/.cache/ --exclude=/home/user/setup.tar --exclude /home/user/.local/share/Trash/ --exclude=/dev/ --exclude=/var/cache/pacman/ --exclude=/run/timeshift/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=/usr/share/doc/ --exclude=/usr/share/man/ --exclude=/usr/share/wallpapers --exclude=/usr/share/gtk-doc --exclude=/usr/share/icons/breeze-dark --exclude=/usr/share/icons/Breeze_Light --exclude=/usr/share/icons/Adwaita* --exclude=/usr/share/icons/Crule* --exclude=/usr/share/fonts/noto --exclude=/usr/lib/firmware/nvidia --exclude=/usr/lib/firmware/amdgpu --exclude=/etc/pacman.d/gnupg/ /real_root/"$fsroot" $new_root
 
                         echo -e "\nYou may now safely remove your USB stick.\n"
                         sleep 1
@@ -1678,7 +1683,7 @@ create_archive () {
 	cd / 
 	rm -rf /root.squashfs
 	
-	time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp/ -e /run -e /mnt -e /.snapshots/ -e /home/$user/.cache/ -e /home/$user/setup.tar -e /var/cache/pacman/ -e /root/.cache/ -e /run/timeshift/ -e /var/tmp/ -e /var/log/ -e /etc/pacman.d/gnupg/ -e /home/$user/.local/share/Trash/ -e /usr/share/doc/ -e /usr/share/man/ -e /usr/share/wallpapers -e /usr/share/gtk-doc -e /usr/share/icons/breeze-dark -e /usr/share/icons/Breeze_Light -e /usr/share/icons/Adwaita -e /usr/share/icons/AdwaitaLegacy -e /usr/share/fonts/noto -e /usr/lib/firmware/nvidia -e /usr/lib/firmware/amdgpu -comp lz4  
+	time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp/ -e /run -e /mnt -e /.snapshots/ -e /home/$user/.cache/ -e /home/$user/setup.tar -e /var/cache/pacman/ -e /root/.cache/ -e /run/timeshift/ -e /var/tmp/ -e /var/log/ -e /etc/pacman.d/gnupg/ -e /home/$user/.local/share/Trash/ -e /usr/share/doc/ -e /usr/share/man/ -e /usr/share/wallpapers -e /usr/share/gtk-doc -e /usr/share/icons/breeze-dark -e /usr/share/icons/Breeze_Light -e /usr/share/icons/Adwaita* -e /usr/share/icons/Crule* -e /usr/share/fonts/noto -e /usr/lib/firmware/nvidia -e /usr/lib/firmware/amdgpu -comp lz4  
 
 	ls -lah root.squashfs
 
