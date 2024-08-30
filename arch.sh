@@ -2509,7 +2509,8 @@ echo
 11. Wipe (zero)
 12. Wipe (urandom)
 13. Wipe freespace     
-14. Create squashfs image")
+14. Shred $disk
+15. Create squashfs image")
 
 
 									config_choice=0
@@ -2547,7 +2548,8 @@ echo
 											wipe|11)			wipe_disk zero ;;
 											wipe|12)			wipe_disk urandom ;;
 											wipe-free|13)	wipe_freespace ;;
-											squashfs|14)	create_archive ;;
+											shred|14)		unmount_disk; shred -n 1 -v -z $disk ;;
+											squashfs|15)	create_archive ;;
               							'')				last_modified ;;
                 						*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 										esac
@@ -2560,6 +2562,7 @@ echo
 
 	sync_disk
 	disk_info
+	echo $disk
 
 done
 
