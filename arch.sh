@@ -458,6 +458,7 @@ echo "File type: $fstype"
 		chattr +C -R $mnt/tmp
 		chattr +C -R $mnt/var/tmp
 		chattr +C -R $mnt/var/log
+		#chmod -R 600 $mnt/root/.gnupg
 	fi
 
 	chmod -R 750 $mnt/root
@@ -1173,7 +1174,7 @@ EOF
 setup_acpid () {
 
 	mount_disk
-	
+
 	pacstrap_install acpid cpupower htop
 
 		echo '[Unit]
@@ -2055,11 +2056,13 @@ backup_config () {
 
 	echo -e "\nYou may wish to clean your system first!\n"
 
-	cd /home/$user
+	cd /
 	rm -rf setup.tar
 
-	sudo -u $user tar -pcf setup.tar $CONFIG_FILES
-	chown $user:$user /home/$user/setup.tar
+	#sudo -u $user tar -pcf setup.tar $CONFIG_FILES
+	tar -pcf setup.tar $CONFIG_FILES
+	#chown $user:$user /home/$user/setup.tar
+	chown -R $user:$user /home/$user/
 
 	#sudo -u $user gpg --yes -c setup.tar
 	#ls -lah setup.tar setup.tar.gpg
@@ -2072,10 +2075,11 @@ backup_config () {
 
 restore_config () {
 
-	cd /home/$user
+	cd /
 
 	echo "Extracting setup file..."
-	sudo -u $user tar xvf setup.tar
+	tar xvf setup.tar
+	chown -R $user:$user /home/$user/
 
 }
 
@@ -2092,10 +2096,11 @@ install_config () {
 
 
 	#cp /home/$user/setup.tar{,.gpg} $mnt/home/$user/
-	cp /home/$user/setup.tar $mnt/home/$user/
+	cp /setup.tar $mnt/
 
 	echo "Extracting setup file..."
-	arch-chroot -u $user $mnt tar xvf /home/$user/setup.tar --directory /home/$user
+	arch-chroot $mnt tar xvf /setup.tar --directory /
+	arch-chroot $mnt chown -R $user:$user /home/$user/
 
 }
 
@@ -2103,8 +2108,8 @@ install_config () {
 
 last_modified () {
 
-	cd /home/$user
-	find . -cmin -1 -printf '%t %p\n' | sort -k 1 -n | cut -d' ' -f2-
+	cd /
+	#find . -cmin -1 -printf '%t %p\n' | sort -k 1 -n | cut -d' ' -f2-
 
 }
 
@@ -2231,54 +2236,100 @@ sync_disk () {
 
 
 
-CONFIG_FILES=".config/baloofilerc
-.config/bleachbit/bleachbit.ini
-.config/dolphinrc
-.config/epy/*
-.config/fontconfig/fonts.conf
-.config/gtkrc
-.config/gtkrc-2.0
-.config/gwenviewrc
-.config/htop
-.config/kactivitymanagerd-pluginsrc
-.config/kactivitymanagerdrc
-.config/kcminputrc
-.config/kded5rc
-.config/kdedefaults/package
-.config/kdeglobals
-.config/kfontinstuirc
-.config/kglobalshortcutsrc
-.config/konsolerc
-.config/konsolesshconfig
-.config/krunnerrc
-.config/kscreenlockerrc
-.config/ksplashrc
-.config/ksmserverrc
-.config/kwinoutputconfig.json
-.config/kwinrc
-.config/kwinrulesrc
-.config/okularrc
-.config/plasma-org.kde.plasma.desktop-appletsrc
-.config/plasmashellrc
-.config/powerdevilrc
-.config/powermanagementprofilesrc
-.config/systemsettingsrc
-.config/Trolltech.conf
-.config/weston.ini
-.config/vlc/*
-.local/bin/*
-.local/lib/*
-.local/share/applications/*
-.local/share/color-schemes/*
-.local/share/dolphin/*
-.local/share/fonts/*
-.local/share/icons/*
-.local/share/konsole/*.profile
-.local/share/kxmlgui5/*
-.local/share/plasma/plasmoids/*
-.local/share/user-places.xbel
-.viminfo
-.mozilla/*"
+CONFIG_FILES="/etc/default/grub
+/etc/hostname
+/etc/hosts
+/etc/iwd/main.conf
+/etc/locale.conf
+/etc/locale.gen
+/etc/localtime
+/etc/mkinitcpio.conf
+/etc/mkinitcpio.d/linux.preset
+/etc/pacman.conf
+/etc/pacman-offline.conf
+/etc/pacman.d/mirrorlist
+/etc/security/limits.conf
+/etc/sudoers.d
+/etc/sudoers.d/1-wheel
+/etc/sudoers.d/10-arch
+/etc/sysctl.d/50-coredump.conf
+/etc/sysctl.d/99-cache-pressure.conf
+/etc/sysctl.d/99-net-keepalive.conf
+/etc/sysctl.d/99-net-timeout.conf
+/etc/sysctl.d/99-swappiness.conf
+/etc/systemd/coredump.conf.d/custom.conf
+/etc/systemd/system/user-power.service
+/etc/systemd/system/getty@tty1.service.d/autologin.conf
+/etc/udev/rules.d/powersave.rules
+/etc/vconsole.conf
+/usr/lib/initcpio/hooks/liveroot
+/usr/lib/initcpio/install/liveroot
+/usr/lib/systemd/system-sleep/sleep.sh
+/usr/lib/systemd/system/acpid.service
+/var/lib/iwd/.known_network.freq
+/var/lib/iwd/BELL364.psk
+
+
+
+
+
+
+
+/home/$user/.bash_profile
+/home/$user/.bashrc
+/home/$user/.config/baloofilerc
+/home/$user/.config/bleachbit/bleachbit.ini
+/home/$user/.config/dolphinrc
+/home/$user/.config/epy/*
+/home/$user/.config/fontconfig/fonts.conf
+/home/$user/.config/gtkrc
+/home/$user/.config/gtkrc-2.0
+/home/$user/.config/gwenviewrc
+/home/$user/.config/htop
+/home/$user/.config/kactivitymanagerd-pluginsrc
+/home/$user/.config/kactivitymanagerdrc
+/home/$user/.config/kcminputrc
+/home/$user/.config/kded5rc
+/home/$user/.config/kdedefaults/package
+/home/$user/.config/kdeglobals
+/home/$user/.config/kfontinstuirc
+/home/$user/.config/kglobalshortcutsrc
+/home/$user/.config/konsolerc
+/home/$user/.config/konsolesshconfig
+/home/$user/.config/krunnerrc
+/home/$user/.config/kscreenlockerrc
+/home/$user/.config/ksplashrc
+/home/$user/.config/ksmserverrc
+/home/$user/.config/kwinoutputconfig.json
+/home/$user/.config/kwinrc
+/home/$user/.config/kwinrulesrc
+/home/$user/.config/okularrc
+/home/$user/.config/plasma-org.kde.plasma.desktop-appletsrc
+/home/$user/.config/plasmashellrc
+/home/$user/.config/powerdevilrc
+/home/$user/.config/powermanagementprofilesrc
+/home/$user/.config/systemsettingsrc
+/home/$user/.config/Trolltech.conf
+/home/$user/.config/weston.ini
+/home/$user/.config/vlc/*
+/home/$user/.hushlogin
+/home/$user/.local/bin/*
+/home/$user/.local/lib/*
+/home/$user/.local/share/applications/*
+/home/$user/.local/share/color-schemes/*
+/home/$user/.local/share/dolphin/*
+/home/$user/.local/share/fonts/*
+/home/$user/.local/share/icons/*
+/home/$user/.local/share/konsole/*.profile
+/home/$user/.local/share/kxmlgui5/*
+/home/$user/.local/share/plasma/plasmoids/*
+/home/$user/.local/share/user-places.xbel
+/home/$user/.viminfo
+/home/$user/.vimrc
+/home/$user/.mozilla/*"
+
+
+
 
 if [ "$1" ]; then
 	disk="$1"
