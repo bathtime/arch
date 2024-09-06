@@ -1175,7 +1175,9 @@ setup_acpid () {
 
 	mount_disk
 
-	pacstrap_install acpid cpupower htop
+	# Or install will generate an error: acpid: /usr/lib/systemd/system/acpid.service exists in filesystem
+	rm -rf /usr/lib/systemd/system/acpid.service
+	pacstrap_install acpid cpupower htop power-profiles-daemon
 
 		echo '[Unit]
 Description=AC user power service
@@ -1907,7 +1909,7 @@ auto_install_user () {
 
 	auto_install_root
 	setup_user
-	#setup_acpid
+	setup_acpid
 	#install_tweaks
 	copy_pkgs
 
@@ -2236,7 +2238,9 @@ sync_disk () {
 
 
 
-CONFIG_FILES="/etc/default/grub
+CONFIG_FILES="
+
+/etc/default/grub
 /etc/hostname
 /etc/hosts
 /etc/iwd/main.conf
@@ -2266,14 +2270,9 @@ CONFIG_FILES="/etc/default/grub
 /usr/lib/initcpio/install/liveroot
 /usr/lib/systemd/system-sleep/sleep.sh
 /usr/lib/systemd/system/acpid.service
+/usr/lib/systemd/system-sleep/sleep.sh
 /var/lib/iwd/.known_network.freq
 /var/lib/iwd/BELL364.psk
-
-
-
-
-
-
 
 /home/$user/.bash_profile
 /home/$user/.bashrc
@@ -2310,8 +2309,8 @@ CONFIG_FILES="/etc/default/grub
 /home/$user/.config/powermanagementprofilesrc
 /home/$user/.config/systemsettingsrc
 /home/$user/.config/Trolltech.conf
-/home/$user/.config/weston.ini
 /home/$user/.config/vlc/*
+/home/$user/.config/weston.ini
 /home/$user/.hushlogin
 /home/$user/.local/bin/*
 /home/$user/.local/lib/*
@@ -2455,8 +2454,8 @@ echo
 
         								case $config_os in
                 						quit|1)		;;
-                						root|2)		auto_install_root; copy_pkgs ;;
-                						user|3)		auto_install_user; copy_pkgs;;
+                						root|2)		auto_install_root ;;
+                						user|3)		auto_install_user ;;
                 						weston|4)	time auto_install_weston ;;
                 						kde|5)		time auto_install_kde ;;
                 						gnome|6)		time auto_install_gnome ;;
