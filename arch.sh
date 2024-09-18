@@ -1177,7 +1177,8 @@ setup_acpid () {
 
 	# Or install will generate an error: acpid: /usr/lib/systemd/system/acpid.service exists in filesystem
 	rm -rf /usr/lib/systemd/system/acpid.service
-	pacstrap_install acpid cpupower htop power-profiles-daemon
+	#pacstrap_install acpid cpupower htop power-profiles-daemon
+	pacstrap_install acpid cpupower htop
 
 		echo '[Unit]
 Description=AC user power service
@@ -1384,6 +1385,7 @@ run_latehook() {
 <r> rsync / to tmpfs\n\
 <h> rsync ~ to tmpfs\n\
 <H> blank ~ to tmpfs\n\
+<m> rsync ~/.mozilla to tmpfs\n\
 <d> emergency shell\n\n\
 <enter> continue boot\n"
 
@@ -1485,7 +1487,16 @@ rsync --info=progress2 -a --exclude=/boot/ --exclude=/etc/fstab --exclude=/boot/
                         mount ${root} $real_root
                         mount -t tmpfs -o size=80% none $new_root/home/user/
 
-                elif [[ "$key" = "d" ]]; then
+				   elif [[ "$key" = "m" ]]; then
+
+                        mount ${root} $real_root
+                        mount -t tmpfs -o size=80% none $new_root/home/user/.mozilla
+
+                        echo "Copying ~/.mozilla filesystem to RAM. Please be patient..."
+
+                        rsync --info=progress2 -a /real_root/"$fsroot"/home/user/.mozilla $new_root/home/user
+
+               elif [[ "$key" = "d" ]]; then
 
                         echo "Entering emergency shell."
 
