@@ -2039,10 +2039,18 @@ clean_system () {
 	echo "Cleaning ~/.cache..."
 	rm -rf /home/user/.cache/*
 	
+
+	echo "Cleaning brave..."
+
+	rm -rf /home/$user/.config/BraveSoftware/Brave-Browser/Default/Service Worker/CacheStorage/* /home/$user/.config/BraveSoftware/Brave-Browser/component_crx_cache/*
+
+
 	echo "Cleaning mozilla..."
 
 	cd /home/$user/.mozilla/firefox
 	rm -rf 'Crash Reports' 'Pending Pings'
+
+	rm -rf /usr/lib/firefox/crashreporter /usr/lib/firefox/minidump-analyzer /usr/lib/firefox/pingsender
 
 	profile=$(ls /home/user/.mozilla/firefox/ | grep .*.default-release)
 	cd $profile
@@ -2289,6 +2297,7 @@ CONFIG_FILES="
 /home/$user/.bashrc
 /home/$user/.config/baloofilerc
 /home/$user/.config/bleachbit/bleachbit.ini
+/home/$user/.config/BraveSoftware/*
 /home/$user/.config/dolphinrc
 /home/$user/.config/epy/*
 /home/$user/.config/fontconfig/fonts.conf
