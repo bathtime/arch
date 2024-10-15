@@ -2042,8 +2042,7 @@ clean_system () {
 
 	echo "Cleaning brave..."
 
-	rm -rf /home/$user/.config/BraveSoftware/Brave-Browser/Default/Service Worker/CacheStorage/* /home/$user/.config/BraveSoftware/Brave-Browser/component_crx_cache/*
-
+	rm -rf /home/$user/.config/BraveSoftware/Brave-Browser/component_crx_cache/* rm -rf /home/user/.config/BraveSoftware/Brave-Browser/Default/Service\ Worker/CacheStorage/*
 
 	echo "Cleaning mozilla..."
 
@@ -2290,8 +2289,7 @@ CONFIG_FILES="
 /usr/lib/systemd/system-sleep/sleep.sh
 /usr/lib/systemd/system/acpid.service
 /usr/lib/systemd/system-sleep/sleep.sh
-/var/lib/iwd/.known_network.freq
-/var/lib/iwd/BELL364.psk
+/var/lib/iwd/*
 
 /home/$user/.bash_profile
 /home/$user/.bashrc
