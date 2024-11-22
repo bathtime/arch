@@ -130,7 +130,7 @@ kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigati
 
 user=user
 password=123456
-aur_app=paru
+aur_app=none
 aur_path=/home/$user
 
 base_install="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar man-db dosfstools"
@@ -1140,32 +1140,39 @@ install_aur () {
 	mount_disk
 
 
-	pacstrap_install git less fakeroot pkg-config
+	#pacstrap_install git less fakeroot pkg-config
+	pacstrap_install git base-devel
 
 
 	[ "$aur_app" = "paru" ] && pacstrap_install cargo
+	#[ "$aur_app" = "none" ] && pacstrap_install cargo
 
 
-	arch-chroot $mnt /bin/bash << EOF
+#	arch-chroot $mnt /bin/bash << EOF
+#
+#cd $aur_path
 
-cd $aur_path
+#sudo -u $user git clone https://aur.archlinux.org/$aur_app.git
 
-sudo -u $user git clone https://aur.archlinux.org/$aur_app.git
+#cd $aur_app
+#sudo -u $user makepkg -si
 
-cd $aur_app
-sudo -u $user makepkg -si
+#sudo -u $user $aur_app --gendb
 
-sudo -u $user $aur_app --gendb
+#chown -R $user:$user /home/$user/$aur_app
 
-chown -R $user:$user /home/$user/$aur_app
-
-EOF
+#EOF
 
 
 	#[ "$aur_app" = "paru" ] && arch-chroot $mnt pacman -R rust
 	#[ "$aur_app" = "yay" ] && arch-chroot $mnt pacman -R rust
 
 	#rm -rf $mnt/home/$user/{.cargo,$aur_app/*} $mnt/usr/lib/{go,rustlib}
+echo "To install an AUR package:
+
+	sudo git clone https://aur.archlinux.org/<aur-package>.git
+	cd <aur-package>
+	makepkg -si"
 
 }
 
@@ -1920,6 +1927,7 @@ auto_install_user () {
 
 	auto_install_root
 	setup_user
+	install_aur
 	setup_acpid
 	#install_tweaks
 	copy_pkgs
@@ -2287,8 +2295,6 @@ CONFIG_FILES="
 /usr/lib/initcpio/hooks/liveroot
 /usr/lib/initcpio/install/liveroot
 /usr/lib/systemd/system-sleep/sleep.sh
-/usr/lib/systemd/system/acpid.service
-/usr/lib/systemd/system-sleep/sleep.sh
 /var/lib/iwd/*
 
 /home/$user/.bash_profile
@@ -2345,6 +2351,7 @@ CONFIG_FILES="
 /home/$user/.vimrc
 /home/$user/.mozilla/*"
 
+#/usr/lib/systemd/system/acpid.service
 
 
 
