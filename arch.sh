@@ -2326,6 +2326,7 @@ CONFIG_FILES="
 /home/$user/.config/kwinoutputconfig.json
 /home/$user/.config/kwinrc
 /home/$user/.config/kwinrulesrc
+/home/$user/.config/Kvantum/*
 /home/$user/.config/okularrc
 /home/$user/.config/plasma-org.kde.plasma.desktop-appletsrc
 /home/$user/.config/plasmashellrc
@@ -2339,14 +2340,16 @@ CONFIG_FILES="
 /home/$user/.local/bin/*
 /home/$user/.local/lib/*
 /home/$user/.local/share/applications/*
+/home/$user/.local/share/aurorae/*
 /home/$user/.local/share/color-schemes/*
 /home/$user/.local/share/dolphin/*
 /home/$user/.local/share/fonts/*
 /home/$user/.local/share/icons/*
 /home/$user/.local/share/konsole/*.profile
 /home/$user/.local/share/kxmlgui5/*
-/home/$user/.local/share/plasma/plasmoids/*
+/home/$user/.local/share/plasma/*
 /home/$user/.local/share/user-places.xbel
+/home/$user/.local/share/wallpapers/*
 /home/$user/.viminfo
 /home/$user/.vimrc
 /home/$user/.mozilla/*"
