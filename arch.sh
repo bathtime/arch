@@ -158,8 +158,9 @@ copy_on_host=1
 
 initramfs=mkinitcpio
 
-wifi_ssid="BELL364"
-wifi_pass="13FDC4A93E3C"
+wlan="wlan0"
+wifi_ssid="dlink-DF50-5GHz"
+wifi_pass="bmzhw16407"
 
 dirty_threshold=0
 
@@ -282,7 +283,7 @@ choose_disk () {
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g"
 		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-		disks=$(echo -e "\nquit\nedit\n$\n#\n$disks\n/\nclean\nupdate\nrefresh\nlogout\nreboot\nsuspend\nhibernate\npoweroff")
+		disks=$(echo -e "\nquit\nedit\n$\n#\n$disks\n/\nclean\nwireless\nupdate\nrefresh\nlogout\nreboot\nsuspend\nhibernate\npoweroff")
 
 		echo -e "\nWhich drive?\n"
 
@@ -303,6 +304,7 @@ choose_disk () {
 								echo -e "\nAfter:"
 								free -h
 								;;
+				wireless)	connect_wireless ;;
 				update)		pacman -Syu --noconfirm ;;
 				/)				mnt='/'; disk=$host; search_disks=0 ; break ;;
 				refresh) 	break;	;;
@@ -1067,15 +1069,6 @@ setup_iwd () {
 	pacstrap_install iw iwd
 	
 	mkdir -p $mnt/etc/iwd $mnt/var/lib/iwd
-	echo '[1901eb9f-5672-5518-b900-ee43811a3672]
-name=/var/lib/iwd//BELL364.psk
-list= 5220 5805 2462' > $mnt/var/lib/iwd/.known_network.freq 
- 
-	echo '[Security]
-PreSharedKey=14ad650cdc57e587a5198d3be78cb4ef4dc2574a580949d3b9803774858c5abd
-Passphrase=13FDC4A93E3C
-SAE-PT-Group19=f5614183429496736ed0da01f20d14b3415e201531b6fc24987eb128c2090897dcb358dc0eac4716994f6dee52bd7cb642bc67f43106478fded1236655418a7a
-SAE-PT-Group20=eb986ca0245dcd12c86bf779e36d4434973059133f10e12326cf319db32b98fed48e248f69e015bed36813f716581e13d56a21dbbda4fe3541e355afe49446458e8d8e47777b9866f720197effd6273b6e89cbdc140e58920cf269abe6ea0bf7' > $mnt/var/lib/iwd/BELL364.psk 
 
 	echo '[General]
 EnableNetworkConfiguration=true
@@ -1632,18 +1625,21 @@ do_chroot () {
 connect_wireless () {
 
 
-	echo -e "\nAttempting to connect to wireless...\n"
+	echo -e "\nAttempting to connect to wireless ($wifi_ssid on $wlan)...\n"
 
-	iwctl station wlan0 scan
+	iwctl station $wlan scan
+	echo "$wlan scanned. Waiting 5 seconds for results..."
+	sleep 5
 
-	sleep 1
-
-	iwctl --passphrase $wifi_pass station wlan0 connect $wifi_ssid
+	iwctl --passphrase $wifi_pass station $wlan connect $wifi_ssid
+	echo "Waiting 5 seconds for wifi connection..."
+sleep 5
 
 	if [[ "$?" -eq 0 ]]; then
-		echo "Connection successful!"
+		echo -e "Connection to wifi successful!\n\nChecking ping..."
+		ping -c 1 -i 1 google.ca && echo "Ping successful!" || echo "Ping unsuccessful!"
 	else
-		echo "Connection unsuccessful."
+		echo "Connection to wifi unsuccessful."
 	fi
 
 }
