@@ -459,7 +459,7 @@ echo "File type: $fstype"
 		mkdir -p $mnt/.snapshots
 		chattr +C -R $mnt/tmp
 		chattr +C -R $mnt/var/tmp
-		chattr +C -R $mnt/var/log
+		#chattr +C -R $mnt/var/log
 		#chmod -R 600 $mnt/root/.gnupg
 	fi
 
