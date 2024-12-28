@@ -1624,23 +1624,27 @@ do_chroot () {
 
 connect_wireless () {
 
+iwctl station wlan0 scan
 
-	echo -e "\nAttempting to connect to wireless ($wifi_ssid on $wlan)...\n"
+	while [ "$(iwctl station $wlan get-networks | grep 'No networks available')" ]; do
+   	echo "Attempting to connected to $wlan..."
+   	iwctl station $wlan get-networks
+   	sleep 1
+	done
 
-	iwctl station $wlan scan
-	echo "$wlan scanned. Waiting 5 seconds for results..."
-	sleep 5
+	echo "$wlan connected!"
+	echo "Waiting 5 seconds before connecting to $wlan..."
+	sleep 4
 
 	iwctl --passphrase $wifi_pass station $wlan connect $wifi_ssid
-	echo "Waiting 5 seconds for wifi connection..."
+	echo "Waiting 5 seconds to ping..."
+
 sleep 5
 
-	if [[ "$?" -eq 0 ]]; then
-		echo -e "Connection to wifi successful!\n\nChecking ping..."
-		ping -c 1 -i 1 google.ca && echo "Ping successful!" || echo "Ping unsuccessful!"
-	else
-		echo "Connection to wifi unsuccessful."
-	fi
+echo "Attempting to ping google.ca..."
+
+ping -c 1 -i 1 -q google.ca
+#curl google.ca
 
 }
 
@@ -2132,9 +2136,9 @@ install_config () {
 
 last_modified () {
 
-	cd /
-	#find . -cmin -1 -printf '%t %p\n' | sort -k 1 -n | cut -d' ' -f2-
-
+	cd /home/user
+	find . -cmin -1 -printf '%t %p\n' | sort -k 1 -n | cut -d' ' -f2-
+	
 }
 
 
