@@ -1624,7 +1624,7 @@ do_chroot () {
 
 connect_wireless () {
 
-iwctl station wlan0 scan
+	iwctl station wlan0 scan
 
 	while [ "$(iwctl station $wlan get-networks | grep 'No networks available')" ]; do
    	echo "Attempting to connected to $wlan..."
@@ -1633,18 +1633,18 @@ iwctl station wlan0 scan
 	done
 
 	echo "$wlan connected!"
+
 	echo "Waiting 5 seconds before connecting to $wlan..."
-	sleep 4
+	sleep 5
 
 	iwctl --passphrase $wifi_pass station $wlan connect $wifi_ssid
 	echo "Waiting 5 seconds to ping..."
+	sleep 5
 
-sleep 5
+	echo "Attempting to ping google.ca..."
 
-echo "Attempting to ping google.ca..."
-
-ping -c 1 -i 1 -q google.ca
-#curl google.ca
+	ping -c 1 -i 1 -q google.ca
+	#curl google.ca
 
 }
 
@@ -2295,6 +2295,7 @@ CONFIG_FILES="
 /usr/lib/initcpio/hooks/liveroot
 /usr/lib/initcpio/install/liveroot
 /usr/lib/systemd/system-sleep/sleep.sh
+/usr/share/applications/firefox.desktop
 /var/lib/iwd/*
 
 /home/$user/.bash_profile
