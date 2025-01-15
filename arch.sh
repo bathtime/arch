@@ -1996,6 +1996,10 @@ auto_install_gnome () {
 	pacstrap_install $gnome_install
 
 	copy_pkgs
+	#home/$user/.config/gnome-session/sessions/gnome-wayland.session
+	
+	# Fix gnome login issue with slow loading apps
+	#https://bbs.archlinux.org/viewtopic.php?pid=1620177#p1620177
 
 	# Auto launch
 	sed -i 's/manager=.*$/manager=gnome/g' $mnt/home/$user/.bash_profile
@@ -2307,6 +2311,7 @@ CONFIG_FILES="
 /home/$user/.config/fontconfig/fonts.conf
 /home/$user/.config/gtkrc
 /home/$user/.config/gtkrc-2.0
+/home/$user/.config/gnome-session/sessions/gnome-wayland.session
 /home/$user/.config/gwenviewrc
 /home/$user/.config/htop
 /home/$user/.config/kactivitymanagerd-pluginsrc
@@ -2353,9 +2358,6 @@ CONFIG_FILES="
 /home/$user/.viminfo
 /home/$user/.vimrc
 /home/$user/.mozilla/*"
-
-#/usr/lib/systemd/system/acpid.service
-
 
 
 if [ "$1" ]; then
