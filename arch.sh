@@ -145,7 +145,7 @@ gnome_install="gnome-shell polkit gdm nautilus gnome-terminal xdg-user-dirs fire
 
 phosh_install="phosh phoc phosh-mobile-settings squeekboard firefox"
 
-kde_install="plasma-desktop plasma-pa kscreen dolphin konsole firefox ffmpegthumbs bleachbit ncdu"
+kde_install="plasma-desktop plasma-pa plasma-nm kscreen dolphin konsole firefox ffmpegthumbs bleachbit ncdu"
 
 ucode=intel-ucode
 hostname=Arch
@@ -1090,10 +1090,9 @@ setup_networkmanager () {
    setup_dhcp
 
 
-   pacstrap_install networkmanager plasma-nm iwd iw 
+   pacstrap_install networkmanager iwd iw 
                               
    systemctl --root=$mnt enable NetworkManager.service
-	#systemctl --root=$mnt enable iwd.service
 	
 	echo "[device]
 wifi.backend=iwd" > $mnt/etc/NetworkManager/conf.d/wifi_backend.conf
