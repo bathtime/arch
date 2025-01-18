@@ -141,7 +141,7 @@ cage_install="cage firefox"
 
 weston_install="brightnessctl wireplumber pipewire pipewire-pulse weston firefox"
 
-gnome_install="gnome-shell nautilus gnome-terminal xdg-user-dirs firefox"
+gnome_install="gnome-shell polkit gdm nautilus gnome-terminal xdg-user-dirs firefox dconf-editor gnome-tweaks gnome-browser-connector gnome-themes-extra  gnome-shell-extensions gnome-control-center"
 
 phosh_install="phosh phoc phosh-mobile-settings squeekboard firefox"
 
@@ -1081,6 +1081,20 @@ DisablePeriodicScan=true' > $mnt/etc/iwd/main.conf
 
 }
 
+setup_networkmanager () {
+
+   check_on_root
+   mount_disk
+
+
+   setup_dhcp
+
+
+   pacstrap_install networkmanager plasma-nm 
+                              
+   systemctl --root=$mnt enable NetworkManager.service
+	systemctl --root=$mnt mask iwd.service
+}
 
 
 setup_dhcp () {
@@ -1724,6 +1738,7 @@ install_network () {
 			"iwd")				setup_iwd; break ;;
 			"dhcp")				setup_dhcp; break ;;
 			"wpa_supplicant")	setup_wpa; break ;;
+			"networkmanager") setup_networkmanager; break ;;
 			'')					echo -e "\nInvalid option!\n" ;;
 		esac
 	done
@@ -1994,6 +2009,9 @@ auto_install_gnome () {
 	auto_install_user
 	
 	pacstrap_install $gnome_install
+	setup_networkmanager 
+
+	#arch-chroot $mnt groupadd polkitd
 
 	copy_pkgs
 	#home/$user/.config/gnome-session/sessions/gnome-wayland.session
@@ -2306,6 +2324,7 @@ CONFIG_FILES="
 /home/$user/.config/baloofilerc
 /home/$user/.config/bleachbit/bleachbit.ini
 /home/$user/.config/BraveSoftware/*
+/home/$user/.config/dconf
 /home/$user/.config/dolphinrc
 /home/$user/.config/epy/*
 /home/$user/.config/fontconfig/fonts.conf
@@ -2341,6 +2360,7 @@ CONFIG_FILES="
 /home/$user/.config/Trolltech.conf
 /home/$user/.config/vlc/*
 /home/$user/.config/weston.ini
+/home/$user/.config/xdg-desktop-portal/*
 /home/$user/.hushlogin
 /home/$user/.local/bin/*
 /home/$user/.local/lib/*
@@ -2349,6 +2369,7 @@ CONFIG_FILES="
 /home/$user/.local/share/color-schemes/*
 /home/$user/.local/share/dolphin/*
 /home/$user/.local/share/fonts/*
+/home/$user/.local/share/gnome-shell/extensions/*
 /home/$user/.local/share/icons/*
 /home/$user/.local/share/konsole/*.profile
 /home/$user/.local/share/kxmlgui5/*
