@@ -1090,10 +1090,12 @@ setup_networkmanager () {
    setup_dhcp
 
 
-   pacstrap_install networkmanager plasma-nm 
+   pacstrap_install networkmanager plasma-nm iwd iw 
                               
    systemctl --root=$mnt enable NetworkManager.service
-	systemctl --root=$mnt mask iwd.service
+	#systemctl --root=$mnt enable iwd.service
+
+	
 }
 
 
@@ -1635,8 +1637,14 @@ do_chroot () {
 }
 
 
-
 connect_wireless () {
+
+	nmcli radio wifi on
+	nmcli device wifi connect $wifi_ssid password $wifi_pass
+
+}
+
+connect_wireless2 () {
 
 	iwctl station wlan0 scan
 
@@ -1730,7 +1738,7 @@ install_network () {
 
 	echo -e "\nWhich network manager would you like to install?\n"
 		
-	net_choices=(quit iwd wpa_supplicant) 
+	net_choices=(quit iwd wpa_supplicant networkmanager) 
 	select net_choice in "${net_choices[@]}"
 	do
 		case $net_choice in
@@ -2296,6 +2304,7 @@ CONFIG_FILES="
 /etc/localtime
 /etc/mkinitcpio.conf
 /etc/mkinitcpio.d/linux.preset
+/etc/NetworkManager/conf.d/wifi_backend.conf
 /etc/pacman.conf
 /etc/pacman-offline.conf
 /etc/pacman.d/mirrorlist
@@ -2617,5 +2626,4 @@ echo
 done
 
 unmount_disk
-
 
