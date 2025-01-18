@@ -1094,8 +1094,10 @@ setup_networkmanager () {
                               
    systemctl --root=$mnt enable NetworkManager.service
 	#systemctl --root=$mnt enable iwd.service
-
 	
+	echo "[device]
+wifi.backend=iwd" > $mnt/etc/NetworkManager/conf.d/wifi_backend.conf
+
 }
 
 
