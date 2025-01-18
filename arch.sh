@@ -2333,6 +2333,7 @@ CONFIG_FILES="
 /home/$user/.bashrc
 /home/$user/.config/baloofilerc
 /home/$user/.config/bleachbit/bleachbit.ini
+/home/$user/.config/brave-flags.conf
 /home/$user/.config/BraveSoftware/*
 /home/$user/.config/dconf
 /home/$user/.config/dolphinrc
