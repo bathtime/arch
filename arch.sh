@@ -115,8 +115,8 @@ copy_on_host=1
 initramfs=mkinitcpio
 
 wlan="wlan0"
-wifi_ssid=""
-wifi_pass=""
+wifi_ssid="dlink-DF50"
+wifi_pass="bmzhw16407"
 
 dirty_threshold=0
 
@@ -1122,7 +1122,10 @@ setup_wpa () {
 	systemctl --root=$mnt enable wpa_supplicant.service
 
 	mkdir -p $mnt/etc/wpa_supplicant
-	#arch-chroot $mnt wpa_passphrase "$wifi_ssid" "$wifi_pass" > $mnt/etc/wpa_supplicant/"$wifi_ssid".conf
+	
+	[ -d /etc/wpa_supplicant ] && cp -r /etc/wpa_supplicant $mnt/etc/ 
+	
+	systemctl --root=$mnt enable wpa_supplicant@wlo1.service
 
 }
 
@@ -1646,14 +1649,31 @@ do_chroot () {
 }
 
 
-connect_wireless2 () {
+connect_wireless () {
+
+	#nmcli --get-values GENERAL.DEVICE,GENERAL.TYPE device show
+	#iw dev
+	iw dev | awk '$1=="Interface"{print $2}'
+	#cat /proc/net/wireless
+	cat /proc/net/wireless | perl -ne '/(\w+):/ && print $1'
+	
+	#wpa_supplicant -B -i wlo1 -c <(wpa_passphrase $wifi_ssid $wifi_pass)
+
+	#wpa_cli
+	#wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant/wpa_supplicant.conf
+	wpa_supplicant -B -i wlo1 -c /etc/wpa_supplicant/"$wifi_ssid".conf
+	#wpa_passphrase "$wifi_ssid" "$wifi_pass" > /etc/wpa_supplicant/"$wifi_ssid".conf
+
+}
+
+connect_wireless3 () {
 
 	nmcli radio wifi on
 	nmcli device wifi connect $wifi_ssid password $wifi_pass
 
 }
 
-connect_wireless () {
+connect_wireless2 () {
 
 	iwctl station wlan0 scan
 
@@ -1962,7 +1982,8 @@ auto_install_root () {
 	general_setup
 	
 	#setup_iwd
-	setup_networkmanager
+	#setup_networkmanager
+	setup_wpa
 	
 	install_tweaks
 	install_liveroot
@@ -2031,7 +2052,7 @@ auto_install_kde () {
 		#setup_snapshots
 	fi
 	
-	setup_networkmanager
+	#setup_networkmanager
 
 	copy_pkgs
 
@@ -2521,6 +2542,7 @@ CONFIG_FILES2="
 /etc/systemd/system/getty@tty1.service.d/autologin.conf
 /etc/udev/rules.d/powersave.rules
 /etc/vconsole.conf
+/etc/wpa_supplicant
 /usr/lib/initcpio/hooks/liveroot
 /usr/lib/initcpio/install/liveroot
 /usr/lib/systemd/system-sleep/sleep.sh
