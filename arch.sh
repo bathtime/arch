@@ -1053,8 +1053,8 @@ EnableNetworkConfiguration=true
 [Scan]
 DisablePeriodicScan=true' > $mnt/etc/iwd/main.conf
 
-	cp -r /var/lib/iwd $mnt/var/lib/
-   #cp -r /etc/iwd $mnt/etc/
+	[ -d /var/lib/dhcpcd ] && cp -r /var/lib/dhcpcd $mnt/var/lib/
+	[ -d /var/lib/iwd ] && cp -r /var/lib/iwd $mnt/var/lib/
 
 
 	echo "Enabling network services..."
@@ -1079,7 +1079,7 @@ setup_networkmanager () {
 	#	echo "[device]
 	#wifi.backend=iwd" > $mnt/etc/NetworkManager/conf.d/wifi_backend.conf
 	
-	cp -r /etc/NetworkManager $mnt/etc/
+	[ -d /etc/NetworkManager ] && cp -r /etc/NetworkManager $mnt/etc/ 
 
 }
 
@@ -1961,17 +1961,13 @@ auto_install_root () {
 	install_GRUB
 	general_setup
 	
-	setup_iwd
-	#setup_networkmanager
+	#setup_iwd
+	setup_networkmanager
 	
 	install_tweaks
 	install_liveroot
 	copy_script
 	copy_pkgs
-
-	#cp -r /var/lib/iwd $mnt/var/lib
-	#cp -r /etc/iwd $mnt/etc
-	#cp -r /etc/NetworkManager $mnt/etc/
 
 }
 
@@ -2231,9 +2227,10 @@ install_config () {
 
 last_modified () {
 
-	cd /home/user
-	find . -cmin -1 -printf '%t %p\n' | sort -k 1 -n | cut -d' ' -f2-
-	
+	#cd /home/user
+	#find . -cmin -1 -printf '%t %p\n' | sort -k 1 -n | cut -d' ' -f2-
+	find / -cmin -1 -printf '%t %p\n' | sort -k 1 -n | cut -d' ' -f2- | grep -v /proc
+
 }
 
 
@@ -2528,7 +2525,8 @@ CONFIG_FILES2="
 /usr/lib/initcpio/install/liveroot
 /usr/lib/systemd/system-sleep/sleep.sh
 /usr/share/applications/firefox.desktop
-/var/lib/iwd/*
+/var/lib/dhcpcd
+/var/lib/iwd
 /home/$user/.bash_profile
 /home/$user/.bashrc
 /home/$user/.config
