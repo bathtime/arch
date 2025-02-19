@@ -365,6 +365,11 @@ create_partitions () {
 
 	fi
 	
+	#mkdir -p /root/.gnupg
+	#chmod 700 /root/.gnupg
+	#find /root/.gnupg -type f -exec chmod 600 {} \;
+   #find /root/.gnupg -type d -exec chmod 700 {} \;
+	
 	unmount_disk
 	mount_disk
 
@@ -412,19 +417,22 @@ echo "File type: $fstype"
 	mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg,/var/tmp,/var/log}
 	mkdir -p /mnt/{dev,proc,run,sys}
 	
+	chmod -R 750 $mnt/root
+	mkdir -p $mnt/root/.gnupg
+	chmod -R 700 $mnt/root/.gnupg
+
 	if [ "$fstype" = "btrfs" ]; then
 		mkdir -p $mnt/.snapshots
-		chattr +C -R $mnt/tmp
-		chattr +C -R $mnt/var/tmp
+		#chattr +C -R $mnt/tmp
+		#chattr +C -R $mnt/var/tmp
 		#chattr +C -R $mnt/var/log
-		#chmod -R 600 $mnt/root/.gnupg
 	fi
 
-	chmod -R 750 $mnt/root
+	
+	#warning: directory permissions differ on /mnt/var/tmp/
+	#filesystem: 755  package: 1777
+	
 	chmod -R 1777 $mnt/var/tmp
-
-#warning: directory permissions differ on /mnt/var/tmp/
-#filesystem: 755  package: 1777
 
 	#error_check 1
 
@@ -1045,6 +1053,10 @@ EnableNetworkConfiguration=true
 [Scan]
 DisablePeriodicScan=true' > $mnt/etc/iwd/main.conf
 
+	cp -r /var/lib/iwd $mnt/var/lib/
+   #cp -r /etc/iwd $mnt/etc/
+
+
 	echo "Enabling network services..."
 	systemctl --root=$mnt enable iwd.service
 
@@ -1059,12 +1071,15 @@ setup_networkmanager () {
    setup_dhcp
 
 
-   pacstrap_install networkmanager iwd iw 
+   #pacstrap_install networkmanager iwd iw 
+   pacstrap_install networkmanager 
                               
    systemctl --root=$mnt enable NetworkManager.service
 	
-	echo "[device]
-wifi.backend=iwd" > $mnt/etc/NetworkManager/conf.d/wifi_backend.conf
+	#	echo "[device]
+	#wifi.backend=iwd" > $mnt/etc/NetworkManager/conf.d/wifi_backend.conf
+	
+	cp -r /etc/NetworkManager $mnt/etc/
 
 }
 
@@ -1631,14 +1646,14 @@ do_chroot () {
 }
 
 
-connect_wireless () {
+connect_wireless2 () {
 
 	nmcli radio wifi on
 	nmcli device wifi connect $wifi_ssid password $wifi_pass
 
 }
 
-connect_wireless2 () {
+connect_wireless () {
 
 	iwctl station wlan0 scan
 
@@ -1888,8 +1903,9 @@ copy_pkgs () {
 
 	done
 
+	echo -e "\n/var/cache/pacman/pkg/* contains:"
 	echo -e "\n.zst packages: $(ls $mnt/var/cache/pacman/pkg/*.zst | wc -l)\n"
-	echo -e "Total packages: $(ls $mnt/var/cache/pacman/pkg/* | wc -l)\n"
+	echo -e "Total files: $(ls $mnt/var/cache/pacman/pkg/* | wc -l)\n"
 
 	#echo -e "\nUpdating package database. Please be patient...\n"
 
@@ -1944,11 +1960,18 @@ auto_install_root () {
 	setup_fstab
 	install_GRUB
 	general_setup
+	
 	setup_iwd
+	#setup_networkmanager
+	
 	install_tweaks
 	install_liveroot
 	copy_script
 	copy_pkgs
+
+	#cp -r /var/lib/iwd $mnt/var/lib
+	#cp -r /etc/iwd $mnt/etc
+	#cp -r /etc/NetworkManager $mnt/etc/
 
 }
 
