@@ -115,8 +115,8 @@ copy_on_host=1
 initramfs=mkinitcpio
 
 wlan="wlan0"
-wifi_ssid="dlink-DF50"
-wifi_pass="bmzhw16407"
+wifi_ssid=""
+wifi_pass=""
 
 dirty_threshold=0
 
@@ -1067,11 +1067,8 @@ setup_networkmanager () {
    check_on_root
    mount_disk
 
-
    setup_dhcp
 
-
-   #pacstrap_install networkmanager iwd iw 
    pacstrap_install networkmanager 
                               
    systemctl --root=$mnt enable NetworkManager.service
@@ -1082,6 +1079,29 @@ setup_networkmanager () {
 	[ -d /etc/NetworkManager ] && cp -r /etc/NetworkManager $mnt/etc/ 
 
 }
+
+
+setup_wpa () {
+
+	check_on_root
+	mount_disk
+
+	setup_dhcp
+
+
+	pacstrap_install iw wpa_supplicant
+
+
+	systemctl --root=$mnt enable wpa_supplicant.service
+
+	mkdir -p $mnt/etc/wpa_supplicant
+	
+	[ -d /etc/wpa_supplicant ] && cp -r /etc/wpa_supplicant $mnt/etc/ 
+	
+	systemctl --root=$mnt enable wpa_supplicant@wlo1.service
+
+}
+
 
 
 setup_dhcp () {
@@ -1107,25 +1127,67 @@ ExecStart=/usr/bin/dhcpcd -b -q %I' > $mnt/etc/systemd/system/dhcpcd@.service.d/
 }
 
 
-
-setup_wpa () {
-
-	check_on_root
-	mount_disk
-
-	setup_dhcp
+connect_wireless () {
 
 
-	pacstrap_install iw wpa_supplicant
+   if [[ "$wifi_ssid" = "" ]] || [[ "$wifi_pass" = "" ]]; then
+   	read -p "Please enter SSID: " $wifi_ssid
+   	read -p "Please enter password: " $wifi_pass
 
+	fi
 
-	systemctl --root=$mnt enable wpa_supplicant.service
+   echo -e "\nWhich network manager would you like to connect to?\n"
 
-	mkdir -p $mnt/etc/wpa_supplicant
+   net_choices=(quit dhcpcd iwd wpa_supplicant networkmanager)
+   select net_choice in "${net_choices[@]}"
+   do
+      case $net_choice in
+         "quit")           break ;;
+         "dhcp")           dhcpcd ;;
+         "iwd")            
+
+	iwctl station wlan0 scan
+
+	while [ "$(iwctl station $wlan get-networks | grep 'No networks available')" ]; do
+   	echo "Attempting to connected to $wlan..."
+   	iwctl station $wlan get-networks
+   	sleep 1
+	done
+
+	echo "$wlan connected!"
+
+	echo "Waiting 5 seconds before connecting to $wlan..."
+	sleep 5
+
+	iwctl --passphrase $wifi_pass station $wlan connect $wifi_ssid
+	echo "Waiting 5 seconds to ping..."
+	sleep 5
+
+	echo "Attempting to ping google.ca..."
+
+	ping -c 1 -i 1 -q google.ca
+
+									;;
+         "wpa_supplicant") 
+
+	interface=$(iw dev | awk '$1=="Interface"{print $2}')
+	#interface=$(cat /proc/net/wireless | perl -ne '/(\w+):/ && print $1')
 	
-	[ -d /etc/wpa_supplicant ] && cp -r /etc/wpa_supplicant $mnt/etc/ 
-	
-	systemctl --root=$mnt enable wpa_supplicant@wlo1.service
+	wpa_passphrase "$wifi_ssid" "$wifi_pass" > /etc/wpa_supplicant/$interface.conf
+	cp /etc/wpa_supplicant/$interface.conf /etc/wpa_supplicant/wpa_supplicant-$interface.conf
+	#wpa_supplicant -B -i $interface -c <(wpa_passphrase $wifi_ssid $wifi_pass)
+
+	systemctl enable wpa_supplicant@$interface.service
+   systemctl start wpa_supplicant@$interface.service
+
+			;;
+         "networkmanager") 
+										nmcli radio wifi on
+										nmcli device wifi connect $wifi_ssid password $wifi_pass 
+										;;
+         '')               	echo -e "\nInvalid option!\n" ;;
+      esac
+   done
 
 }
 
@@ -1649,58 +1711,6 @@ do_chroot () {
 }
 
 
-connect_wireless () {
-
-	#nmcli --get-values GENERAL.DEVICE,GENERAL.TYPE device show
-	#iw dev
-	iw dev | awk '$1=="Interface"{print $2}'
-	#cat /proc/net/wireless
-	cat /proc/net/wireless | perl -ne '/(\w+):/ && print $1'
-	
-	#wpa_supplicant -B -i wlo1 -c <(wpa_passphrase $wifi_ssid $wifi_pass)
-
-	#wpa_cli
-	#wpa_supplicant -B -i wlan0 -c /etc/wpa_supplicant/wpa_supplicant.conf
-	wpa_supplicant -B -i wlo1 -c /etc/wpa_supplicant/"$wifi_ssid".conf
-	#wpa_passphrase "$wifi_ssid" "$wifi_pass" > /etc/wpa_supplicant/"$wifi_ssid".conf
-
-}
-
-connect_wireless3 () {
-
-	nmcli radio wifi on
-	nmcli device wifi connect $wifi_ssid password $wifi_pass
-
-}
-
-connect_wireless2 () {
-
-	iwctl station wlan0 scan
-
-	while [ "$(iwctl station $wlan get-networks | grep 'No networks available')" ]; do
-   	echo "Attempting to connected to $wlan..."
-   	iwctl station $wlan get-networks
-   	sleep 1
-	done
-
-	echo "$wlan connected!"
-
-	echo "Waiting 5 seconds before connecting to $wlan..."
-	sleep 5
-
-	iwctl --passphrase $wifi_pass station $wlan connect $wifi_ssid
-	echo "Waiting 5 seconds to ping..."
-	sleep 5
-
-	echo "Attempting to ping google.ca..."
-
-	ping -c 1 -i 1 -q google.ca
-	#curl google.ca
-
-}
-
-
-
 download_script () {
 
 	echo -e "\nDowloading script from Github..."
@@ -1982,8 +1992,8 @@ auto_install_root () {
 	general_setup
 	
 	#setup_iwd
-	#setup_networkmanager
-	setup_wpa
+	setup_networkmanager
+	#setup_wpa
 	
 	install_tweaks
 	install_liveroot
