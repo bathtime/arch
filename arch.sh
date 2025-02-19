@@ -73,10 +73,11 @@ mnt=/mnt
 espPartNum=1
 swapPartNum=2
 rootPartNum=3
+fsPercent='50'			# What percentage of space should the root drive take?
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='btrfs'		# ext4,btrfs,xfs,jfs,f2fs,nilfs22   TODO: bcachefs
+fstype='f2fs'		# ext4,btrfs,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
 subvols=()
 efi_path=/efi
 
@@ -314,14 +315,28 @@ create_partitions () {
 	systemctl daemon-reload
 
 	check_pkg parted
-	
-	parted -s $disk mklabel gpt \
+
+	if [ ! $fstype = bcachefs ]; then
+		
+		parted -s $disk mklabel gpt \
 			mkpart ESP fat32 1Mib 512Mib \
 			set $espPartNum esp on \
 			mkpart SWAP linux-swap 512Mib 8512Mib \
 			set $swapPartNum swap on \
-			mkpart ROOT $fstype 8512Mib 50%
-			#mkpart ROOT $fstype 8512Mib 100% \
+			mkpart ROOT $fstype 8512Mib $fsPercent%
+			
+			#mkpart ROOT $fstype 8512Mib 100%
+	
+	else
+	
+		parted -s $disk mklabel gpt \
+			mkpart ESP fat32 1Mib 512Mib \
+			set $espPartNum esp on \
+			mkpart SWAP linux-swap 512Mib 8512Mib \
+			set $swapPartNum swap on \
+			mkpart ROOT ext4 8512Mib $fsPercent%
+	
+	fi
 
 	check_pkg dosfstools
 
@@ -2062,8 +2077,6 @@ auto_install_kde () {
 		#setup_snapshots
 	fi
 	
-	#setup_networkmanager
-
 	copy_pkgs
 
 	# Auto-launch
@@ -2085,8 +2098,6 @@ auto_install_gnome () {
 		#setup_snapshots
 	fi
 		
-	setup_networkmanager 
-
 	copy_pkgs
 
 	# Auto launch
@@ -2109,8 +2120,6 @@ auto_install_gnomekde () {
   		pacstrap_install timeshift xorg-xhost
 		#setup_snapshots
 	fi
-	
-	setup_networkmanager 
 	
 	copy_pkgs
 
