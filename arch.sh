@@ -113,7 +113,7 @@ reinstall=0
 root_only=0
 copy_on_host=1
 
-initramfs='dracut'		# mkinitcpio, dracut, booster
+initramfs='booster'		# mkinitcpio, dracut, booster
 
 wlan="wlan0"
 wifi_ssid=""
@@ -642,23 +642,26 @@ choose_initramfs () {
 		mkinitcpio|2)	pacstrap_install mkinitcpio ;;
 		dracut|3)		pacstrap_install dracut 
 
-							echo 'hostonly="no"
+							echo 'hostonly="yes"
 compress="lz4"
 add_drivers+=" "
 omit_dracutmodules+=" "' > $mnt/etc/dracut.conf.d/myflags.conf
 
 							arch-chroot $mnt dracut -f /boot/initramfs-linux.img
+							#arch-chroot $mnt dracut -f /boot/initramfs-dracut-linux.img
 
-							#dracut --regenerate-all /boot/initramfs-linux.img
+							#arch-chroot $mnt dracut --regenerate-all /boot/initramfs-linux.img
 
-							dracut -f /boot/initramfs-linux-fallback.img
+							arch-chroot $mnt dracut -f /boot/initramfs-linux-fallback.img
+
+							arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg 
 							;;
 		booster|4)		pacstrap_install booster 
 							
 							# manual build
 							#booster build mybooster.img 
-
-							grub-mkconfig -o /boot/grub/grub.cfg ;; 
+							
+							arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg ;; 
 		*)					echo -e "Invalid option!" ;;
 	esac
 
@@ -716,7 +719,7 @@ EOF
 
 
 
-install_GRUB () {
+install_grub () {
 
 	check_on_root
 	mount_disk
@@ -1348,9 +1351,9 @@ install_tweaks () {
 	mount_disk
 
 	
-	#pacstrap_install terminus-font ncdu
+	pacstrap_install terminus-font ncdu
 
-	#[ ! $(cat $mnt/etc/vconsole.conf | grep 'FONT=ter-132b') ] && echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
+	[ ! $(cat $mnt/etc/vconsole.conf | grep 'FONT=ter-132b') ] && echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
 
 
 	echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
@@ -1771,7 +1774,7 @@ clone () {
 	rsync $2 --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
 
 	setup_fstab
-  	install_GRUB
+  	install_grub
 	mkinitcpio -P
 
 	#echo -e "\nYou may need to generate /etc/fstab and install a bootloader at this point!\n"
@@ -1854,7 +1857,7 @@ install_bootloader () {
 	select choiceBoot in "${choiceBoot[@]}"
 	do
 		case $choiceBoot in
-			"grub")		install_GRUB; break ;;
+			"grub")		install_grub; break ;;
 			"rEFInd")	install_REFIND; break ;;
 			"EFISTUB")	install_EFISTUB; break ;;
 			"uki")		install_uki; break ;;
@@ -2024,19 +2027,21 @@ auto_install_root () {
 
 	create_partitions
 	install_base
-
-	choose_initramfs $initramfs 
-
+	
 	setup_fstab
-	install_GRUB
+	install_grub
+	#install_liveroot
+	
+	# mkinitcpio, dracut, booster
+	choose_initramfs booster 
+
 	general_setup
 	
-	#setup_iwd
-	setup_networkmanager
+	setup_iwd
+	#setup_networkmanager
 	#setup_wpa
 	
 	install_tweaks
-	install_liveroot
 	copy_script
 	copy_pkgs
 
