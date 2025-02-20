@@ -77,7 +77,7 @@ fsPercent='50'			# What percentage of space should the root drive take?
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='ext4'		# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
+fstype='f2fs'		# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
 subvols=()
 efi_path=/efi
 
@@ -356,7 +356,6 @@ create_partitions () {
 		jfs)			check_pkg jfsutils			
 						mkfs.jfs -f -L ROOT $disk$rootPart ;;
 		f2fs)			check_pkg f2fs-tools
-						#mkfs.f2fs -f -l ROOT -i -O extra_attr,inode_checksum,sb_checksum $disk$rootPart
 						mkfs.f2fs -f -l ROOT $disk$rootPart 
 						;;
 		nilfs2)		check_pkg nilfs-utils
