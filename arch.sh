@@ -77,11 +77,14 @@ fsPercent='50'			# What percentage of space should the root drive take?
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='f2fs'		# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
+fstype='ext4'		# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
 subvols=()
 efi_path=/efi
 
-kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
+#kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
+
+# This method uses the blk-mq to implicitly set the I/O scheduler to none. 
+kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold scsi_mod.use_blk_mq=1"
 
 # systemd.gpt_auto=0
 
@@ -317,7 +320,7 @@ create_partitions () {
 	check_pkg parted
 
 	if [ ! $fstype = bcachefs ]; then
-		
+
 		parted -s $disk mklabel gpt \
 			mkpart ESP fat32 1Mib 512Mib \
 			set $espPartNum esp on \
@@ -325,10 +328,8 @@ create_partitions () {
 			set $swapPartNum swap on \
 			mkpart ROOT $fstype 8512Mib $fsPercent%
 			
-			#mkpart ROOT $fstype 8512Mib 100%
-	
 	else
-	
+
 		parted -s $disk mklabel gpt \
 			mkpart ESP fat32 1Mib 512Mib \
 			set $espPartNum esp on \
@@ -347,7 +348,9 @@ create_partitions () {
 
 		btrfs)		check_pkg btrfs-progs
 						mkfs.btrfs -f -L ROOT $disk$rootPart ;;
-		ext4)			mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart 
+		ext4)			
+						#mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart 
+						mkfs.ext4 -F -b 4096 -q -t ext4 -L ROOT $disk$rootPart 
 						echo "Using tune2fs to create fast commit journal area. Please be patient..." 
 						tune2fs -O fast_commit $disk$rootPart
 						tune2fs -l $disk$rootPart | grep features ;;
@@ -603,8 +606,10 @@ setup_fstab () {
 	sed -i '/portal/d' $mnt/etc/fstab
 
 	#sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,commit=60      0 1/' $mnt/etc/fstab
-	#sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,nodiratime,commit=60      0 1/' $mnt/etc/fstab
-	sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,nodiratime,nosuid,nodev,noauto,x-gvfs-show,commit=60      0 1/' $mnt/etc/fstab
+	sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,barrier=0,data=writeback,nobh,commit=60      0 1/' $mnt/etc/fstab
+
+	# external journal
+	#sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,relatime,journal_checksum,journal_async_commit      0 1/' $mnt/etc/fstab
 
 	# Make /efi read-only
 	#sed -i 's/\/efi.*vfat.*rw/\/efi     vfat     ro/' $mnt/etc/fstab
