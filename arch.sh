@@ -576,7 +576,7 @@ hypervisor_setup () {
 
 setup_fstab () {
 
-	#check_on_root
+	check_on_root
 	mount_disk
 
 	echo -e "\nCreating new /etc/fstab file...\n"
@@ -602,7 +602,9 @@ setup_fstab () {
 
 	sed -i '/portal/d' $mnt/etc/fstab
 
-	sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,commit=60      0 1/' $mnt/etc/fstab
+	#sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,commit=60      0 1/' $mnt/etc/fstab
+	#sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,nodiratime,commit=60      0 1/' $mnt/etc/fstab
+	sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,nodiratime,nosuid,nodev,noauto,x-gvfs-show,commit=60      0 1/' $mnt/etc/fstab
 
 	# Make /efi read-only
 	#sed -i 's/\/efi.*vfat.*rw/\/efi     vfat     ro/' $mnt/etc/fstab
