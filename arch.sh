@@ -77,7 +77,7 @@ fsPercent='50'			# What percentage of space should the root drive take?
 espPart=$espPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='f2fs'		# ext4,btrfs,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
+fstype='ext4'		# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
 subvols=()
 efi_path=/efi
 
@@ -113,7 +113,7 @@ reinstall=0
 root_only=0
 copy_on_host=1
 
-initramfs=mkinitcpio
+initramfs='dracut'		# mkinitcpio, dracut, booster
 
 wlan="wlan0"
 wifi_ssid=""
@@ -356,7 +356,9 @@ create_partitions () {
 		jfs)			check_pkg jfsutils			
 						mkfs.jfs -f -L ROOT $disk$rootPart ;;
 		f2fs)			check_pkg f2fs-tools
-						mkfs.f2fs -f -l ROOT $disk$rootPart ;;
+						#mkfs.f2fs -f -l ROOT -i -O extra_attr,inode_checksum,sb_checksum $disk$rootPart
+						mkfs.f2fs -f -l ROOT $disk$rootPart 
+						;;
 		nilfs2)		check_pkg nilfs-utils
 						mkfs.nilfs2 -f -L ROOT $disk$rootPart ;;
 		bcachefs)	check_pkg bcachefs-tools
@@ -622,23 +624,43 @@ setup_fstab () {
 
 choose_initramfs () {
 
+	check_on_root
+	mount_disk
+
 	if [ "$1" ]; then
-		choiceInitramfs=$1
+		choice=$1
 	else
-		choiceInitramfs="quit mkinitcpio dracut booster"
-		echo -e "\nWhich initramfs would you like to install?"
+		#choiceInitramfs="quit mkinitcpio dracut booster"
+		echo -e "\nWhich initramfs would you like to install?\n
+1. quit 2. mkinitcpio 3. dracut 4. booster\n"
+
+		read choice
 	fi
 
-	select choice in $choiceInitramfs
-	do
-		case $choice in
-			quit|1)			break ;;
-			mkinitcpio|2)	pacstrap_install mkinitcpio; break ;;
-			dracut|3)		pacstrap_install dracut; break ;;
-			booster|4)		pacstrap_install booster; break ;;
-			'')				echo -e "\nInvalid option!\n" ;;
-		esac
-	done
+	case $choice in
+		quit|1)			;;
+		mkinitcpio|2)	pacstrap_install mkinitcpio ;;
+		dracut|3)		pacstrap_install dracut 
+
+							echo 'hostonly="no"
+compress="lz4"
+add_drivers+=" "
+omit_dracutmodules+=" "' > $mnt/etc/dracut.conf.d/myflags.conf
+
+							arch-chroot $mnt dracut -f /boot/initramfs-linux.img
+
+							#dracut --regenerate-all /boot/initramfs-linux.img
+
+							dracut -f /boot/initramfs-linux-fallback.img
+							;;
+		booster|4)		pacstrap_install booster 
+							
+							# manual build
+							#booster build mybooster.img 
+
+							grub-mkconfig -o /boot/grub/grub.cfg ;; 
+		*)					echo -e "Invalid option!" ;;
+	esac
 
 }
 
@@ -2002,6 +2024,9 @@ auto_install_root () {
 
 	create_partitions
 	install_base
+
+	choose_initramfs $initramfs 
+
 	setup_fstab
 	install_GRUB
 	general_setup
@@ -2534,6 +2559,7 @@ CONFIG_FILES="
 
 CONFIG_FILES2="
 /etc/default/grub
+/etc/dracut.conf.d/myflags.conf
 /etc/hostname
 /etc/hosts
 /etc/iwd/main.conf
@@ -2573,8 +2599,8 @@ CONFIG_FILES2="
 /home/$user/.config
 /home/$user/.hushlogin
 /home/$user/.local
-/home/$user/.vimrc
-/home/$user/.mozilla"
+/home/$user/.mozilla
+/home/$user/.vimrc"
 
 
 if [ "$1" ]; then
