@@ -340,13 +340,7 @@ create_partitions () {
 
 	if [ ! $boot = '' ]; then
 
-	#parted -s $disk mklabel gpt \
-	#		mkpart ESP fat32 1Mib 512Mib \
-	#		mkpart BOOT ext2 512Mib 1024Mib \
-	#		mkpart SWAP linux-swap 1024Mib 8512Mib \
-	#		set $espPartNum esp on \
 	#		set $bootPartNum boot on \
-	#		set $swapPartNum swap on
 	
 	parted -s $disk mklabel gpt \
 			mkpart ESP fat32 1Mib 512Mib \
@@ -477,7 +471,7 @@ echo "File type: $fstype"
 	fi
 
 	mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg,/var/tmp,/var/log}
-	mkdir -p /mnt/{dev,proc,run,sys}
+	mkdir -p $mnt/{dev,proc,run,sys}
 	
 	chmod -R 750 $mnt/root
 	mkdir -p $mnt/root/.gnupg
@@ -488,6 +482,10 @@ echo "File type: $fstype"
 		#chattr +C -R $mnt/tmp
 		#chattr +C -R $mnt/var/tmp
 		#chattr +C -R $mnt/var/log
+	fi
+
+	if [ "$fstype" = "bcachefs" ]; then
+		mkdir -p $mnt/.snapshots
 	fi
 
 	
