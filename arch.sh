@@ -70,18 +70,27 @@ arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
 
 mnt=/mnt
-espPartNum=1
-bootPartNum=2
-swapPartNum=3
-rootPartNum=4
-fsPercent='50'			# What percentage of space should the root drive take?
+boot='/boot'		# leave blank to not mount boot separately
+
+if [[ ! $boot = '' ]]; then
+	espPartNum=1
+	bootPartNum=2
+	swapPartNum=3
+	rootPartNum=4
+else
+	bootPartNum=0
+	espPartNum=1
+	swapPartNum=2
+	rootPartNum=3
+fi
+
 espPart=$espPartNum
 bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='bcachefs'		# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
-subvols=()
-boot_path=/boot
+fsPercent='50'			# What percentage of space should the root drive take?
+fstype='ext4'			# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
+subvols=()				# used for btrfs 	TODO: bcachefs
 efi_path=/efi
 
 #kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
@@ -119,7 +128,7 @@ reinstall=0
 root_only=0
 copy_on_host=1
 
-initramfs='booster'		# mkinitcpio, dracut, booster
+initramfs='dracut'		# mkinitcpio, dracut, booster
 
 wlan="wlan0"
 wifi_ssid=""
@@ -185,14 +194,12 @@ unmount_disk () {
 		echo "Unmounting $mnt$efi_path..."
 		umount -n -R $mnt$efi_path
 		sleep .1
-
 	fi
 
-	if [[ $(mount | grep -E $disk$bootPart | grep -E "on $mnt/boot") ]]; then
-		echo "Unmounting $mnt/boot..."
-		umount -n -R $mnt/boot
+	if [[ $(mount | grep -E $disk$bootPart | grep -E "on $mnt$boot") ]] && [[ ! $boot = '' ]]; then
+		echo "Unmounting $mnt$boot..."
+		umount -n -R $mnt$boot
 		sleep .1
-
 	fi
 
 	if [[ $(mount | grep -E $disk$rootPart | grep -E "on $mnt") ]]; then
@@ -328,44 +335,39 @@ create_partitions () {
 	
 	systemctl daemon-reload
 
-	check_pkg parted
+	check_pkg parted dosfstools
 
-	if [ ! $fstype = bcachefs ]; then
 
-		#parted -s $disk mklabel gpt \
-		#	mkpart ESP fat32 1Mib 512Mib \
-		#	set $espPartNum esp on \
-		#	mkpart SWAP linux-swap 512Mib 8512Mib \
-		#	set $swapPartNum swap on \
-		#	mkpart ROOT $fstype 8512Mib $fsPercent%
+	if [ ! $boot = '' ]; then
+
+		parted -s $disk mklabel gpt \
+			mkpart ESP fat32 1Mib 512Mib \
+			mkpart BOOT ext2 512Mib 1024Mib \
+			mkpart SWAP linux-swap 1024Mib 8512Mib \
+			set $espPartNum esp on \
+			set $bootPartNum boot on \
+			set $swapPartNum swap on
+			
+			mkfs.ext2 -F -L BOOT $disk$bootPart 
 		
-		parted -s $disk mklabel gpt \
-			mkpart ESP fat32 1Mib 512Mib \
-			mkpart BOOT ext2 512Mib 1024Mib \
-			mkpart SWAP linux-swap 1024Mib 8512Mib \
-			mkpart ROOT $fstype 8512Mib $fsPercent% \
-			set $espPartNum esp on \
-			set $bootPartNum boot on \
-			set $swapPartNum swap on \
-	
-		else
+	else
 
 		parted -s $disk mklabel gpt \
 			mkpart ESP fat32 1Mib 512Mib \
-			mkpart BOOT ext2 512Mib 1024Mib \
 			mkpart SWAP linux-swap 1024Mib 8512Mib \
-			mkpart ROOT ext4 8512Mib $fsPercent% \
 			set $espPartNum esp on \
-			set $bootPartNum boot on \
-			set $swapPartNum swap on \
-	
+			set $swapPartNum swap on
+		
+	fi
+
+	if [ $fstype = bcachefs ]; then
+		# Parted doesn't recognise bcachefs filesystem
+		parted -s $disk mkpart ROOT ext4 8512Mib $fsPercent%
+	else
+		parted -s $disk mkpart ROOT $fstype 8512Mib $fsPercent%
 	fi
 
 	parted -s $disk print
-	
-	check_pkg dosfstools
-
-	mkfs.ext2 -F -L BOOT $disk$bootPart 
 
 	# Won't work without a small delay
 	sleep 1
@@ -381,7 +383,8 @@ create_partitions () {
 						mkfs.ext4 -F -b 4096 -q -t ext4 -L ROOT $disk$rootPart 
 						echo "Using tune2fs to create fast commit journal area. Please be patient..." 
 						tune2fs -O fast_commit $disk$rootPart
-						tune2fs -l $disk$rootPart | grep features ;;
+						tune2fs -l $disk$rootPart | grep features 
+						;;
 		xfs)			check_pkg xfsprogs			
 						mkfs.xfs -f -L ROOT $disk$rootPart ;;
 		jfs)			check_pkg jfsutils			
@@ -398,6 +401,7 @@ create_partitions () {
 
 	parted -s $disk print
 
+sleep 2
 
 	echo -e "\nMounting $mnt..."
 	mount --mkdir $disk$rootPart $mnt
@@ -457,8 +461,8 @@ echo "File type: $fstype"
 
 	fi
 	
-	if [[ ! $(mount | grep -E $disk$bootPart | grep -E "on $mnt/boot") ]]; then
-		mount --mkdir $disk$bootPart $mnt/boot
+	if [[ ! $(mount | grep -E $disk$bootPart | grep -E "on $mnt$boot") ]] && [[ ! $boot = '' ]]; then
+		mount --mkdir $disk$bootPart $mnt$boot
 	fi
 
 	if [[ ! $(mount | grep -E $disk$espPart | grep -E "on $mnt$efi_path") ]]; then
@@ -815,6 +819,13 @@ EOF2
 	grub-mkconfig -o /boot/grub/grub.cfg
 
 EOF
+
+	# btrfs cannot store saved default so will result in spare file error
+	if [[ $fstype = btrfs ]] && [[ $boot = '' ]]; then
+		sed -i 's/^GRUB_DEFAULT=.*/GRUB_DEFAULT=0/' $mnt/etc/default/grub	
+		sed -i 's/^GRUB_SAVEDEFAULT=.*/GRUB_SAVEDEFAULT=false/' $mnt/etc/default/grub
+	fi
+
 
 	# So systemd won't remount as 'rw'
 	#systemctl --root=$mnt mask systemd-remount-fs.service
@@ -2073,7 +2084,7 @@ auto_install_root () {
 	#install_liveroot
 	
 	# mkinitcpio, dracut, booster
-	choose_initramfs booster 
+	choose_initramfs dracut
 
 	general_setup
 	
@@ -2603,7 +2614,6 @@ CONFIG_FILES="
 /home/$user/.mozilla/*"
 
 CONFIG_FILES2="
-/etc/default/grub
 /etc/dracut.conf.d/myflags.conf
 /etc/hostname
 /etc/hosts
