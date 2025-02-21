@@ -89,7 +89,7 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'			# What percentage of space should the root drive take?
-fstype='ext4'			# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
+fstype='bcachefs'			# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
 subvols=()				# used for btrfs 	TODO: bcachefs
 efi_path=/efi
 
@@ -340,14 +340,21 @@ create_partitions () {
 
 	if [ ! $boot = '' ]; then
 
-		parted -s $disk mklabel gpt \
+	#parted -s $disk mklabel gpt \
+	#		mkpart ESP fat32 1Mib 512Mib \
+	#		mkpart BOOT ext2 512Mib 1024Mib \
+	#		mkpart SWAP linux-swap 1024Mib 8512Mib \
+	#		set $espPartNum esp on \
+	#		set $bootPartNum boot on \
+	#		set $swapPartNum swap on
+	
+	parted -s $disk mklabel gpt \
 			mkpart ESP fat32 1Mib 512Mib \
 			mkpart BOOT ext2 512Mib 1024Mib \
 			mkpart SWAP linux-swap 1024Mib 8512Mib \
 			set $espPartNum esp on \
-			set $bootPartNum boot on \
 			set $swapPartNum swap on
-			
+				
 			mkfs.ext2 -F -L BOOT $disk$bootPart 
 		
 	else
