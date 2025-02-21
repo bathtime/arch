@@ -71,14 +71,17 @@ arch_path=$(dirname "$0")
 
 mnt=/mnt
 espPartNum=1
-swapPartNum=2
-rootPartNum=3
+bootPartNum=2
+swapPartNum=3
+rootPartNum=4
 fsPercent='50'			# What percentage of space should the root drive take?
 espPart=$espPartNum
+bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fstype='ext4'		# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
+fstype='bcachefs'		# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
 subvols=()
+boot_path=/boot
 efi_path=/efi
 
 #kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
@@ -185,6 +188,13 @@ unmount_disk () {
 
 	fi
 
+	if [[ $(mount | grep -E $disk$bootPart | grep -E "on $mnt/boot") ]]; then
+		echo "Unmounting $mnt/boot..."
+		umount -n -R $mnt/boot
+		sleep .1
+
+	fi
+
 	if [[ $(mount | grep -E $disk$rootPart | grep -E "on $mnt") ]]; then
 
 		# Might need to turn error checking off here
@@ -284,6 +294,7 @@ choose_disk () {
 	done
 
 	if [ "$(echo $disk | grep nvme)" ]; then
+		bootPart="p$bootPartNum"
 		espPart="p$espPartNum"
 		swapPart="p$swapPartNum"
 		rootPart="p$rootPartNum"
@@ -321,26 +332,43 @@ create_partitions () {
 
 	if [ ! $fstype = bcachefs ]; then
 
+		#parted -s $disk mklabel gpt \
+		#	mkpart ESP fat32 1Mib 512Mib \
+		#	set $espPartNum esp on \
+		#	mkpart SWAP linux-swap 512Mib 8512Mib \
+		#	set $swapPartNum swap on \
+		#	mkpart ROOT $fstype 8512Mib $fsPercent%
+		
 		parted -s $disk mklabel gpt \
 			mkpart ESP fat32 1Mib 512Mib \
+			mkpart BOOT ext2 512Mib 1024Mib \
+			mkpart SWAP linux-swap 1024Mib 8512Mib \
+			mkpart ROOT $fstype 8512Mib $fsPercent% \
 			set $espPartNum esp on \
-			mkpart SWAP linux-swap 512Mib 8512Mib \
+			set $bootPartNum boot on \
 			set $swapPartNum swap on \
-			mkpart ROOT $fstype 8512Mib $fsPercent%
-			
-	else
+	
+		else
 
 		parted -s $disk mklabel gpt \
 			mkpart ESP fat32 1Mib 512Mib \
+			mkpart BOOT ext2 512Mib 1024Mib \
+			mkpart SWAP linux-swap 1024Mib 8512Mib \
+			mkpart ROOT ext4 8512Mib $fsPercent% \
 			set $espPartNum esp on \
-			mkpart SWAP linux-swap 512Mib 8512Mib \
+			set $bootPartNum boot on \
 			set $swapPartNum swap on \
-			mkpart ROOT ext4 8512Mib $fsPercent%
 	
 	fi
 
+	parted -s $disk print
+	
 	check_pkg dosfstools
 
+	mkfs.ext2 -F -L BOOT $disk$bootPart 
+
+	# Won't work without a small delay
+	sleep 1
 	mkfs.fat -F 32 -n EFI $disk$espPart 
 	mkswap -L SWAP $disk$swapPart
 
@@ -429,6 +457,10 @@ echo "File type: $fstype"
 
 	fi
 	
+	if [[ ! $(mount | grep -E $disk$bootPart | grep -E "on $mnt/boot") ]]; then
+		mount --mkdir $disk$bootPart $mnt/boot
+	fi
+
 	if [[ ! $(mount | grep -E $disk$espPart | grep -E "on $mnt$efi_path") ]]; then
 		mount --mkdir $disk$espPart $mnt$efi_path
 	fi
@@ -585,7 +617,7 @@ setup_fstab () {
 	echo -e "\nCreating new /etc/fstab file...\n"
 
 	genfstab -U $mnt > $mnt/etc/fstab
-
+	#grep /dev/$disk /proc/mounts > $mnt/etc/fstab2
 
 	###  Tweak the resulting /etc/fstab generated  ###
 
@@ -605,8 +637,8 @@ setup_fstab () {
 
 	sed -i '/portal/d' $mnt/etc/fstab
 
-	#sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,commit=60      0 1/' $mnt/etc/fstab
-	sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,barrier=0,data=writeback,nobh,commit=60      0 1/' $mnt/etc/fstab
+	sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,commit=60      0 1/' $mnt/etc/fstab
+	#sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,barrier=0,nobh,commit=60      0 1/' $mnt/etc/fstab
 
 	# external journal
 	#sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,relatime,journal_checksum,journal_async_commit      0 1/' $mnt/etc/fstab
@@ -745,13 +777,15 @@ install_grub () {
 
 GRUB_DISTRIBUTOR=""
 GRUB_DEFAULT=saved
+GRUB_SAVEDEFAULT=true
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
 GRUB_CMDLINE_LINUX="$kernel_ops resume=UUID=$SWAP_UUID"
 GRUB_DISABLE_RECOVERY="true"
 #GRUB_HIDDEN_TIMEOUT=1
 GRUB_RECORDFAIL_TIMEOUT=1
-GRUB_TIMEOUT=2
+GRUB_TIMEOUT=1
+GRUB_DISABLE_OS_PROBER=true
 
 # Update grub with:
 # grub-mkconfig -o /boot/grub/grub.cfg
