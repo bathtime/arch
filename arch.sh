@@ -1394,6 +1394,9 @@ WantedBy=multi-user.target' > $mnt/usr/lib/systemd/system/acpid.service
 
 setup_snapshots () {
 
+	# Use to copy bcachefs snapshot files
+	# cp --reflink=never
+
 	pacstrap_install timeshift cronie
 
 	systemctl --root=$mnt enable cronie.service
@@ -1837,6 +1840,39 @@ clone () {
 
 }
 
+
+restore_snapshot () {
+
+	pacman -S --noconfirm rsync
+
+	echo -e "\nList of snapshots:\n"
+	ls  /.snapshots/
+	echo -e "\nWhich snapshot would you like to recover?\n"
+	read snapshot
+
+	if [ -d "/.snapshots/$snapshot" ]; then
+
+		echo -e "\nRunning dry run first..."
+		sleep 2
+
+		rsync --dry-run -av --del --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=/mnt/ --exclude=/boot/ --exclude=/efi/ /.snapshots/$snapshot/ /
+
+		read -p "Type 'y' to procede with rsync or any other key to exit..." choice
+
+		if [[ $choice = y ]]; then
+
+			echo -e "\nRunning rsync...\n"
+			rsync -av --del --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=/mnt/ --exclude=/boot/ --exclude=/efi/ /.snapshots/$snapshot/ /
+		
+		else
+			echo "Exiting."
+		fi
+
+	else
+		echo "Snapshot directory does not exist. Exiting."
+	fi
+
+}
 
 
 extract_archive () {
@@ -2847,7 +2883,8 @@ echo
 12. Wipe (urandom)
 13. Wipe freespace     
 14. Shred $disk
-15. Create squashfs image")
+15. Create squashfs image
+16. Restore bcachefs snapshot")
 
 
 									config_choice=0
@@ -2887,6 +2924,7 @@ echo
 											wipe-free|13)	wipe_freespace ;;
 											shred|14)		unmount_disk; shred -n 1 -v -z $disk ;;
 											squashfs|15)	create_archive ;;
+											restore|16)		restore_snapshot ;;
               							'')				last_modified ;;
                 						*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 										esac
