@@ -555,7 +555,7 @@ Server = file:///var/cache/pacman/pkg/
 	[ "$fstype" = "jfs" ] && packages="$packages jfsutils"
 	[ "$fstype" = "f2fs" ] && packages="$packages f2fs-tools"
 	[ "$fstype" = "nilfs2" ] && packages="$packages nilfs-utils"
-	[ "$fstype" = "bcachefs" ] && packages="$packages bcachefs-tools"
+	[ "$fstype" = "bcachefs" ] && packages="$packages bcachefs-tools rsync"
 
 	pacstrap_install $packages
 
@@ -2916,7 +2916,7 @@ echo
 							[ "$fstype" = "xfs" ] && pacstrap_install xfsprogs
 							[ "$fstype" = "jfs" ] && pacstrap_install jfsutils
 							[ "$fstype" = "f2fs" ] && pacstrap_install f2fs-tools
-							[ "$fstype" = "bcachefs" ] && pacstrap_install bcachefs-tools
+							[ "$fstype" = "bcachefs" ] && pacstrap_install bcachefs-tools rsync
 							[ "$fstype" = "nilfs2" ] && pacstrap_install nilfs-utils
 
    														;;
