@@ -91,6 +91,7 @@ rootPart=$rootPartNum
 fsPercent='50'			# What percentage of space should the root drive take?
 fstype='bcachefs'			# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
 subvols=()				# used for btrfs 	TODO: bcachefs
+snapshot_dir="/.snapshots"
 efi_path=/efi
 
 #kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
@@ -480,14 +481,14 @@ echo "File type: $fstype"
 	chmod -R 700 $mnt/root/.gnupg
 
 	if [ "$fstype" = "btrfs" ]; then
-		mkdir -p $mnt/.snapshots
+		mkdir -p $mnt$snapshot_dir
 		#chattr +C -R $mnt/tmp
 		#chattr +C -R $mnt/var/tmp
 		#chattr +C -R $mnt/var/log
 	fi
 
 	if [ "$fstype" = "bcachefs" ]; then
-		mkdir -p $mnt/.snapshots
+		mkdir -p $mnt$snapshot_dir
 	fi
 
 	
@@ -1846,8 +1847,18 @@ nn
 
 take_snapshot () {
 
-	echo TODO!!!
+	filename=$(date +"%Y-%m-%d @ %H:%M:%S - ")
 
+	if [[ $1 = '' ]]; then
+		echo -e "\nWhat would you like to call this snapshot?\n"
+		read snapshotname
+	else
+		snapshotname="$1"
+	fi
+
+	echo -e "\nCreating snapshot: $snapshot_dir/$filename$snapshotname"
+	
+	bcachefs subvolume snapshot "$snapshot_dir/$filename$snapshotname"	
 
 }
 
@@ -1857,27 +1868,25 @@ restore_snapshot () {
 	#bcachefs fsck $disk$rootPart
 
 	echo -e "\nList of snapshots:\n"
-	
-	ls  /.snapshots/
-	echo
-	ls -ltcr /.snapshots/ | grep -v total | awk '{print $6" "$7" @ "$8": "$9}'
+
+	ls -1N $snapshot_dir/
 
 	echo -e "\nWhich snapshot would you like to recover?\n"
 	read snapshot
 
-	if [ -d "/.snapshots/$snapshot" ] && [ ! $snapshot = '' ]; then
+	if [ -d "$snapshot_dir/$snapshot" ] && [ ! "$snapshot" = '' ]; then
 
 		echo -e "\nRunning dry run first..."
 		sleep 2
 
-		rsync --dry-run -av --del --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=/mnt/ --exclude=/boot/ --exclude=/efi/ /.snapshots/$snapshot/ / | less
+		rsync --dry-run -av --del --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=/mnt/ --exclude=/boot/ --exclude=/efi/ "$snapshot_dir/$snapshot/" / | less
 
 		read -p "Type 'y' to procede with rsync or any other key to exit..." choice
 
 		if [[ $choice = y ]]; then
 
 			echo -e "\nRunning rsync...\n"
-			rsync -av --del --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=/mnt/ --exclude=/boot/ --exclude=/efi/ /.snapshots/$snapshot/ /
+			rsync -av --del --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=/mnt/ --exclude=/boot/ --exclude=/efi/ "$snapshot_dir/$snapshot/" /
 		
 		else
 			echo "Exiting."
@@ -1912,13 +1921,13 @@ create_archive () {
 	cd / 
 	rm -rf /root.squashfs
 	
-	#time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp/ -e /run -e /mnt -e /.snapshots/ -e /home/$user/.cache/ -e /setup.tar -e /var/cache/pacman/ -e /root/.cache/ -e /run/timeshift/ -e /var/tmp/ -e /var/log/ -e /etc/pacman.d/gnupg/ -e /home/$user/.local/share/Trash/ -e /usr/share/doc/ -e /usr/share/man/ -e /usr/share/wallpapers -e /usr/share/gtk-doc -e /usr/share/fonts/noto -e /usr/lib/firmware/nvidia -e /usr/lib/firmware/amdgpu -comp lz4  
+	#time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp/ -e /run -e /mnt -e $snapshot_dir/ -e /home/$user/.cache/ -e /setup.tar -e /var/cache/pacman/ -e /root/.cache/ -e /run/timeshift/ -e /var/tmp/ -e /var/log/ -e /etc/pacman.d/gnupg/ -e /home/$user/.local/share/Trash/ -e /usr/share/doc/ -e /usr/share/man/ -e /usr/share/wallpapers -e /usr/share/gtk-doc -e /usr/share/fonts/noto -e /usr/lib/firmware/nvidia -e /usr/lib/firmware/amdgpu -comp lz4  
 	
-	#time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp/ -e /run -e /mnt -e /.snapshots/ -e /home/$user/.cache/ -e /setup.tar -e /var/cache/pacman/ -e /root/.cache/ -e /run/timeshift/ -e /var/tmp/ -e /var/log/ -e /etc/pacman.d/gnupg/ -e /home/$user/.local/share/Trash/ -e /usr/share/doc/ -e /usr/share/man/ -e /usr/share/wallpapers -e /usr/share/gtk-doc -e /usr/share/fonts/noto -e /usr/lib/firmware/nvidia -e /usr/lib/firmware/amdgpu -comp gzip
+	#time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp/ -e /run -e /mnt -e $snapshot_dir/ -e /home/$user/.cache/ -e /setup.tar -e /var/cache/pacman/ -e /root/.cache/ -e /run/timeshift/ -e /var/tmp/ -e /var/log/ -e /etc/pacman.d/gnupg/ -e /home/$user/.local/share/Trash/ -e /usr/share/doc/ -e /usr/share/man/ -e /usr/share/wallpapers -e /usr/share/gtk-doc -e /usr/share/fonts/noto -e /usr/lib/firmware/nvidia -e /usr/lib/firmware/amdgpu -comp gzip
 	
-	#time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp/ -e /run -e /mnt -e /.snapshots/ -e /home/$user/.cache/ -e /root/.cache/ -e /run/timeshift/ -e /var/tmp/ -e /var/log/ -e /home/$user/.local/share/Trash/ -comp gzip
+	#time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp/ -e /run -e /mnt -e $snapshot_dir/ -e /home/$user/.cache/ -e /root/.cache/ -e /run/timeshift/ -e /var/tmp/ -e /var/log/ -e /home/$user/.local/share/Trash/ -comp gzip
 	
-	time mksquashfs / root.squashfs -comp lz4 -mem-percent 25 -no-recovery -noappend -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp/ -e /run -e /mnt -e /.snapshots/ -e /home/$user/.cache/ -e /root/.cache/ -e /var/tmp/ -e /var/log/ -e /home/$user/.local/share/Trash/
+	time mksquashfs / root.squashfs -comp lz4 -mem-percent 25 -no-recovery -noappend -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp/ -e /run -e /mnt -e $snapshot_dir/ -e /home/$user/.cache/ -e /root/.cache/ -e /var/tmp/ -e /var/log/ -e /home/$user/.local/share/Trash/
 
 	ls -lah root.squashfs
 
@@ -2222,8 +2231,7 @@ auto_install_kde () {
 	install_config
 
 	if [[ "$fstype" = "bcachefs" ]]; then
-		echo -e "\nCreating snapshot...\n"
-		arch-chroot $mnt bcachefs subvolume snapshot / /.snapshots/firstsetup
+		take_snapshot "before first boot"
 	fi
 
 }
