@@ -1,7 +1,8 @@
 # arch
-A script to install Arch linux on a USB stick
+A script to install Arch linux on a USB stick or machine.
 
-To run from an arch iso:
+
+Running from an arch iso:
 
 nmcli radio wifi on
 nmcli device wifi connect <WIFI-SSID> password <WIFI-PASSWORD>
@@ -12,6 +13,7 @@ chmod +x arch.sh
 Run on the fly: bash <(curl -sL bit.ly/a-install)
 
 Supported filesystems: ext4, btrfs, xfs, f2fs, bcachefs
+
 
 **Features**
 
