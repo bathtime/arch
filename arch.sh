@@ -260,7 +260,7 @@ choose_disk () {
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g"
 		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-		disks=$(echo -e "\nquit\nedit\n$\n#\n$disks\n/\nclean\nwireless\nupdate\nrefresh\nlogout\nreboot\nsuspend\nhibernate\npoweroff")
+		disks=$(echo -e "\nquit\nedit\n$\n#\n$disks\n/\nclean\nwireless\nupdate\nrefresh\nlogout\nreboot\nsuspend\nhibernate\npoweroff\nsnapshot\nrestore")
 
 		echo -e "\nWhich drive?\n"
 
@@ -289,6 +289,8 @@ choose_disk () {
 				poweroff)	poweroff ;;
 				suspend)		echo mem > /sys/power/state ;;
 				hibernate)	echo disk > /sys/power/state ;;
+				snapshot)	take_snapshot ;;
+				restore)		restore_snapshot ;;
 				htop)			su - user -c /usr/bin/htop ;;
 				reboot)		reboot ;;
 				quit) 		echo -e "\nQuitting!"; exit ;;
@@ -1842,6 +1844,14 @@ nn
 }
 
 
+take_snapshot () {
+
+	echo TODO!!!
+
+
+}
+
+
 restore_snapshot () {
 
 	#bcachefs fsck $disk$rootPart
@@ -1855,7 +1865,7 @@ restore_snapshot () {
 	echo -e "\nWhich snapshot would you like to recover?\n"
 	read snapshot
 
-	if [ -d "/.snapshots/$snapshot" ]; then
+	if [ -d "/.snapshots/$snapshot" ] && [ ! $snapshot = '' ]; then
 
 		echo -e "\nRunning dry run first..."
 		sleep 2
