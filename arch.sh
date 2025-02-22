@@ -1897,9 +1897,19 @@ restore_snapshot () {
 		echo -e "\nRunning dry run first..."
 		sleep 1
 
-		# --one-file-system makes it so system won't cross into other partitions
-		rsync_params="-av --del --one-file-system --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/mnt/ --exclude=$mnt/"
+		#-a  : all files, with permissions, etc..
+		#-v  : verbose, mention files
+		#-x  : stay on one file system
+		#-H  : preserve hard links (not included with -a)
+		#-A  : preserve ACLs/permissions (not included with -a)
+		#-X  : preserve extended attributes (not included with -a)
+		#-S  : handle sparse files efficiently
+		#-W  : improve the copy speed by not calculating deltas/diffs of the files
+		#---numeric-ids : avoid mapping uid/gid values by user/group name
+		#--info=progress2 : instead of --progress is useful for large transfers
 
+		rsync_params="-avxHAXSW --del --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/mnt/ --exclude=$mnt/"
+		
 		rsync --dry-run $rsync_params "$snapshot_dir/$snapshot/" / | less
 
 		echo -e "\nType 'y' to proceed with rsync or any other key to exit..."
