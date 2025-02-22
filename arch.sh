@@ -104,6 +104,7 @@ kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigati
 
 user=user
 password='123456'
+autologin=true
 aur_app=none
 aur_path=/home/$user/aur
 
@@ -127,7 +128,7 @@ timezone=Canada/Eastern
 
 offline=0
 reinstall=0
-root_only=0
+#root_only=0
 copy_on_host=1
 
 initramfs='mkinitcpio'		# mkinitcpio, dracut, booster
@@ -564,7 +565,7 @@ Server = file:///var/cache/pacman/pkg/
 
 	packages="$base_install"
 
-	[ "$root_only" ] && packages="$packages sudo"
+	#[ "$root_only" ] && packages="$packages sudo"
 
 	[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs grub-btrfs"
 	[ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
@@ -586,14 +587,22 @@ Server = file:///var/cache/pacman/pkg/
 	#sed -i 's/SigLevel    = .*$/SigLevel    = TrustAll/' $mnt/etc/pacman.conf
 
 
+
+}
+
+
+auto_login () {
+
 	###  Prepare auto-login  ###
 
 	# Does a user already exist?
-	if [ ! "$(grep ^$user $mnt/etc/passwd)" ] || [ "$root_only" -eq 1 ]; then
-		login_user=root
-	else
-		login_user=$user
-	fi
+	#if [ ! "$(grep ^$user $mnt/etc/passwd)" ] || [ "$1" = root ]; then
+	#	login_user=root
+	#else
+	#	login_user=$user
+	#fi
+	
+	login_user=$1
 
 	echo -e "\nCreating auto-login for $login_user.\n"
 
@@ -606,7 +615,6 @@ ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin $login_us
 EOF
 
 }
-
 
 
 hypervisor_setup () {
@@ -991,7 +999,7 @@ PS1="# "' > $mnt/root/.bashrc
 	arch-chroot $mnt hwclock --systohc
 	arch-chroot $mnt locale-gen
 
-	[ "$root_only" -eq 0 ] && arch-chroot $mnt printf "$password\n$password\n" | passwd root
+	#[ "$root_only" -eq 0 ] && arch-chroot $mnt printf "$password\n$password\n" | passwd root
 
 	cat > $mnt/root/.vimrc << EOF
 
@@ -1021,7 +1029,8 @@ setup_user () {
 	mount_disk
 
 
-	pacstrap_install "$install_user" 
+	#pacstrap_install "$install_user" 
+	pacstrap_install sudo 
 
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
 		arch-chroot $mnt useradd -m $user -G wheel
@@ -2011,9 +2020,9 @@ copy_script () {
 	mkdir -p $mnt$arch_path
 	cp $arch_path/$arch_file $mnt$arch_path
 
-	if [ "$root_only" -eq 0 ] && [ $(grep "^$user" $mnt/etc/passwd) ]; then
-		arch-chroot $mnt chown $user:$user $arch_path/$arch_file
-	fi
+	#if [ "$root_only" -eq 0 ] && [ $(grep "^$user" $mnt/etc/passwd) ]; then
+	#	arch-chroot $mnt chown $user:$user $arch_path/$arch_file
+	#fi
 
 }
 
@@ -2153,11 +2162,15 @@ check_online () {
 
 auto_install_root () {
 
-	root_only=1
+	#root_only=1
 
 	create_partitions
 	install_base
-	
+
+	if [[ $autologin = true ]]; then
+		auto_login root
+	fi
+
 	setup_fstab
 	install_grub
 	#install_liveroot
@@ -2180,10 +2193,15 @@ auto_install_root () {
 
 auto_install_user () {
 
-	root_only=0
+	#root_only=0
 
 	auto_install_root
 	setup_user
+
+	if [[ $autologin = true ]]; then
+		auto_login $user
+	fi
+
 	#install_aur
 	#setup_acpid
 	#install_tweaks
