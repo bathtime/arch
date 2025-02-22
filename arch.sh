@@ -1895,17 +1895,21 @@ restore_snapshot () {
 	if [ -d "$snapshot_dir/$snapshot" ] && [ ! "$snapshot" = '' ]; then
 
 		echo -e "\nRunning dry run first..."
-		sleep 2
+		sleep 1
 
-		rsync --dry-run -av --del --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=/mnt/ --exclude=/boot/ --exclude=/efi/ "$snapshot_dir/$snapshot/" / | less
+		# --one-file-system makes it so system won't cross into other partitions
+		rsync_params="-av --del --one-file-system --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/mnt/ --exclude=$mnt/"
 
-		read -p "Type 'y' to procede with rsync or any other key to exit..." choice
+		rsync --dry-run $rsync_params "$snapshot_dir/$snapshot/" / | less
+
+		echo -e "\nType 'y' to proceed with rsync or any other key to exit..."
+		read choice
 
 		if [[ $choice = y ]]; then
 
 			echo -e "\nRunning rsync...\n"
-			rsync -av --del --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=/mnt/ --exclude=/boot/ --exclude=/efi/ "$snapshot_dir/$snapshot/" /
-		
+			rsync $rsync_params "$snapshot_dir/$snapshot/" /
+	
 		else
 			echo "Exiting."
 		fi
