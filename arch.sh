@@ -1875,7 +1875,7 @@ take_snapshot () {
 		echo -e "\nWhat would you like to call this snapshot?\n"
 		read snapshotname
 
-		[[ ! $snapshotname = '' ]] && $snapshotname=" - $snapshotname"
+		[[ ! $snapshotname = '' ]] && snapshotname=" - $snapshotname"
 
 	else
 		snapshotname="$1"
@@ -2560,11 +2560,12 @@ sync_disk () {
 
 		last_dirty=$dirty
 		
-		#if [ $stall_count -gt 10 ]; then
-		#	sync &
-		#	stall_count=0
-		#	#echo "Resyncing..."
-		#fi
+		# If it's taking too long, it might be stuck and need to be resynced
+		if [ $stall_count -gt 50 ]; then
+			sync &
+			stall_count=0
+			echo "Resyncing..."
+		fi
 
 		sleep .1
 
