@@ -88,10 +88,11 @@ espPart=$espPartNum
 bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fsPercent='50'			# What percentage of space should the root drive take?
+fsPercent='50'				# What percentage of space should the root drive take?
 fstype='bcachefs'			# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
-subvols=()				# used for btrfs 	TODO: bcachefs
+subvols=()					# used for btrfs 	TODO: bcachefs
 snapshot_dir="/.snapshots"
+encrypt=false
 efi_path=/efi
 
 #kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
@@ -129,7 +130,7 @@ reinstall=0
 root_only=0
 copy_on_host=1
 
-initramfs='dracut'		# mkinitcpio, dracut, booster
+initramfs='mkinitcpio'		# mkinitcpio, dracut, booster
 
 wlan="wlan0"
 wifi_ssid=""
@@ -399,7 +400,14 @@ create_partitions () {
 		nilfs2)		check_pkg nilfs-utils
 						mkfs.nilfs2 -f -L ROOT $disk$rootPart ;;
 		bcachefs)	check_pkg bcachefs-tools
-						bcachefs format -f -L ROOT $disk$rootPart ;;
+
+						if [[ $encrypt = true ]]; then
+							bcachefs format -f -L ROOT --encrypted $disk$rootPart
+							bcachefs unlock -k session $disk$rootPart
+						else
+							bcachefs format -f -L ROOT $disk$rootPart
+						fi
+						;;
 	esac
 
 
@@ -408,6 +416,8 @@ create_partitions () {
 sleep 2
 
 	echo -e "\nMounting $mnt..."
+
+
 	mount --mkdir $disk$rootPart $mnt
 
 	cd $mnt
@@ -429,7 +439,6 @@ sleep 2
 	mount_disk
 
 }
-
 
 
 mount_disk () {
@@ -458,7 +467,11 @@ echo "File type: $fstype"
 
 		else
 
-			mount --mkdir $disk$rootPart $mnt
+		if [[ $encrypt = true ]] && [[ $fstype = bcachefs ]]; then
+			bcachefs unlock -k session $disk$rootPart
+		fi
+
+		mount --mkdir $disk$rootPart $mnt
 
 		fi
 
@@ -1847,18 +1860,19 @@ nn
 
 take_snapshot () {
 
-	filename=$(date +"%Y-%m-%d @ %H:%M:%S - ")
+	filename=$(date +"%Y-%m-%d @ %H:%M:%S")
 
 	if [[ $1 = '' ]]; then
 		echo -e "\nWhat would you like to call this snapshot?\n"
 		read snapshotname
+
+		[[ ! $snapshotname = '' ]] && $snapshotname=" - $snapshotname"
+
 	else
 		snapshotname="$1"
 	fi
-
-	echo -e "\nCreating snapshot: $snapshot_dir/$filename$snapshotname"
 	
-	bcachefs subvolume snapshot "$snapshot_dir/$filename$snapshotname"	
+	bcachefs subvolume snapshot "$snapshot_dir/$filename$snapshotname" && echo -e "\nCreated snapshot: $snapshot_dir/$filename$snapshotname\n"	
 
 }
 
@@ -2148,8 +2162,7 @@ auto_install_root () {
 	install_grub
 	#install_liveroot
 	
-	# mkinitcpio, dracut, booster
-	choose_initramfs dracut
+	choose_initramfs $initramfs
 
 	general_setup
 	
@@ -2712,8 +2725,6 @@ CONFIG_FILES2="
 /etc/udev/rules.d/powersave.rules
 /etc/vconsole.conf
 /etc/wpa_supplicant
-/usr/lib/initcpio/hooks/liveroot
-/usr/lib/initcpio/install/liveroot
 /usr/lib/systemd/system-sleep/sleep.sh
 /usr/share/applications/firefox.desktop
 /var/lib/dhcpcd
