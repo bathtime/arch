@@ -1846,7 +1846,11 @@ restore_snapshot () {
 	pacman -S --noconfirm rsync
 
 	echo -e "\nList of snapshots:\n"
+	
 	ls  /.snapshots/
+	echo
+	ls -ltcr /.snapshots/ | grep -v total | awk '{print $6" "$7" @ "$8": "$9}'
+
 	echo -e "\nWhich snapshot would you like to recover?\n"
 	read snapshot
 
@@ -1855,7 +1859,7 @@ restore_snapshot () {
 		echo -e "\nRunning dry run first..."
 		sleep 2
 
-		rsync --dry-run -av --del --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=/mnt/ --exclude=/boot/ --exclude=/efi/ /.snapshots/$snapshot/ /
+		rsync --dry-run -av --del --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=/mnt/ --exclude=/boot/ --exclude=/efi/ /.snapshots/$snapshot/ / | less
 
 		read -p "Type 'y' to procede with rsync or any other key to exit..." choice
 
