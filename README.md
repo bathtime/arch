@@ -21,8 +21,8 @@ Supported filesystems: ext4, btrfs, xfs, f2fs, bcachefs
 
 ** BUGS: **
 
-1. encrypted bcachefs throws an error after entering password twice when prompted during boot. Login succeeds nonetheless
-2. bcachefs cannot install an ext4 system to do some known bug. You may install btrfs or bcachefs instea
+1. encrypted bcachefs throws an error after entering password twice when prompted during boot. Login succeeds nonetheless.
+2. bcachefs cannot install an ext4 system due to some known bug in bcachefs. You may install btrfs or bcachefs instead.
 3. 
 
 
