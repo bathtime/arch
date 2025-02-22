@@ -1827,7 +1827,8 @@ clone () {
 	mount_disk
 
 	echo -e "\n$1 $3 -> $4. Please be patient...\n"
-
+/disk
+nn
 	#rsync $2 --exclude=/boot/ --exclude=/efi/ --exclude=/etc/fstab/ --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
 	
 	rsync $2 --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
@@ -1843,7 +1844,7 @@ clone () {
 
 restore_snapshot () {
 
-	pacman -S --noconfirm rsync
+	#bcachefs fsck $disk$rootPart
 
 	echo -e "\nList of snapshots:\n"
 	
@@ -2133,8 +2134,8 @@ auto_install_root () {
 
 	general_setup
 	
-	setup_iwd
-	#setup_networkmanager
+	#setup_iwd
+	setup_networkmanager
 	#setup_wpa
 	
 	install_tweaks
@@ -2208,7 +2209,12 @@ auto_install_kde () {
 	# Auto-launch
 	sed -i 's/manager=.*$/manager=kde/g' $mnt/home/$user/.bash_profile
 
-	install_config	
+	install_config
+
+	if [[ "$fstype" = "bcachefs" ]]; then
+		echo -e "\nCreating snapshot...\n"
+		arch-chroot $mnt bcachefs subvolume snapshot / /.snapshots/firstsetup
+	fi
 
 }
 
@@ -2505,11 +2511,11 @@ sync_disk () {
 
 		last_dirty=$dirty
 		
-		if [ $stall_count -gt 10 ]; then
-			sync &
-			stall_count=0
-			#echo "Resyncing..."
-		fi
+		#if [ $stall_count -gt 10 ]; then
+		#	sync &
+		#	stall_count=0
+		#	#echo "Resyncing..."
+		#fi
 
 		sleep .1
 
