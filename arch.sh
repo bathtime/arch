@@ -2936,8 +2936,8 @@ echo
 13. Wipe freespace     
 14. Shred $disk
 15. Create squashfs image
-16. Restore bcachefs snapshot")
-
+16. Take bcachefs snapshot
+17. Restore bcachefs snapshot")
 
 									config_choice=0
 									while [ ! "$config_choice" = "1" ]; do
@@ -2976,7 +2976,8 @@ echo
 											wipe-free|13)	wipe_freespace ;;
 											shred|14)		unmount_disk; shred -n 1 -v -z $disk ;;
 											squashfs|15)	create_archive ;;
-											restore|16)		restore_snapshot ;;
+											snapshot|16)	take_snapshot ;;
+											restore|17)		restore_snapshot ;;
               							'')				last_modified ;;
                 						*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 										esac
