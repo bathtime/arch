@@ -128,8 +128,7 @@ timezone=Canada/Eastern
 
 offline=0
 reinstall=0
-#root_only=0
-copy_on_host=1
+copy_on_host='1'				# Set to '0' when installing from an arch iso in ram
 
 initramfs='mkinitcpio'		# mkinitcpio, dracut, booster
 
@@ -565,8 +564,6 @@ Server = file:///var/cache/pacman/pkg/
 
 	packages="$base_install"
 
-	#[ "$root_only" ] && packages="$packages sudo"
-
 	[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs grub-btrfs"
 	[ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
 	[ "$fstype" = "jfs" ] && packages="$packages jfsutils"
@@ -998,8 +995,6 @@ PS1="# "' > $mnt/root/.bashrc
 
 	arch-chroot $mnt hwclock --systohc
 	arch-chroot $mnt locale-gen
-
-	#[ "$root_only" -eq 0 ] && arch-chroot $mnt printf "$password\n$password\n" | passwd root
 
 	cat > $mnt/root/.vimrc << EOF
 
@@ -2020,10 +2015,6 @@ copy_script () {
 	mkdir -p $mnt$arch_path
 	cp $arch_path/$arch_file $mnt$arch_path
 
-	#if [ "$root_only" -eq 0 ] && [ $(grep "^$user" $mnt/etc/passwd) ]; then
-	#	arch-chroot $mnt chown $user:$user $arch_path/$arch_file
-	#fi
-
 }
 
 
@@ -2062,7 +2053,14 @@ pacstrap_install () {
 		if [ "$offline" -eq 1 ]; then
 			pacstrap -C /etc/pacman-offline.conf -c -K $mnt ${packages[@]}
 		else
-			pacstrap -c -K $mnt ${packages[@]}
+
+			# Ideal when using an arch install disk in ram
+			if [ "$copy_on_host" -eq 0 ]; then
+				pacstrap -K $mnt ${packages[@]}
+			else
+				pacstrap -c -K $mnt ${packages[@]}
+			fi
+
 		fi
 
 	fi
@@ -2162,8 +2160,6 @@ check_online () {
 
 auto_install_root () {
 
-	#root_only=1
-
 	create_partitions
 	install_base
 
@@ -2192,8 +2188,6 @@ auto_install_root () {
 
 
 auto_install_user () {
-
-	#root_only=0
 
 	auto_install_root
 	setup_user
