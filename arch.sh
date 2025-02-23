@@ -263,7 +263,7 @@ choose_disk () {
 		echo -e "\nDrives found (current mount: /):\n"
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g"
-		choices='quit edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / logout poweroff suspend hibernate' 
+		choices='quit edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / logout reboot suspend hibernate poweroff stats' 
 		
 
 		echo -e "\nWhich drive?\n"
@@ -276,9 +276,14 @@ choose_disk () {
 				$)				sudo -u $user bash ;;
 				\#)			bash ;;
 				logout)		killall systemd ;;
-				poweroff)	poweroff ;;
+				reboot)		reboot ;;
 				suspend)		echo mem > /sys/power/state ;;
 				hibernate)	echo disk > /sys/power/state ;;
+				poweroff)	poweroff ;;
+				stats)		
+								echo; free -h; echo
+								systemd-analyze | sed 's/in .*=/in/;s/graph.*//'
+								;;
 				/)				disk=$host; search_disks=0; break ;;
 				*)    		if [[ $disk = '' ]]; then
 						   		echo -e "\nInvalid option!\n"
