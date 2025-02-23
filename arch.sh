@@ -267,6 +267,8 @@ choose_disk () {
 
 		echo -e "\nWhich drive?\n"
 
+		mnt='/'
+
 		select disk in $disks
 		do
 			case $disk in
@@ -286,7 +288,8 @@ choose_disk () {
 								;;
 				wireless)	connect_wireless ;;
 				update)		pacman -Syu --noconfirm ;;
-				/)				mnt='/'; disk=$host; search_disks=0 ; break ;;
+				#/)				mnt='/'; disk=$host; search_disks=0 ; break ;;
+				/)				disk=$host; search_disks=0 ; break ;;
 				refresh) 	break;	;;
 				logout)		killall systemd ;;
 				poweroff)	poweroff ;;
@@ -299,7 +302,11 @@ choose_disk () {
 				quit) 		echo -e "\nQuitting!"; exit ;;
 				edit)			vim $arch_path/$arch_file; exit ;;
 				'')   		echo -e "\nInvalid option!\n" ; break ;;
+
+				# This option is the chosen disk
+
 				*)    		search_disks=0; mnt='/mnt'; break; ;;
+
 			esac
 		done
 
