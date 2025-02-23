@@ -450,8 +450,8 @@ sleep 2
 
 mount_disk () {
 
-	fstype="$(lsblk -n -o FSTYPE $disk$rootPart)"
-	echo "File type: $fstype"
+	#fstype="$(lsblk -n -o FSTYPE $disk$rootPart)"
+	#echo "File type: $fstype"
 
 	[ "$mnt" = "" ] && return
 
@@ -1876,11 +1876,28 @@ clone () {
 	mount_disk
 
 	echo -e "\n$1 $3 -> $4. Please be patient...\n"
-/disk
-nn
-	#rsync $2 --exclude=/boot/ --exclude=/efi/ --exclude=/etc/fstab/ --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
 	
-	rsync $2 --exclude=/root.squashfs --exclude=/home/$user/.cache/ --exclude /home/$user/.local/share/Trash/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=$mnt/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=$mnt/ $3 $4
+	
+	#rsync_excludes="--exclude=/efi/ --exclude=/boot/ --exclude=/root.squashfs --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/"
+	rsync_excludes="--exclude=/boot/ --exclude=/efi/ --exclude=/etc/fstab/ --exclude=/root.squashfs --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/"
+
+	rsync --dry-run $2 -v $rsync_excludes $3 $4 | less
+	#echo rsync --dry-run $2 $rsync_excludes $3 $4 
+
+
+
+		echo -e "\nType 'y' to proceed with rsync or any other key to exit..."
+		read choice
+
+		if [[ $choice = y ]]; then
+
+			echo -e "\nRunning rsync...\n"
+	rsync $2 --info=progress2 $rsync_excludes $3 $4
+	
+		else
+			echo "Exiting."
+		fi
+
 
 	setup_fstab
   	install_grub
@@ -1894,8 +1911,6 @@ nn
 take_snapshot () {
 
 	mount_disk
-	
-	ls -1N $mnt$snapshot_dir/
 	
 	filename=$(date +"%Y-%m-%d @ %H:%M:%S")
 
@@ -2594,10 +2609,9 @@ wipe_freespace () {
 disk_info () {
 
 	echo -ne "\nDisk: $(lsblk --output=PATH,SIZE,MODEL,TRAN -dn $disk) "
-
-	mounted_on="$(lsblk -no MOUNTPOINT $disk$rootPart)"
-
-	fstype="$(lsblk -n -o FSTYPE $disk$rootPart)"
+	
+	#mounted_on="$(lsblk -no MOUNTPOINT $disk$rootPart)"
+	#fstype="$(lsblk -n -o FSTYPE $disk$rootPart)"
 
 	if [[ "$mounted_on" = "" ]]; then
 		echo "(unmounted)"
@@ -2840,10 +2854,11 @@ else
 	choose_disk
 fi
 
-
 check_viable_disk
+echo "DISK INFO"
 disk_info
 
+echo "CHECK ONLINE"
 check_online
 
 
@@ -3039,7 +3054,7 @@ echo
                 						quit|1)			echo "Quitting!"; break ;;
 											unsquash|2)		extract_archive ;;
 											clone|3)			create_partitions
-																clone Cloning "-av --del" / $mnt/
+																clone Cloning '-a --del' / $mnt/
 
 							[ "$fstype" = "btrfs" ] && pacstrap_install btrfs-progs grub-btrfs
 							[ "$fstype" = "xfs" ] && pacstrap_install xfsprogs
@@ -3050,8 +3065,8 @@ echo
 
    														;;
 
-											clone|4)			clone Cloning "-av --del" / $mnt/ ;; 
-											clone|5)			clone Cloning "-av --del" $mnt/ / ;;
+											clone|4)			clone Cloning '-a --del' / $mnt/ ;; 
+											clone|5)			clone Cloning '-axHAXvSW --del' $mnt/ / ;;
 											copy|6)			clone Copying -av / $mnt/ ;;
 											copy|7)			clone Copying -av $mnt/ / ;;
 											copy|8)			clone Copying -av /home $mnt/ ;;
