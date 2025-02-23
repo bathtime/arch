@@ -849,16 +849,16 @@ EOF2
 	#fi
 
 	# Remove grub os-prober message
-	sed -i 's/grub_warn/#grub_warn/g' $mnt/etc/grub.d/30_os-prober
+	#sed -i 's/grub_warn/#grub_warn/g' $mnt/etc/grub.d/30_os-prober
 
 	###  Offer readonly grub booting option  ###
-	cp $mnt/etc/grub.d/10_linux $mnt/etc/grub.d/10_linux-readonly
-	sed -i 's/\"\$title\"/\"\$title \(readonly\)\"/g' $mnt/etc/grub.d/10_linux-readonly
-	sed -i 's/ rw / ro /g' $mnt/etc/grub.d/10_linux-readonly
+	#cp $mnt/etc/grub.d/10_linux $mnt/etc/grub.d/10_linux-readonly
+	#sed -i 's/\"\$title\"/\"\$title \(readonly\)\"/g' $mnt/etc/grub.d/10_linux-readonly
+	#sed -i 's/ rw / ro /g' $mnt/etc/grub.d/10_linux-readonly
 
-	cp $mnt/etc/grub.d/10_linux $mnt/etc/grub.d/10_linux-nomodeset
-	sed -i 's/\"\$title\"/\"\$title \(nomodeset\)\"/g' $mnt/etc/grub.d/10_linux-nomodeset
-	sed -i 's/ rw / rw nomodeset /g' $mnt/etc/grub.d/10_linux-nomodeset
+	#cp $mnt/etc/grub.d/10_linux $mnt/etc/grub.d/10_linux-nomodeset
+	#sed -i 's/\"\$title\"/\"\$title \(nomodeset\)\"/g' $mnt/etc/grub.d/10_linux-nomodeset
+	#sed -i 's/ rw / rw nomodeset /g' $mnt/etc/grub.d/10_linux-nomodeset
 
 
 	if [[ $mnt = '' ]]; then
@@ -1895,34 +1895,36 @@ clone () {
 	mount_disk
 
 	echo -e "\n$1 $3 -> $4. Please be patient...\n"
-
-	rsync_excludes=" --exclude=/etc/fstab --exclude=/etc/default/grub --exclude=/etc/grub.d/ --exclude=/boot/ --exclude=/efi/ --exclude=/etc/fstab/ --exclude=/root.squashfs --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/"
-
-	echo rsync --dry-run $2 -v $rsync_excludes $3 $4
-
-	rsync --dry-run $2 -v $rsync_excludes $3 $4 | less
-	#echo rsync --dry-run $2 $rsync_excludes $3 $4 
-
-
-
-		echo -e "\nType 'y' to proceed with rsync or any other key to exit..."
-		read choice
-
-		if [[ $choice = y ]]; then
-
-			echo -e "\nRunning rsync...\n"
-	rsync $2 --info=progress2 $rsync_excludes $3 $4
 	
+	rsync_excludes=" --exclude=/etc/fstab --exclude=/etc/default/grub --exclude=/root.squashfs --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/user/.cache/ --exclude=/home/user/.local/share/Trash/"
 
-	setup_fstab
-  	install_grub
-	mkinitcpio -P
 
-		else
-			echo "Exiting."
-		fi
+	#rsync --dry-run -avSW --del $rsync_excludes $3 $4 | less
+	rsync --dry-run $2 -v $rsync_excludes $3 $4 | less
 
-	#echo -e "\nYou may need to generate /etc/fstab and install a bootloader at this point!\n"
+	echo -e "\nType 'y' to proceed with rsync or any other key to exit..."
+	read choice
+
+	if [[ $choice = y ]]; then
+
+		echo -e "\nRunning rsync...\n"
+	
+		#rsync -aSW --info=progress2 $rsync_excludes $3 $4
+		rsync $2 --info=progress2 $rsync_excludes $3 $4
+
+		#if [[ $4 = '/' ]]; then
+		#	pacman -S linux
+		#else
+		#	arch-chroot $mnt pacman -S linux
+		#fi
+
+		setup_fstab
+  		install_grub
+		mkinitcpio -P
+
+	else
+		echo "Exiting."
+	fi
 
 }
 
@@ -2874,10 +2876,9 @@ else
 fi
 
 check_viable_disk
-echo "DISK INFO"
+
 disk_info
 
-echo "CHECK ONLINE"
 check_online
 
 
@@ -3073,7 +3074,7 @@ echo
                 						quit|1)			echo "Quitting!"; break ;;
 											unsquash|2)		extract_archive ;;
 											clone|3)			create_partitions
-																clone Cloning '-a --del' / $mnt/
+																clone Cloning '-aSW --del' / $mnt/
 
 							[ "$fstype" = "btrfs" ] && pacstrap_install btrfs-progs grub-btrfs
 							[ "$fstype" = "xfs" ] && pacstrap_install xfsprogs
@@ -3084,14 +3085,14 @@ echo
 
    														;;
 
-											clone|4)			clone Cloning '-a --del' / $mnt/ ;; 
-											clone|5)			clone Cloning '-axHAXvSW --del' $mnt/ / ;;
-											copy|6)			clone Copying -av / $mnt/ ;;
-											copy|7)			clone Copying -av $mnt/ / ;;
-											copy|8)			clone Copying -av /home $mnt/ ;;
-											copy|9)			clone Copying -av $mnt/home / ;;
-											update|10)		clone Updating -auv / $mnt/
-																clone Updating -auv $mnt/ / ;;
+											clone|4)			clone Cloning '-aSW --del' / $mnt/ ;; 
+											clone|5)			clone Cloning '-aSW --del' $mnt/ / ;;
+											copy|6)			clone Copying -aSW / $mnt/ ;;
+											copy|7)			clone Copying -aSW $mnt/ / ;;
+											copy|8)			clone Copying -aSW /home $mnt/ ;;
+											copy|9)			clone Copying -aSW $mnt/home / ;;
+											update|10)		clone Updating -auSW / $mnt/
+																clone Updating -auSW $mnt/ / ;;
 											wipe|11)			wipe_disk zero ;;
 											wipe|12)			wipe_disk urandom ;;
 											wipe-free|13)	wipe_freespace ;;
