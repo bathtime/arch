@@ -89,7 +89,7 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
-fstype='btrfs'			# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
+fstype='ext4'			# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
 subvols=()					# used for btrfs 	TODO: bcachefs
 snapshot_dir="/.snapshots"
 encrypt=false
@@ -712,9 +712,9 @@ choose_initramfs () {
 		mkinitcpio|2)	pacstrap_install mkinitcpio
 
 							if [[ $mnt = '' ]]; then
-								mkinitcpio -o
+								mkinitcpio -P
 							else
-								arch-chroot $mnt mkinitcpio -o
+								arch-chroot $mnt mkinitcpio -P
 							fi
 
 							;;
@@ -1893,6 +1893,8 @@ clone () {
 
 	check_on_root
 	mount_disk
+
+	check_pkg rsync
 
 	echo -e "\n$1 $3 -> $4. Please be patient...\n"
 	
