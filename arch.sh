@@ -89,7 +89,7 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
-fstype='ext4'			# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
+fstype='f2fs'			# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
 subvols=()					# used for btrfs 	TODO: bcachefs
 snapshot_dir="/.snapshots"
 encrypt=false
@@ -1918,9 +1918,9 @@ clone () {
 		#	arch-chroot $mnt pacman -S linux
 		#fi
 
-		setup_fstab
+#		setup_fstab
   		install_grub
-		mkinitcpio -P
+#		mkinitcpio -P
 
 	else
 		echo "Exiting."
