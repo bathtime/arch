@@ -263,7 +263,7 @@ choose_disk () {
 		echo -e "\nDrives found (current mount: /):\n"
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g"
-		choices='quit edit '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' /' 
+		choices='quit edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / logout poweroff suspend hibernate' 
 		
 
 		echo -e "\nWhich drive?\n"
@@ -273,7 +273,13 @@ choose_disk () {
 			case $disk in
 				quit)			exit ;;
 				edit)			vim $arch_path/$arch_file; exit ;;
-				/)				disk=$host; break ;;
+				$)				sudo -u $user bash ;;
+				\#)			bash ;;
+				logout)		killall systemd ;;
+				poweroff)	poweroff ;;
+				suspend)		echo mem > /sys/power/state ;;
+				hibernate)	echo disk > /sys/power/state ;;
+				/)				disk=$host; search_disks=0; break ;;
 				*)    		if [[ $disk = '' ]]; then
 						   		echo -e "\nInvalid option!\n"
 								else
@@ -282,10 +288,11 @@ choose_disk () {
 									else
 										mnt='/mnt'
 									fi
+									search_disks=0
 									break
 								fi
 								;;
-				'')   		echo -e "\nInvalid option!\n" ;;
+					'')   		echo -e "\nInvalid option!\n" ;;
 			esac
 
 		done
@@ -309,52 +316,6 @@ choose_disk () {
 
 
 
-
-		choices=$(echo -e "\nexit\nedit\nbuild\n$\n#\nclean\nwireless\nupdate\nrefresh\nlogout\nreboot\nsuspend\nhibernate\npoweroff\nsnapshot\nrestore\nstats\nquit")
-
-	echo -e "\nPlease chooose:\n"
-
-		select choice in $choices
-		do
-			case $choice in
-				$)				sudo -u $user bash ;;
-				\#)			bash ;;
-				clean)		echo -e "\nCleaning files...\n"
-								rm -rfv /var/log /var/tmp /tmp/{*,.*} /home/$user/.cache/{*,.*} \
-								/root/.cache/{*,.*} /root/.bash_history 
-								
-
-								echo
-								echo -e "\nClearing pagecache, dentries, and inodes...\n\nBefore:"
-								free -h
-								sudo sync; echo 3 > /proc/sys/vm/drop_caches
-								echo -e "\nAfter:"
-								free -h
-								;;
-				wireless)	connect_wireless ;;
-				update)		pacman -Syu --noconfirm ;;
-				refresh) 	search_disks=0	;;
-				logout)		killall systemd ;;
-				poweroff)	poweroff ;;
-				suspend)		echo mem > /sys/power/state ;;
-				hibernate)	echo disk > /sys/power/state ;;
-				snapshot)	take_snapshot ;;
-				restore)		restore_snapshot ;;
-				htop)			su - user -c /usr/bin/htop ;;
-				stats)		echo; free -h; echo
-								systemd-analyze | sed 's/in .*=/in/;s/graph.*//'
-								;;
-				reboot)		reboot ;;
-				exit) 		break ;;
-				quit) 		echo -e "\nQuitting!"; exit ;;
-				edit)			vim $arch_path/$arch_file; exit ;;
-				build)		search_disks=0 ; break ;;
-				*)   			echo -e "\nInvalid * option!\n" ;;
-				'')   		echo -e "\nInvalid option!\n" ;;
-			esac
-
-		done
-	
 	done
 }
 
@@ -2578,6 +2539,20 @@ wipe_disk () {
 
 }
 
+
+clean () {
+							echo -e "\nCleaning files...\n"
+								rm -rfv /var/log /var/tmp /tmp/{*,.*} /home/$user/.cache/{*,.*} \
+								/root/.cache/{*,.*} /root/.bash_history 
+								
+
+								echo
+								echo -e "\nClearing pagecache, dentries, and inodes...\n\nBefore:"
+								free -h
+								sudo sync; echo 3 > /proc/sys/vm/drop_caches
+								echo -e "\nAfter:"
+								free -h
+}
 
 
 wipe_freespace () {
