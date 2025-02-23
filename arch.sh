@@ -1895,6 +1895,8 @@ take_snapshot () {
 
 	mount_disk
 	
+	ls -1N $mnt$snapshot_dir/
+	
 	filename=$(date +"%Y-%m-%d @ %H:%M:%S")
 
 	if [[ $1 = '' ]]; then
