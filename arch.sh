@@ -268,7 +268,7 @@ choose_disk () {
 
 		echo -e "\nWhich drive?\n"
 
-		select disk in $choices
+	select disk in $choices
 		do
 			case $disk in
 				quit)			exit ;;
@@ -302,7 +302,7 @@ choose_disk () {
 
 		done
 
-
+	
 	if [ "$(echo $disk | grep nvme)" ]; then
 		bootPart="p$bootPartNum"
 		espPart="p$espPartNum"
@@ -615,32 +615,35 @@ EOF
 
 hypervisor_setup () {
 
-	echo -e "\nNot tested. Run at your own risk!\n"
+	choices=(exit auto kvm vmware oracle microsoft)
 
-	hypervisor=$(systemd-detect-virt)
-
-	case $hypervisor in
-
-		kvm)			pacstrap_install qemu-guest-agent
-						systemctl --root=$mnt enable qemu-guest-agent ;;
-		vmware)		pacstrap_install open-vm-tools
-						systemctl --root=$mnt enable vmtoolsd
-						systemctl --root=$mnt enable vmware-vmblock-fuse ;;
-		oracle)		pacstrap_install virtualbox-guest-utils
-						systemctl --root=$mnt enable vboxservice ;;
-		microsoft)	pacstrap_install hyperv
-						systemctl --root=$mnt enable hv_fcopy_daemon
-						systemctl --root=$mnt enable hv_kvp_daemon
-						systemctl --root=$mnt enable hv_vss_daemon ;;
-	esac
-
+   select choice in "${choices[@]}"
+		do
+		case $choice in
+			auto)			hypervisor=$(systemd-detect-virt) 
+							echo "Detected: $hypervisor" ;;
+			kvm)			pacstrap_install qemu-guest-agent
+							systemctl --root=$mnt enable qemu-guest-agent ;;
+			vmware)		pacstrap_install open-vm-tools
+							systemctl --root=$mnt enable vmtoolsd
+							systemctl --root=$mnt enable vmware-vmblock-fuse ;;
+			oracle)		pacstrap_install virtualbox-guest-utils
+							systemctl --root=$mnt enable vboxservice ;;
+			microsoft)	pacstrap_install hyperv
+							systemctl --root=$mnt enable hv_fcopy_daemon
+							systemctl --root=$mnt enable hv_kvp_daemon
+							systemctl --root=$mnt enable hv_vss_daemon ;;
+			exit)			break ;;
+			*)    		echo -e "\nInvalid option!\n" ;;
+			'')   		echo -e "\nInvalid option!\n" ;;
+		esac
+	done
 }
 
 
 
 setup_fstab () {
 
-	#check_on_root
 	mount_disk
 
 	echo -e "\nCreating new /etc/fstab file...\n"
@@ -789,7 +792,6 @@ EOF
 
 install_grub () {
 
-	check_on_root
 	mount_disk
 
 
@@ -800,12 +802,11 @@ install_grub () {
    echo "$SWAP_UUID"
 
 	[[ $fstype = bcachefs ]] && extra_ops='rootfstype=bcachefs'
-	
-	arch-chroot $mnt /bin/bash -e << EOF
 
-	grub-install --target=x86_64-efi --efi-directory=$efi_path --bootloader-id=GRUB --removable
 
-	cat > /etc/default/grub << EOF2
+	grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --boot-directory=$mnt/boot
+
+	cat > $mnt/etc/default/grub << EOF2
 
 GRUB_DISTRIBUTOR=""
 GRUB_DEFAULT=saved
@@ -832,21 +833,20 @@ EOF2
 	#fi
 
 	# Remove grub os-prober message
-	sed -i 's/grub_warn/#grub_warn/g' /etc/grub.d/30_os-prober
+	sed -i 's/grub_warn/#grub_warn/g' $mnt/etc/grub.d/30_os-prober
 
 	###  Offer readonly grub booting option  ###
-	cp /etc/grub.d/10_linux /etc/grub.d/10_linux-readonly
-	sed -i 's/\"\$title\"/\"\$title \(readonly\)\"/g' /etc/grub.d/10_linux-readonly
-	sed -i 's/ rw / ro /g' /etc/grub.d/10_linux-readonly
+	cp $mnt/etc/grub.d/10_linux $mnt/etc/grub.d/10_linux-readonly
+	sed -i 's/\"\$title\"/\"\$title \(readonly\)\"/g' $mnt/etc/grub.d/10_linux-readonly
+	sed -i 's/ rw / ro /g' $mnt/etc/grub.d/10_linux-readonly
 
-	cp /etc/grub.d/10_linux /etc/grub.d/10_linux-nomodeset
-	sed -i 's/\"\$title\"/\"\$title \(nomodeset\)\"/g' /etc/grub.d/10_linux-nomodeset
-	sed -i 's/ rw / rw nomodeset /g' /etc/grub.d/10_linux-nomodeset
+	cp $mnt/etc/grub.d/10_linux $mnt/etc/grub.d/10_linux-nomodeset
+	sed -i 's/\"\$title\"/\"\$title \(nomodeset\)\"/g' $mnt/etc/grub.d/10_linux-nomodeset
+	sed -i 's/ rw / rw nomodeset /g' $mnt/etc/grub.d/10_linux-nomodeset
 
 
-	grub-mkconfig -o /boot/grub/grub.cfg
+	grub-mkconfig -o $mnt/boot/grub/grub.cfg
 
-EOF
 
 	# btrfs cannot store saved default so will result in spare file error
 	if [[ $fstype = btrfs ]] && [[ $boot = '' ]]; then
@@ -1061,8 +1061,10 @@ setup_user () {
 	# TODO: find a way to create symbolic link from host
 	if [[ $mnt = '' ]]; then
 		ln -s $mnt/tmp $mnt/home/$user/.cache
+		visudo -c
 	else
 		arch-chroot $mnt ln -s /tmp /home/$user/.cache
+		arch-chroot $mnt visudo -c
 	fi
 
 	chown -R $user:$user $mnt/home/$user/.cache
@@ -1078,7 +1080,7 @@ setup_user () {
 	echo "$user ALL = NOPASSWD: /usr/local/bin/arch.sh" > $mnt/etc/sudoers.d/10-arch
 	chmod 0440 $mnt/etc/sudoers.d/{1-wheel,10-arch}
 
-	arch-chroot $mnt visudo -c
+	
 	
 	# Autologin to tty1
 	mkdir -p $mnt/etc/systemd/system/getty@tty1.service.d
@@ -1177,7 +1179,6 @@ PS1="$ "' > $mnt/home/$user/.bashrc
 
 setup_iwd () {
 
-	check_on_root
 	mount_disk
 
 
@@ -1194,9 +1195,10 @@ EnableNetworkConfiguration=true
 [Scan]
 DisablePeriodicScan=true' > $mnt/etc/iwd/main.conf
 
-	[ -d /var/lib/dhcpcd ] && cp -r /var/lib/dhcpcd $mnt/var/lib/
-	[ -d /var/lib/iwd ] && cp -r /var/lib/iwd $mnt/var/lib/
-
+	if [[ ! $mnt = '' ]]; then
+		[ -d /var/lib/dhcpcd ] && cp -r /var/lib/dhcpcd $mnt/var/lib/
+		[ -d /var/lib/iwd ] && cp -r /var/lib/iwd $mnt/var/lib/
+	fi
 
 	echo "Enabling network services..."
 	systemctl --root=$mnt enable iwd.service
@@ -1205,7 +1207,6 @@ DisablePeriodicScan=true' > $mnt/etc/iwd/main.conf
 
 setup_networkmanager () {
 
-   check_on_root
    mount_disk
 
    setup_dhcp
@@ -1217,14 +1218,14 @@ setup_networkmanager () {
 	#	echo "[device]
 	#wifi.backend=iwd" > $mnt/etc/NetworkManager/conf.d/wifi_backend.conf
 	
-	[ -d /etc/NetworkManager ] && cp -r /etc/NetworkManager $mnt/etc/ 
-
+	if [[ -d /etc/NetworkManager ]] && [[ ! $mnt = '' ]]; then
+		cp -r /etc/NetworkManager $mnt/etc/ 
+	fi
 }
 
 
 setup_wpa () {
 
-	check_on_root
 	mount_disk
 
 	setup_dhcp
@@ -1237,8 +1238,10 @@ setup_wpa () {
 
 	mkdir -p $mnt/etc/wpa_supplicant
 	
-	[ -d /etc/wpa_supplicant ] && cp -r /etc/wpa_supplicant $mnt/etc/ 
-	
+	if [[ -d /etc/wpa_supplicant ]] && [[ ! $mnt = '' ]]; then
+		cp -r /etc/wpa_supplicant $mnt/etc/ 
+	fi
+
 	systemctl --root=$mnt enable wpa_supplicant@wlo1.service
 
 }
@@ -1247,7 +1250,6 @@ setup_wpa () {
 
 setup_dhcp () {
 
-	check_on_root
 	mount_disk
 
 
@@ -1451,7 +1453,6 @@ setup_snapshots () {
 
 install_tweaks () {
 
-	check_on_root
 	mount_disk
 
 	
@@ -1532,7 +1533,6 @@ EOF
 
 install_liveroot () {
 
-	check_on_root
 	mount_disk
 
 	touch $mnt/etc/vconsole.conf
@@ -1809,7 +1809,11 @@ MODULES_DECOMPRESS="no"' > $mnt/etc/mkinitcpio.conf
 #default_config="/etc/mkinitcpio.conf"
 #default_image="/boot/initramfs-linux.img"' > $mnt/etc/mkinitcpio.d/linux.preset
 
-	arch-chroot $mnt mkinitcpio -P 
+	if [[ $mnt = '' ]]; then
+		mkinitcpio -P 
+	else
+		arch-chroot $mnt mkinitcpio -P 
+	fi
 
 	# So systemd won't remount as 'rw'
 	#systemctl --root=$mnt mask systemd-remount-fs.service
