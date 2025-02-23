@@ -1079,7 +1079,7 @@ EOF
 	echo "$user ALL = NOPASSWD: /usr/local/bin/arch.sh" > $mnt/etc/sudoers.d/10-arch
 	chmod 0440 $mnt/etc/sudoers.d/{1-wheel,10-arch}
 
-	#arch-chroot $mnt visudo -c
+	arch-chroot $mnt visudo -c
 	
 	# Autologin to tty1
 	mkdir -p $mnt/etc/systemd/system/getty@tty1.service.d
