@@ -189,7 +189,7 @@ unmount_disk () {
 	#error_check 0 
 	#error_bypass=1
 
-	[ "$mnt" = '/' ] && return
+	[ "$mnt" = '' ] && return
 
 
 	if [[ $(mount | grep -E $disk$espPart | grep -E "on $mnt$efi_path") ]]; then
@@ -263,7 +263,7 @@ choose_disk () {
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g"
 		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-		disks=$(echo -e "\nquit\nedit\n$\n#\n$disks\n/\nclean\nwireless\nupdate\nrefresh\nlogout\nreboot\nsuspend\nhibernate\npoweroff\nsnapshot\nrestore")
+		disks=$(echo -e "\nquit\nedit\n$\n#\n$disks\n/\nclean\nwireless\nupdate\nrefresh\nlogout\nreboot\nsuspend\nhibernate\npoweroff\nsnapshot\nrestore\nstats")
 
 		echo -e "\nWhich drive?\n"
 
@@ -296,6 +296,9 @@ choose_disk () {
 				snapshot)	take_snapshot ;;
 				restore)		restore_snapshot ;;
 				htop)			su - user -c /usr/bin/htop ;;
+				stats)		echo; free -h; echo
+								systemd-analyze | sed 's/in .*=/in/;s/graph.*//'
+								;;
 				reboot)		reboot ;;
 				quit) 		echo -e "\nQuitting!"; exit ;;
 				edit)			vim $arch_path/$arch_file; exit ;;
@@ -344,6 +347,7 @@ delete_partitions () {
 create_partitions () {
 
 	check_on_root
+
 	delete_partitions
 	
 	systemctl daemon-reload
@@ -439,11 +443,6 @@ sleep 2
 
 	fi
 	
-	#mkdir -p /root/.gnupg
-	#chmod 700 /root/.gnupg
-	#find /root/.gnupg -type f -exec chmod 600 {} \;
-   #find /root/.gnupg -type d -exec chmod 700 {} \;
-	
 	unmount_disk
 	mount_disk
 
@@ -452,10 +451,11 @@ sleep 2
 
 mount_disk () {
 
-	[ "$mnt" = "/" ] && return
-
 	fstype="$(lsblk -n -o FSTYPE $disk$rootPart)"
-echo "File type: $fstype"
+	echo "File type: $fstype"
+
+	[ "$mnt" = "" ] && return
+
 	#error_check 0
 	check_on_root
 
@@ -650,13 +650,14 @@ hypervisor_setup () {
 
 setup_fstab () {
 
-	check_on_root
+	#check_on_root
 	mount_disk
 
 	echo -e "\nCreating new /etc/fstab file...\n"
 
-	genfstab -U $mnt > $mnt/etc/fstab
-	#grep /dev/$disk /proc/mounts > $mnt/etc/fstab2
+	genfstab -U $mnt/ > $mnt/etc/fstab
+	grep $disk /proc/mounts > $mnt/etc/fstab.bak
+
 
 	###  Tweak the resulting /etc/fstab generated  ###
 
@@ -1875,6 +1876,8 @@ nn
 
 take_snapshot () {
 
+	mount_disk
+	
 	filename=$(date +"%Y-%m-%d @ %H:%M:%S")
 
 	if [[ $1 = '' ]]; then
@@ -1897,7 +1900,10 @@ take_snapshot () {
 
 restore_snapshot () {
 
-	#bcachefs fsck $disk$rootPart
+	mount_disk
+	
+	#bcachefs fsck $mnt$disk$rootPart
+	
 
 	echo -e "\nList of snapshots:\n"
 
@@ -1906,7 +1912,7 @@ restore_snapshot () {
 	echo -e "\nWhich snapshot would you like to recover?\n"
 	read snapshot
 
-	if [ -d "$snapshot_dir/$snapshot" ] && [ ! "$snapshot" = '' ]; then
+	if [ -d "$mnt$snapshot_dir/$snapshot" ] && [ ! "$snapshot" = '' ]; then
 
 		echo -e "\nRunning dry run first..."
 		sleep 1
@@ -1921,10 +1927,11 @@ restore_snapshot () {
 		#-W  : improve the copy speed by not calculating deltas/diffs of the files
 		#---numeric-ids : avoid mapping uid/gid values by user/group name
 		#--info=progress2 : instead of --progress is useful for large transfers
+		# arch recommended: -aAXHv
 
-		rsync_params="-avxHAXSW --del --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/mnt/ --exclude=$mnt/"
+		rsync_params="-axHAXvSW --del --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/"
 		
-		rsync --dry-run $rsync_params "$snapshot_dir/$snapshot/" / | less
+		rsync --dry-run $rsync_params "$mnt$snapshot_dir/$snapshot/" $mnt/ | less
 
 		echo -e "\nType 'y' to proceed with rsync or any other key to exit..."
 		read choice
