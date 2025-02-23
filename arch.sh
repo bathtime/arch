@@ -89,7 +89,7 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
-fstype='bcachefs'			# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
+fstype='btrfs'			# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
 subvols=()					# used for btrfs 	TODO: bcachefs
 snapshot_dir="/.snapshots"
 encrypt=false
@@ -1876,10 +1876,10 @@ clone () {
 	mount_disk
 
 	echo -e "\n$1 $3 -> $4. Please be patient...\n"
-	
-	
-	#rsync_excludes="--exclude=/efi/ --exclude=/boot/ --exclude=/root.squashfs --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/"
-	rsync_excludes="--exclude=/boot/ --exclude=/efi/ --exclude=/etc/fstab/ --exclude=/root.squashfs --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/"
+
+	rsync_excludes=" --exclude=/etc/fstab --exclude=/etc/default/grub --exclude=/etc/grub.d/ --exclude=/boot/ --exclude=/efi/ --exclude=/etc/fstab/ --exclude=/root.squashfs --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/"
+
+	echo rsync --dry-run $2 -v $rsync_excludes $3 $4
 
 	rsync --dry-run $2 -v $rsync_excludes $3 $4 | less
 	#echo rsync --dry-run $2 $rsync_excludes $3 $4 
@@ -1894,14 +1894,14 @@ clone () {
 			echo -e "\nRunning rsync...\n"
 	rsync $2 --info=progress2 $rsync_excludes $3 $4
 	
-		else
-			echo "Exiting."
-		fi
-
 
 	setup_fstab
   	install_grub
 	mkinitcpio -P
+
+		else
+			echo "Exiting."
+		fi
 
 	#echo -e "\nYou may need to generate /etc/fstab and install a bootloader at this point!\n"
 
