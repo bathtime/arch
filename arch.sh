@@ -1882,8 +1882,8 @@ download_script () {
 
 	echo -e "\nDowloading script from Github..."
 
-	curl -sL https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > $arch_path/$arch_file
-	chmod +x $arch_path/$arch_file
+	curl -sL https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > $mnt/$arch_path/$arch_file
+	chmod +x $mnt/$arch_path/$arch_file
 
 }
 
@@ -1899,8 +1899,7 @@ clone () {
 	rsync_excludes=" --exclude=/etc/fstab --exclude=/etc/default/grub --exclude=/root.squashfs --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/user/.cache/ --exclude=/home/user/.local/share/Trash/"
 
 
-	#rsync --dry-run -avSW --del $rsync_excludes $3 $4 | less
-	rsync --dry-run $2 -v $rsync_excludes $3 $4 | less
+	rsync --dry-run -v $2 $rsync_excludes $3 $4 | less
 
 	echo -e "\nType 'y' to proceed with rsync or any other key to exit..."
 	read choice
@@ -1909,7 +1908,6 @@ clone () {
 
 		echo -e "\nRunning rsync...\n"
 	
-		#rsync -aSW --info=progress2 $rsync_excludes $3 $4
 		rsync $2 --info=progress2 $rsync_excludes $3 $4
 
 		#if [[ $4 = '/' ]]; then
@@ -2554,7 +2552,7 @@ last_modified () {
 edit_arch () {
 
 	if [ "$(ls $arch_path | grep $arch_file)" ]; then
-		vim $arch_path/$arch_file && exit
+		vim $mnt$arch_path/$arch_file && exit
 	fi
 
 }
