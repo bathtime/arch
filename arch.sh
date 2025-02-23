@@ -259,7 +259,7 @@ choose_disk () {
 
 	while [ $search_disks -eq 1 ]; do
 
-		echo -e "\nDrives found:\n"
+		echo -e "\nDrives found (current mount: /):\n"
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g"
 		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
