@@ -695,13 +695,12 @@ setup_fstab () {
 
 choose_initramfs () {
 
-	check_on_root
 	mount_disk
 
 	if [ "$1" ]; then
 		choice=$1
 	else
-		#choiceInitramfs="quit mkinitcpio dracut booster"
+
 		echo -e "\nWhich initramfs would you like to install?\n
 1. quit 2. mkinitcpio 3. dracut 4. booster\n"
 
@@ -710,7 +709,15 @@ choose_initramfs () {
 
 	case $choice in
 		quit|1)			;;
-		mkinitcpio|2)	pacstrap_install mkinitcpio ;;
+		mkinitcpio|2)	pacstrap_install mkinitcpio
+
+							if [[ $mnt = '' ]]; then
+								mkinitcpio -o
+							else
+								arch-chroot $mnt mkinitcpio -o
+							fi
+
+							;;
 		dracut|3)		pacstrap_install dracut 
 
 							echo 'hostonly="yes"
@@ -718,21 +725,30 @@ compress="lz4"
 add_drivers+=" "
 omit_dracutmodules+=" "' > $mnt/etc/dracut.conf.d/myflags.conf
 
-							arch-chroot $mnt dracut -f /boot/initramfs-linux.img
-							#arch-chroot $mnt dracut -f /boot/initramfs-dracut-linux.img
+							if [[ $mnt = '' ]]; then
+								dracut -f $mnt/boot/initramfs-linux.img
+								#dracut --regenerate-all $mnt/boot/initramfs-linux.img
+								dracut -f $mnt/boot/initramfs-linux-fallback.img
+								grub-mkconfig -o $mnt/boot/grub/grub.cfg
+							else
+								arch-chroot $mnt dracut -f /boot/initramfs-linux.img
+								#arch-chroot $mnt dracut --regenerate-all /boot/initramfs-linux.img
+								arch-chroot $mnt dracut -f /boot/initramfs-linux-fallback.img
+								arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
+							fi
 
-							#arch-chroot $mnt dracut --regenerate-all /boot/initramfs-linux.img
-
-							arch-chroot $mnt dracut -f /boot/initramfs-linux-fallback.img
-
-							arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg 
 							;;
 		booster|4)		pacstrap_install booster 
 							
 							# manual build
-							#booster build mybooster.img 
-							
-							arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg ;; 
+							#booster build mybooster.img
+
+							if [[ $mnt = '' ]]; then	
+								grub-mkconfig -o $mnt/boot/grub/grub.cfg
+							else
+								arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
+							fi
+							;;
 		*)					echo -e "Invalid option!" ;;
 	esac
 
@@ -845,8 +861,11 @@ EOF2
 	sed -i 's/ rw / rw nomodeset /g' $mnt/etc/grub.d/10_linux-nomodeset
 
 
-	grub-mkconfig -o $mnt/boot/grub/grub.cfg
-
+	if [[ $mnt = '' ]]; then
+		grub-mkconfig -o $mnt/boot/grub/grub.cfg
+	else
+		arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
+	fi
 
 	# btrfs cannot store saved default so will result in spare file error
 	if [[ $fstype = btrfs ]] && [[ $boot = '' ]]; then
