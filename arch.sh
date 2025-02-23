@@ -543,7 +543,7 @@ SigLevel = Optional TrustAll
 Server = file:///var/cache/pacman/pkg/
 ' > /etc/pacman-offline.conf
 	
-	if [ ! "$mnt" = "/" ]; then
+	if [ ! $mnt = '' ]; then
 
 		cp /etc/pacman-offline.conf $mnt/etc/pacman-offline.conf
 
@@ -592,8 +592,6 @@ Server = file:///var/cache/pacman/pkg/
 	sed -i 's/#ParallelDownloads.*$/ParallelDownloads = 5/' $mnt/etc/pacman.conf
 	#sed -i 's/SigLevel    = .*$/SigLevel    = TrustAll/' $mnt/etc/pacman.conf
 
-
-
 }
 
 
@@ -601,13 +599,6 @@ auto_login () {
 
 	###  Prepare auto-login  ###
 
-	# Does a user already exist?
-	#if [ ! "$(grep ^$user $mnt/etc/passwd)" ] || [ "$1" = root ]; then
-	#	login_user=root
-	#else
-	#	login_user=$user
-	#fi
-	
 	login_user=$1
 
 	echo -e "\nCreating auto-login for $login_user.\n"
@@ -981,18 +972,20 @@ install_SYSTEMDBOOT () {
 
 general_setup () {
 
-	check_on_root
+	#check_on_root
 	mount_disk
 
 	#rm -rf $mnt/var/tmp && ln -s $mnt/tmp $mnt/var/tmp
-
-	arch-chroot $mnt printf "$password\n$password\n" | passwd
 	
+	#	echo "$password" | passwd --stdin && echo "Root password created."
+	echo "root:$password" | chpasswd --root=$mnt/ && echo "Root password created."
+
 	echo -e 'en_US.UTF-8 UTF-8\nen_US ISO-8859-1' > $mnt/etc/locale.gen  
 	echo 'LANG=en_US.UTF-8' > $mnt/etc/locale.conf
 	echo 'Arch-Linux' > $mnt/etc/hostname
 	echo 'KEYMAP=us' > $mnt/etc/vconsole.conf
-	arch-chroot $mnt ln -sf /usr/share/zoneinfo/$timezone /etc/localtime
+	#arch-chroot $mnt ln -sf /usr/share/zoneinfo/$timezone /etc/localtime
+	ln -sf $mnt/usr/share/zoneinfo/$timezone $mnt/etc/localtime
 
 	echo "127.0.0.1   localhost
 ::1         localhost
@@ -1005,8 +998,13 @@ alias vi="vim"
 alias arch="sudo /usr/local/bin/arch.sh"
 PS1="# "' > $mnt/root/.bashrc
 
-	arch-chroot $mnt hwclock --systohc
-	arch-chroot $mnt locale-gen
+	if [[ $mnt = '' ]]; then
+		hwclock --systohc
+		locale-gen
+	else
+		arch-chroot $mnt hwclock --systohc
+		arch-chroot $mnt locale-gen
+	fi
 
 	cat > $mnt/root/.vimrc << EOF
 
@@ -1032,47 +1030,38 @@ EOF
 
 setup_user () {
 
-	check_on_root
+	#check_on_root
 	mount_disk
 
-
-	#pacstrap_install "$install_user" 
-	pacstrap_install sudo 
-
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
-		arch-chroot $mnt useradd -m $user -G wheel
+	#	arch-chroot $mnt useradd -m $user -G wheel
+		useradd --root=$mnt/ -m $user -G wheel -p "$password"
 	fi
 	
-	#if [ "$fstype" = "btrfs" ]; then
-	#	mkdir -p $mnt/home/$user/.cache
-	#	chown -R $user:$user $mnt/home/$user/.cache
-	#	chattr +C -R $mnt/home/$user/.cache
-	#fi
-
-
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
 		echo -e "\nUser was not created. Exiting.\n"
 		exit
 	fi
 
-	arch-chroot $mnt /bin/bash -e << EOF
-		printf "$password\n$password\n" | passwd "$user"
-EOF
+	#arch-chroot $mnt echo "$password" | passwd $user --stdin && echo "User password changed."
 
+  # arch-chroot $mnt /bin/bash -e << EOF
+	#	rm -rf /home/$user/.cache
+	#	ln -s /tmp /home/$user/.cache
+	#	chown -R user:user /home/$user/.cache
+#EOF
 
-   arch-chroot $mnt /bin/bash -e << EOF
-		rm -rf /home/$user/.cache
-		ln -s /tmp /home/$user/.cache
-		chown -R user:user /home/$user/.cache
-		ls -la /home/$user
-EOF
+	rm -rf $mnt/home/$user/.cache
+	ln -s $mnt/tmp $mnt/home/$user/.cache
+	chown -R $user:$user $mnt/home/$user/.cache
+
 
 	mkdir -p -m 750 $mnt/etc/sudoers.d
 	echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/1-wheel
 	echo "$user ALL = NOPASSWD: /usr/local/bin/arch.sh" > $mnt/etc/sudoers.d/10-arch
 	chmod 0440 $mnt/etc/sudoers.d/{1-wheel,10-arch}
 
-	arch-chroot $mnt visudo -c
+	#arch-chroot $mnt visudo -c
 	
 	# Autologin to tty1
 	mkdir -p $mnt/etc/systemd/system/getty@tty1.service.d
@@ -1081,9 +1070,8 @@ Type=simple
 ExecStart=
 ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin $user --noclear %I 38400 linux" > $mnt/etc/systemd/system/getty@tty1.service.d/autologin.conf
 
-	#[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/user/.cache')" ] && echo "tmpfs    /home/user/.cache    tmpfs   rw,nodev,nosuid,uid=$user,size=2G   0 0" >> $mnt/etc/fstab
-
-	arch-chroot $mnt sudo -u $user mkdir -p /home/$user/.local/bin /home/$user/{Documents,Downloads}
+	#sudo -u $user mkdir -p $mnt/home/$user/.local/bin
+	sudo -u $user mkdir -p $mnt/home/$user/{.local/bin,Documents,Downloads,.local/bin}
 
 
 	echo '# If running bash
@@ -1124,39 +1112,20 @@ if [[ -z $DISPLAY && $(tty) == /dev/tty1 && $XDG_SESSION_TYPE == tty ]]; then
 fi
 
 ' > $mnt/home/$user/.bash_profile
-	arch-chroot $mnt chown user:user /home/$user/.bash_profile
 
 	touch $mnt/home/$user/.hushlogin
-	arch-chroot $mnt chown user:user /home/$user/.hushlogin
-
-	echo '[[ $- != *i* ]] && return
+		echo '[[ $- != *i* ]] && return
 alias ls="ls --color=auto"
 alias grep="grep --color=auto"
 alias vi="vim"
 alias arch="sudo /usr/local/bin/arch.sh"
 PS1="$ "' > $mnt/home/$user/.bashrc
-	arch-chroot $mnt chown user:user /home/$user/.bashrc
-
-	cat > $mnt/root/.vimrc << EOF
-
-au BufReadPost *
-    \ if line("'\"") > 0 && line("'\"") <= line("$") && &filetype != "gitcommit" |
-    \ execute("normal \`\"") |
-    \ endif
-
-set mouse=c
-
-syntax on
-
-set tabstop=3
-set shiftwidth=3
-set autoindent
-set smartindent
-
-EOF
 
 	cp $mnt/root/.vimrc $mnt/home/$user/.vimrc
-	arch-chroot $mnt chown $user:$user /home/$user/.vimrc
+
+	chown $user:$user $mnt/home/$user/{.vimrc,.hushlogin,.bash_profile,.bashrc}
+
+	ls -la $mnt/home/$user
 
 }
 
@@ -2226,6 +2195,8 @@ auto_install_user () {
 
 	auto_install_root
 	setup_user
+
+	pacstrap_install sudo
 
 	if [[ $autologin = true ]]; then
 		auto_login $user
