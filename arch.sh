@@ -277,7 +277,12 @@ choose_disk () {
 				*)    		if [[ $disk = '' ]]; then
 						   		echo -e "\nInvalid option!\n"
 								else
-									mnt='/mnt'; break
+									if [[ "$(mount | awk '/ on \/ / { print $1}' | sed 's/p*[0-9]$//g')" = $disk ]]; then
+										mnt=''
+									else
+										mnt='/mnt'
+									fi
+									break
 								fi
 								;;
 				'')   		echo -e "\nInvalid option!\n" ;;
@@ -2606,6 +2611,8 @@ disk_info () {
 
 	mounted_on="$(lsblk -no MOUNTPOINT $disk$rootPart)"
 
+	fstype="$(lsblk -n -o FSTYPE $disk$rootPart)"
+
 	if [[ "$mounted_on" = "" ]]; then
 		echo "(unmounted)"
 	elif [[ "$mounted_on" = "/" ]]; then
@@ -2614,7 +2621,7 @@ disk_info () {
 		echo "(mounted on $(lsblk -no MOUNTPOINT $disk$rootPart))"
 	fi
 
-	echo "mount: $mounted_on"
+   echo "File type: $fstype"
 
 }
 
