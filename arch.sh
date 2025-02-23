@@ -267,7 +267,7 @@ choose_disk () {
 
 		echo -e "\nWhich drive?\n"
 
-		mnt='/'
+		mnt=''
 
 		select disk in $disks
 		do
@@ -288,8 +288,6 @@ choose_disk () {
 								;;
 				wireless)	connect_wireless ;;
 				update)		pacman -Syu --noconfirm ;;
-				#/)				mnt='/'; disk=$host; search_disks=0 ; break ;;
-				/)				disk=$host; search_disks=0 ; break ;;
 				refresh) 	break;	;;
 				logout)		killall systemd ;;
 				poweroff)	poweroff ;;
@@ -301,12 +299,10 @@ choose_disk () {
 				reboot)		reboot ;;
 				quit) 		echo -e "\nQuitting!"; exit ;;
 				edit)			vim $arch_path/$arch_file; exit ;;
-				'')   		echo -e "\nInvalid option!\n" ; break ;;
-
-				# This option is the chosen disk
-
+				/)				disk=$host; search_disks=0 ; break ;;
+								# option below is the chosen disk
 				*)    		search_disks=0; mnt='/mnt'; break; ;;
-
+				'')   		echo -e "\nInvalid option!\n" ; break ;;
 			esac
 		done
 
@@ -1889,9 +1885,11 @@ take_snapshot () {
 	fi
 
 	[[ ! $snapshotname = '' ]] && snapshotname=" - $snapshotname"
-	
-	bcachefs subvolume snapshot "$mnt$snapshot_dir/$filename$snapshotname" && echo -e "\nCreated snapshot: $mnt$snapshot_dir/$filename$snapshotname\n"	
+	echo $mnt
 
+	bcachefs subvolume snapshot "$mnt$snapshot_dir/$filename$snapshotname"
+	echo -e "\nCreated snapshot: $mnt$snapshot_dir/$filename$snapshotname\n"	
+	
 	ls -1N $mnt$snapshot_dir/
 
 }
