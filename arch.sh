@@ -1035,8 +1035,21 @@ setup_user () {
 	pacstrap_install sudo
 
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
-	#	arch-chroot $mnt useradd -m $user -G wheel
-		useradd --root=$mnt/ -m $user -G wheel -p "$password"
+
+		if [[ $mnt = '' ]]; then
+			echo "$user:$password" | chpasswd --root=$mnt/ && echo "User password created."
+			useradd --root=$mnt/ -m $user -G wheel -p "$password"
+		else
+#			arch-chroot $mnt useradd -m $user -G wheel
+#			arch-chroot $mnt echo "$password" | passwd $user --stdin
+arch-chroot $mnt useradd -m $user -G wheel
+
+		arch-chroot $mnt /bin/bash -e << EOF
+		printf "$password\n$password\n" | passwd "$user"
+EOF
+
+		fi
+
 	fi
 	
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
