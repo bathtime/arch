@@ -130,7 +130,7 @@ offline=0
 reinstall=0
 copy_on_host='1'				# Set to '0' when installing from an arch iso in ram
 
-initramfs='mkinitcpio'		# mkinitcpio, dracut, booster
+initramfs='booster'		# mkinitcpio, dracut, booster
 
 wlan="wlan0"
 wifi_ssid=""
@@ -799,6 +799,8 @@ install_grub () {
 	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
    echo "$SWAP_UUID"
 
+	[[ $fstype = bcachefs ]] && extra_ops='rootfstype=bcachefs'
+	
 	arch-chroot $mnt /bin/bash -e << EOF
 
 	grub-install --target=x86_64-efi --efi-directory=$efi_path --bootloader-id=GRUB --removable
@@ -810,7 +812,7 @@ GRUB_DEFAULT=saved
 GRUB_SAVEDEFAULT=true
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
-GRUB_CMDLINE_LINUX="$kernel_ops resume=UUID=$SWAP_UUID"
+GRUB_CMDLINE_LINUX="$kernel_ops $extra_ops resume=UUID=$SWAP_UUID"
 GRUB_DISABLE_RECOVERY="true"
 #GRUB_HIDDEN_TIMEOUT=1
 GRUB_RECORDFAIL_TIMEOUT=1
@@ -1875,8 +1877,11 @@ take_snapshot () {
 	else
 		snapshotname="$1"
 	fi
+
 	
-	bcachefs subvolume snapshot "$snapshot_dir/$filename$snapshotname" && echo -e "\nCreated snapshot: $snapshot_dir/$filename$snapshotname\n"	
+	bcachefs subvolume snapshot "$mnt$snapshot_dir/$filename$snapshotname" && echo -e "\nCreated snapshot: $mnt$snapshot_dir/$filename$snapshotname\n"	
+
+	ls -1N $mnt$snapshot_dir/
 
 }
 
@@ -1887,7 +1892,7 @@ restore_snapshot () {
 
 	echo -e "\nList of snapshots:\n"
 
-	ls -1N $snapshot_dir/
+	ls -1N $mnt$snapshot_dir/
 
 	echo -e "\nWhich snapshot would you like to recover?\n"
 	read snapshot
@@ -2196,6 +2201,27 @@ auto_install_root () {
 	install_tweaks
 	copy_script
 	copy_pkgs
+		
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		take_snapshot "before first boot"
+
+
+
+
+
 
 }
 
@@ -2269,7 +2295,7 @@ auto_install_kde () {
 
 	install_config
 
-	if [[ "$fstype" = "bcachefs" ]]; then
+	if [[ $fstype = bcachefs ]]; then
 		take_snapshot "before first boot"
 	fi
 
