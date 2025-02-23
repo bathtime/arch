@@ -569,7 +569,7 @@ Server = file:///var/cache/pacman/pkg/
 
 
 	mkdir -p $mnt/etc/pacman.d
-	cp /etc/pacman.d/mirrorlist $mnt/etc/pacman.d/mirrorlist
+	[ ! $mnt = '' ] && cp /etc/pacman.d/mirrorlist $mnt/etc/pacman.d/mirrorlist
 
 	packages="$base_install"
 
@@ -1030,8 +1030,9 @@ EOF
 
 setup_user () {
 
-	#check_on_root
 	mount_disk
+
+	pacstrap_install sudo
 
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
 	#	arch-chroot $mnt useradd -m $user -G wheel
@@ -1043,18 +1044,22 @@ setup_user () {
 		exit
 	fi
 
-	#arch-chroot $mnt echo "$password" | passwd $user --stdin && echo "User password changed."
+	rm -rf $mnt/home/$user/.cache
+
+	# TODO: find a way to create symbolic link from host
+	if [[ $mnt = '' ]]; then
+		ln -s $mnt/tmp $mnt/home/$user/.cache
+	else
+		arch-chroot $mnt ln -s /tmp /home/$user/.cache
+	fi
+
+	chown -R $user:$user $mnt/home/$user/.cache
 
   # arch-chroot $mnt /bin/bash -e << EOF
 	#	rm -rf /home/$user/.cache
 	#	ln -s /tmp /home/$user/.cache
 	#	chown -R user:user /home/$user/.cache
 #EOF
-
-	rm -rf $mnt/home/$user/.cache
-	ln -s $mnt/tmp $mnt/home/$user/.cache
-	chown -R $user:$user $mnt/home/$user/.cache
-
 
 	mkdir -p -m 750 $mnt/etc/sudoers.d
 	echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/1-wheel
@@ -1074,39 +1079,66 @@ ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin $user --n
 	sudo -u $user mkdir -p $mnt/home/$user/{.local/bin,Documents,Downloads,.local/bin}
 
 
-	echo '# If running bash
+	echo '
+# If running bash
 if [ -n "$BASH_VERSION" ]; then
 
-	# include .bashrc if it exists
-	if [ -f "$HOME/.bashrc" ]; then
-		. "$HOME/.bashrc"
+        # include .bashrc if it exists
+        if [ -f "$HOME/.bashrc" ]; then
+                . "$HOME/.bashrc"
    fi
 fi
 
-PATH="$HOME/.local/bin:$PATH"
-
 export EDITOR=/usr/bin/vim
-export QT_QPA_PLATFORM=wayland
+#export QT_QPA_PLATFORM=wayland
 export QT_IM_MODULE=Maliit
-export MOZ_ENABLE_WAYLAND=1
-export XDG_RUNTIME_DIR=/run/$USER/1000
-export RUNLEVEL=3
-export QT_LOGGING_RULES="*=false"
+#export MOZ_ENABLE_WAYLAND=1
+#export XDG_RUNTIME_DIR=/run/$USER/1000
+#export RUNLEVEL=3
+#export QT_LOGGING_RULES="*=false"
+#export GTK_USE_PORTAL=1
+#export XDG_RUNTIME_DIR="/run/user/$UID"
+#export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
+#export XDG_SESSION_TYPE=wayland
+#dbus-launch
+#export $(dbus-launch)
+#
 
-manager=none
+export QT_AUTO_SCREEN_SCALE_FACTOR=1
+export KWIN_IM_SHOW_ALWAYS=1
+
+manager=''
+#default_manager=gnome
+default_manager=kde-dbus
 
 if [[ -z $DISPLAY && $(tty) == /dev/tty1 && $XDG_SESSION_TYPE == tty ]]; then
 
-        if [ "$manager" = "choice" ]; then
-                echo -e "Choose a window manager:\n1. none\n2. weston\n3. kde\n4. gnome\n"
-                read manager
+#       read -t 2 -s -n1 -p "Press <w> to choose a window manager..." key;echo;echo;
+
+        if [ "$key" = "w" ]; then
+      if [ "$manager" = "choice" ] || [ "$manager" = "" ]; then
+        echo -e "Choose a window manager:
+        1. none
+        2. weston
+        3. kde
+        4. kde-mobile
+        5. gnome
+        6. phosh
+        7. kde (dbus)\n"
+         read manager
+        fi
         fi
 
+        [ "$manager" = "" ] && manager=$default_manager
+
         case $manager in
-                1|none)         ;;
-                2|weston)       exec weston --shell=desktop ;;
-                3|kde)          startplasma-wayland ;;
-                4|gnome)        MOZ_ENABLE_WAYLAND=1 QT_QPA_PLATFORM=wayland XDG_SESSION_TYPE=wayland exec dbus-run-session gnome-session ;;
+        1|none)                 ;;
+      2|weston)         exec weston --shell=desktop ;;
+      3|kde)            startplasma-wayland ;;
+      4|kde-mobile)     startplasmamobile ;;
+      5|gnome)          MOZ_ENABLE_WAYLAND=1 gnome-session --session=gnome-wayland ;;
+                6|phosh)                                phosh-session ;;
+                7|kde-dbus)                     /usr/lib/plasma-dbus-run-session-if-needed /usr/bin/startplasma-wayland ;;
         esac
 
 fi
@@ -2048,25 +2080,29 @@ pacstrap_install () {
 
 	fi
 
-	if [ "$packages" ]; then
+	if [[ "$packages" ]]; then
 
-		if [ "$copy_on_host" -eq 1 ] && [ ! "$(pacman -Q $package 2>/dev/null)" ]; then
-			pacman --noconfirm -S ${packages[@]}
-		fi
-
-		if [ "$offline" -eq 1 ]; then
-			pacstrap -C /etc/pacman-offline.conf -c -K $mnt ${packages[@]}
+		if [[ "$mnt" = '' ]]; then
+			pacman --noconfirm --needed -S ${packages[@]}
 		else
 
-			# Ideal when using an arch install disk in ram
-			if [ "$copy_on_host" -eq 0 ]; then
-				pacstrap -K $mnt ${packages[@]}
-			else
-				pacstrap -c -K $mnt ${packages[@]}
+			if [ "$copy_on_host" -eq 1 ] && [ ! "$(pacman -Q $package 2>/dev/null)" ]; then
+				pacman --needed --noconfirm -S ${packages[@]}
 			fi
 
-		fi
+			if [ "$offline" -eq 1 ]; then
+				pacstrap -C /etc/pacman-offline.conf -c -K $mnt ${packages[@]}
+			else
 
+				# Ideal when using an arch install disk in ram
+				if [ "$copy_on_host" -eq 0 ]; then
+					pacstrap -K $mnt ${packages[@]}
+				else
+					pacstrap -c -K $mnt ${packages[@]}
+				fi
+
+			fi
+		fi
 	fi
 }
 
@@ -2074,7 +2110,7 @@ pacstrap_install () {
 
 custom_install () {
 
-	check_on_root
+	#check_on_root
    mount_disk
 
 	echo -e "Which package(s) would you like to install?\n"
@@ -2416,11 +2452,13 @@ backup_config () {
 
 restore_config () {
 
-	cd /
+	mount_disk
+	
+	cd $mnt/
 
 	echo "Extracting setup file..."
-	tar xvf setup.tar
-	chown -R $user:$user /home/$user/
+	tar xvf /setup.tar
+	chown -R $user:$user $mnt/home/$user/
 
 }
 
@@ -2804,7 +2842,8 @@ choices=("1. Back to main menu
 30. Custom install
 31. Setup ~ files
 32. Copy/sync/update/wipe ->
-33. Install aur packages ->")
+33. Install aur packages ->
+34. Install group packages ->")
 
 
 while :; do
@@ -2906,7 +2945,8 @@ echo
 4. Install config
 5. Cleanup system
 6. Last modified
-7. Copy packages")			config_choice=0
+7. Copy config
+8. Copy packages")			config_choice=0
 
 									while [ ! "$config_choice" = "1" ]; do
 
@@ -2923,7 +2963,9 @@ echo
                 						install|4)	install_config ;;
                 						clean|5)		clean_system ;;
                 						last|6)		last_modified ;;
-											pkgs|7)		copy_pkgs ;;
+											copy|7)		echo "Copying packages from /setup.tar to $mnt/..."
+															cp /setup.tar $mnt/ ;;
+											pkgs|8)		copy_pkgs ;;
                 						'')			last_modified ;;
                 						*)				echo -e "\nInvalid option ($config_choice)!\n" ;;
 										esac
@@ -2994,6 +3036,28 @@ echo
 									done ;;
 
 		setup|33)      		aur_package_install ;; 
+		packages|34)			config_choices=("1. Quit
+2. kde
+3. gnome")			config_choice=0
+
+									while [ ! "$config_choice" = "1" ]; do
+
+										echo
+										echo "${config_choices[@]}" | column
+										echo  
+
+										read -p "Which option? " config_choice
+
+        								case $config_choice in
+                						quit|1)		echo "Quitting!"; break; ;;
+                						kde|2)		pacstrap_install $kde_install" sudo" ;;
+                						gnome|3)		pacstrap_install $gnome_install" sudo" ;;
+                						'')			last_modified ;;
+                						*)				echo -e "\nInvalid option ($config_choice)!\n" ;;
+										esac
+
+									done ;;
+
 		'')						;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
