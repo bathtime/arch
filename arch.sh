@@ -253,6 +253,7 @@ unmount_disk () {
 
 choose_disk () {
 
+	#mnt=/mnt
 	search_disks=1
 	host="$(mount | awk '/ on \/ / { print $1}' | sed 's/p*[0-9]$//g')"
 
@@ -298,7 +299,7 @@ choose_disk () {
 				quit) 		echo -e "\nQuitting!"; exit ;;
 				edit)			vim $arch_path/$arch_file; exit ;;
 				'')   		echo -e "\nInvalid option!\n" ; break ;;
-				*)    		search_disks=0; break; ;;
+				*)    		search_disks=0; mnt='/mnt'; break; ;;
 			esac
 		done
 
@@ -309,6 +310,11 @@ choose_disk () {
 		espPart="p$espPartNum"
 		swapPart="p$swapPartNum"
 		rootPart="p$rootPartNum"
+	else
+		bootPart="$bootPartNum"
+      espPart="$espPartNum"
+      swapPart="$swapPartNum"
+      rootPart="$rootPartNum"
 	fi
 
 }
@@ -1871,13 +1877,11 @@ take_snapshot () {
 	if [[ $1 = '' ]]; then
 		echo -e "\nWhat would you like to call this snapshot?\n"
 		read snapshotname
-
-		[[ ! $snapshotname = '' ]] && snapshotname=" - $snapshotname"
-
 	else
 		snapshotname="$1"
 	fi
 
+	[[ ! $snapshotname = '' ]] && snapshotname=" - $snapshotname"
 	
 	bcachefs subvolume snapshot "$mnt$snapshot_dir/$filename$snapshotname" && echo -e "\nCreated snapshot: $mnt$snapshot_dir/$filename$snapshotname\n"	
 
@@ -2202,27 +2206,6 @@ auto_install_root () {
 	copy_script
 	copy_pkgs
 		
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-		take_snapshot "before first boot"
-
-
-
-
-
-
 }
 
 
@@ -2257,6 +2240,7 @@ auto_install_cage () {
 	sed -i 's/manager=.*$/manager=cage/g' $mnt/home/$user/.bash_profile
 
 	install_config
+
 }
 
 
@@ -2565,6 +2549,8 @@ disk_info () {
 	else
 		echo "(mounted on $(lsblk -no MOUNTPOINT $disk$rootPart))"
 	fi
+
+	echo "mount: $mounted_on"
 
 }
 
@@ -3025,13 +3011,12 @@ echo
 									done ;;
 
 		setup|33)      		aur_package_install ;; 
-		'')						;; #disk_info ;;
+		'')						;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
 
 	sync_disk
 	disk_info
-	echo $disk
 
 done
 
