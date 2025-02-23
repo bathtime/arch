@@ -253,25 +253,65 @@ unmount_disk () {
 
 choose_disk () {
 
-	#mnt=/mnt
 	search_disks=1
 	host="$(mount | awk '/ on \/ / { print $1}' | sed 's/p*[0-9]$//g')"
 
 	while [ $search_disks -eq 1 ]; do
+		
+		mnt=''
 
 		echo -e "\nDrives found (current mount: /):\n"
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g"
-		disks=$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd") 
-		disks=$(echo -e "\nquit\nedit\n$\n#\n$disks\n/\nclean\nwireless\nupdate\nrefresh\nlogout\nreboot\nsuspend\nhibernate\npoweroff\nsnapshot\nrestore\nstats")
+		choices='quit edit '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' /' 
+		
 
 		echo -e "\nWhich drive?\n"
 
-		mnt=''
-
-		select disk in $disks
+		select disk in $choices
 		do
 			case $disk in
+				quit)			exit ;;
+				edit)			vim $arch_path/$arch_file; exit ;;
+				/)				disk=$host; break ;;
+				*)    		if [[ $disk = '' ]]; then
+						   		echo -e "\nInvalid option!\n"
+								else
+									mnt='/mnt'; break
+								fi
+								;;
+				'')   		echo -e "\nInvalid option!\n" ;;
+			esac
+
+		done
+
+
+	if [ "$(echo $disk | grep nvme)" ]; then
+		bootPart="p$bootPartNum"
+		espPart="p$espPartNum"
+		swapPart="p$swapPartNum"
+		rootPart="p$rootPartNum"
+	else
+		bootPart="$bootPartNum"
+		espPart="$espPartNum"
+     	swapPart="$swapPartNum"
+     	rootPart="$rootPartNum"
+	fi
+
+	echo -e "\nDisk chosen: $disk (mounted on $mnt/)"
+
+
+
+
+
+
+		choices=$(echo -e "\nexit\nedit\nbuild\n$\n#\nclean\nwireless\nupdate\nrefresh\nlogout\nreboot\nsuspend\nhibernate\npoweroff\nsnapshot\nrestore\nstats\nquit")
+
+	echo -e "\nPlease chooose:\n"
+
+		select choice in $choices
+		do
+			case $choice in
 				$)				sudo -u $user bash ;;
 				\#)			bash ;;
 				clean)		echo -e "\nCleaning files...\n"
@@ -288,7 +328,7 @@ choose_disk () {
 								;;
 				wireless)	connect_wireless ;;
 				update)		pacman -Syu --noconfirm ;;
-				refresh) 	break;	;;
+				refresh) 	search_disks=0	;;
 				logout)		killall systemd ;;
 				poweroff)	poweroff ;;
 				suspend)		echo mem > /sys/power/state ;;
@@ -300,29 +340,17 @@ choose_disk () {
 								systemd-analyze | sed 's/in .*=/in/;s/graph.*//'
 								;;
 				reboot)		reboot ;;
+				exit) 		break ;;
 				quit) 		echo -e "\nQuitting!"; exit ;;
 				edit)			vim $arch_path/$arch_file; exit ;;
-				/)				disk=$host; search_disks=0 ; break ;;
-								# option below is the chosen disk
-				*)    		search_disks=0; mnt='/mnt'; break; ;;
-				'')   		echo -e "\nInvalid option!\n" ; break ;;
+				build)		search_disks=0 ; break ;;
+				*)   			echo -e "\nInvalid * option!\n" ;;
+				'')   		echo -e "\nInvalid option!\n" ;;
 			esac
+
 		done
-
+	
 	done
-
-	if [ "$(echo $disk | grep nvme)" ]; then
-		bootPart="p$bootPartNum"
-		espPart="p$espPartNum"
-		swapPart="p$swapPartNum"
-		rootPart="p$rootPartNum"
-	else
-		bootPart="$bootPartNum"
-      espPart="$espPartNum"
-      swapPart="$swapPartNum"
-      rootPart="$rootPartNum"
-	fi
-
 }
 
 
@@ -1036,19 +1064,19 @@ setup_user () {
 
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
 
-		if [[ $mnt = '' ]]; then
-			echo "$user:$password" | chpasswd --root=$mnt/ && echo "User password created."
+#		if [[ $mnt = '' ]]; then
 			useradd --root=$mnt/ -m $user -G wheel -p "$password"
-		else
+			echo "$user:$password" | chpasswd --root=$mnt/ && echo "User password created."
+#		else
 #			arch-chroot $mnt useradd -m $user -G wheel
 #			arch-chroot $mnt echo "$password" | passwd $user --stdin
-arch-chroot $mnt useradd -m $user -G wheel
+#arch-chroot $mnt useradd -m $user -G wheel
 
-		arch-chroot $mnt /bin/bash -e << EOF
-		printf "$password\n$password\n" | passwd "$user"
-EOF
+#		arch-chroot $mnt /bin/bash -e << EOF
+#		printf "$password\n$password\n" | passwd "$user"
+#EOF
 
-		fi
+#		fi
 
 	fi
 	
@@ -1915,7 +1943,6 @@ take_snapshot () {
 restore_snapshot () {
 
 	mount_disk
-	
 	#bcachefs fsck $mnt$disk$rootPart
 	
 
@@ -2163,9 +2190,12 @@ copy_pkgs () {
 
 	done
 
-	echo -e "\n/var/cache/pacman/pkg/* contains:"
-	echo -e "\n.zst packages: $(ls $mnt/var/cache/pacman/pkg/*.zst | wc -l)\n"
-	echo -e "Total files: $(ls $mnt/var/cache/pacman/pkg/* | wc -l)\n"
+	#echo -e "\n/var/cache/pacman/pkg/* contains:"
+	
+	echo -e "\nTotal packages: $(ls $mnt/var/cache/pacman/pkg/*.zst | wc -l)\n"
+
+	#echo -e "\nTotal packages: $(ls $mnt/var/cache/pacman/pkg/*.zst | wc -l)\n"
+	#echo -e "Total files: $(ls $mnt/var/cache/pacman/pkg/* | wc -l)\n"
 
 	#echo -e "\nUpdating package database. Please be patient...\n"
 
@@ -2829,6 +2859,7 @@ if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ]; then
 	setfont ter-132b
 fi
 
+while :; do
 
 choices=("1. Back to main menu 
 2. Edit $arch_file
@@ -2859,7 +2890,6 @@ choices=("1. Back to main menu
 34. Install group packages ->")
 
 
-while :; do
 
 echo
 echo "${choices[@]}" | column   
@@ -3063,8 +3093,8 @@ echo
 
         								case $config_choice in
                 						quit|1)		echo "Quitting!"; break; ;;
-                						kde|2)		pacstrap_install $kde_install" sudo" ;;
-                						gnome|3)		pacstrap_install $gnome_install" sudo" ;;
+                						kde|2)		pacstrap_install $kde_install ;;
+                						gnome|3)		pacstrap_install $gnome_install ;;
                 						'')			last_modified ;;
                 						*)				echo -e "\nInvalid option ($config_choice)!\n" ;;
 										esac
@@ -3074,6 +3104,7 @@ echo
 		'')						;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
+
 
 	sync_disk
 	disk_info
