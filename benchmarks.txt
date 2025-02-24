@@ -5,7 +5,7 @@
 
 Mon Feb 24 05:02:24 PM EST 2025
 /dev/nvme0n1 476.9G INTEL SSDPEKNU512GZ nvme (host)
-File system type: xfs
+/dev/nvme0n1p4 on / type bcachefs (rw,noatime,noshard_inode_numbers)
 
 
 
