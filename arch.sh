@@ -2735,36 +2735,41 @@ benchmark () {
 		tempfile="$mnt/temp.tmp"
 		cd $mnt/
 
-		echo -e "\n\n\n\n" >> $bench
-		date | tee -a $bench
-		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "$disk" | sed "s#$host.*#& (host)#g" | tee -a $bench  
-		echo -e "File system type: $fstype\n\n\n\n" | tee -a $bench
+		echo -e "\nRunning tests and saving to $bench. Please be patient...\n"
 
-		echo "\nRunning cryptsetup benchmark...\n"
-		cryptsetup benchmark | tee -a $bench
+
+		echo -e "\n\n\n\n" >> $bench
+		date >> $bench
+		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "$disk" | sed "s#$host.*#& (host)#g" >> $bench  
+		echo -e "File system type: $fstype\n\n\n\n" >> $bench
+
+		echo -e "\nRunning cryptsetup benchmark...\n" >> $bench
+		cryptsetup benchmark >> $bench
 					
-		echo "\nRunning sysbench cpu test...\n"
-		sysbench --test=cpu --cpu-max-prime=500 run | tee -a $bench
-		sysbench --test=cpu --cpu-max-prime=500 run --num-threads=4 | tee -a $bench 
+		echo -e "\nRunning sysbench cpu test...\n" >> $bench
+		sysbench --test=cpu --cpu-max-prime=500 run >> $bench
+		sysbench --test=cpu --cpu-max-prime=500 run --num-threads=4 >> $bench 
 	 
-		echo "\nRunning sysbench file IO benchmark...\n"
-		sysbench --test=fileio --file-total-size=8G --file-test-mode=seqwr run | tee -a $bench
+		echo -e "\nRunning sysbench file IO benchmark...\n" >> $bench
+		sysbench --test=fileio --file-total-size=8G --file-test-mode=seqwr run >> $bench
 		sysbench --test=fileio --file-total-size=8G cleanup
 	 
-		echo "\nRunning hdparm test...\n"
-		hdparm -Tt $disk
+		echo -e "\nRunning hdparm test...\n" >> $bench
+		hdparm -Tt $disk >> $bench
 
-		echo "\nRunning dd to measure write speed...\n"
+		echo -e "\nRunning dd to measure write speed...\n" >> $bench
 		time dd if=/dev/zero of=$tempfile bs=1M count=1024 conv=fdatasync,notrunc status=progress 2>> $bench
 
 		echo 3 > /proc/sys/vm/drop_caches
-		echo "\nRunning dd to measure read speed...\n" 2>> bench
+		echo -e "\nRunning dd to measure read speed...\n" >> $bench
 		time dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress 2>> $bench
 
-		echo "\nRunning dd to measure buffer-cache speed...\n"
+		echo -e "\nRunning dd to measure buffer-cache speed...\n" >> $bench
 		time dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress 2>> $bench
 
 		rm $tempfile
+		
+		echo -e "\nTests completed. View $bench for results.\n"
 }
 
 
