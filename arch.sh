@@ -89,7 +89,7 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
-fstype='f2fs'			# btrfs,ext4,,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
+fstype='bcachefs'			# btrfs,ext4,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
 subvols=()					# used for btrfs 	TODO: bcachefs
 snapshot_dir="/.snapshots"
 encrypt=false
@@ -1910,17 +1910,9 @@ clone () {
 
 		echo -e "\nRunning rsync...\n"
 	
-		rsync $2 --info=progress2 $rsync_excludes $3 $4
+		time rsync $2 --info=progress2 $rsync_excludes $3 $4
 
-		#if [[ $4 = '/' ]]; then
-		#	pacman -S linux
-		#else
-		#	arch-chroot $mnt pacman -S linux
-		#fi
-
-#		setup_fstab
   		install_grub
-#		mkinitcpio -P
 
 	else
 		echo "Exiting."
