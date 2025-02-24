@@ -261,8 +261,12 @@ choose_disk () {
 		mnt=''
 
 		echo -e "\nDrives found (current mount: /):\n"
+		
+		rootfs=$(mount | grep ' / ' | sed 's/(.*//; s/\/dev.* type //')
 
-		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g"
+		#lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g" 
+		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#&  $rootfs#g" | sed "s#$host.*#& (host)#g"
+
 		choices='quit edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / logout reboot suspend hibernate poweroff stats'
 		
 
@@ -2628,7 +2632,6 @@ wipe_freespace () {
 disk_info () {
 
 	echo -ne "\nDisk: $(lsblk --output=PATH,SIZE,MODEL,TRAN -dn $disk) "
-	
 	#mounted_on="$(lsblk -no MOUNTPOINT $disk$rootPart)"
 	#fstype="$(lsblk -n -o FSTYPE $disk$rootPart)"
 
