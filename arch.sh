@@ -1919,6 +1919,7 @@ clone () {
 		choose_initramfs dracut
 		choose_initramfs booster 
 		setup_fstab
+		sync_disk
 
 	else
 		echo "Exiting."
