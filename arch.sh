@@ -89,7 +89,7 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
-fstype='bcachefs'			# btrfs,ext4,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
+fstype='f2fs'			# btrfs,ext4,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
 subvols=()					# used for btrfs 	TODO: bcachefs
 snapshot_dir="/.snapshots"
 encrypt=false
@@ -263,7 +263,7 @@ choose_disk () {
 		echo -e "\nDrives found (current mount: /):\n"
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g"
-		choices='quit edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / logout reboot suspend hibernate poweroff stats' 
+		choices='quit edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / logout reboot suspend hibernate poweroff stats benchmark'
 		
 
 		echo -e "\nWhich drive?\n"
@@ -297,7 +297,8 @@ choose_disk () {
 									break
 								fi
 								;;
-					'')   		echo -e "\nInvalid option!\n" ;;
+				benchmark)	benchmark ;;
+				'')   		echo -e "\nInvalid option!\n" ;;
 			esac
 
 		done
@@ -2711,208 +2712,231 @@ aur_package_install () {
 	echo -e "Finished!"
 
 
-	arch-chroot $mnt /bin/bash << EOF
+		arch-chroot $mnt /bin/bash << EOF
 
-cd $aur_path
+	cd $aur_path
 
-sudo -u $user git clone $aur_git
+	sudo -u $user git clone $aur_git
 
-cd $aur_app
-sudo -u $user makepkg -sf
+	cd $aur_app
+	sudo -u $user makepkg -sf
 
-echo "Installing $aur_path/$aur_app/$aur_app-*.zst..."
-pacman -U $aur_path/$aur_app/$aur_app-*.zst
+	echo "Installing $aur_path/$aur_app/$aur_app-*.zst..."
+	pacman -U $aur_path/$aur_app/$aur_app-*.zst
 
-EOF
+	EOF
 
-}
+	}
+
+	benchmark () {
+		
+		check_pkg cryptsetup sysbench fio hdparm
+
+		bench=/home/$user/.local/bin/benchmarks.txt
+		date >> $bench
+		echo -e "\nFile system type: $fstype\n\n"
+
+		echo "\nRunning cryptsetup benchmark...\n"
+		cryptsetup benchmark >> $bench 
+					
+		echo "\nRunning sysbench cpu test...\n"
+		sysbench --test=cpu --cpu-max-prime=150 run >> $bench
+		sysbench --test=cpu --cpu-max-prime=150 run --num-threads=4 >> $bench
+	 
+		echo "\nRunning sysbench file IO benchmark...\n"
+		sysbench --test=fileio --file-total-size=3G --file-test-mode=seqwr run >> $bench
+		sysbench --test=fileio --file-total-size=3G cleanup
+	 
+		echo "\nRunning hdparm test...\n"
+		hdparm -Tt $disk
+
+	}
+									
+
+	CONFIG_FILES="
+
+	/etc/default/grub
+	/etc/hostname
+	/etc/hosts
+	/etc/iwd/main.conf
+	/etc/locale.conf
+	/etc/locale.gen
+	/etc/localtime
+	/etc/mkinitcpio.conf
+	/etc/NetworkManager/conf.d/dhcp-client.conf
+	/etc/NetworkManager/conf.d/wifi_backend.conf
+	/etc/NetworkManager/system-connections/*
+	/etc/pacman.conf
+	/etc/pacman-offline.conf
+	/etc/pacman.d/mirrorlist
+	/etc/security/limits.conf
+	/etc/sudoers.d
+	/etc/sudoers.d/1-wheel
+	/etc/sudoers.d/10-arch
+	/etc/sysctl.d/50-coredump.conf
+	/etc/sysctl.d/99-cache-pressure.conf
+	/etc/sysctl.d/99-net-keepalive.conf
+	/etc/sysctl.d/99-net-timeout.conf
+	/etc/sysctl.d/99-swappiness.conf
+	/etc/systemd/coredump.conf.d/custom.conf
+	/etc/systemd/system/user-power.service
+	/etc/systemd/system/getty@tty1.service.d/autologin.conf
+	/etc/udev/rules.d/powersave.rules
+	/etc/vconsole.conf
+	/usr/lib/initcpio/hooks/liveroot
+	/usr/lib/initcpio/install/liveroot
+	/usr/lib/systemd/system-sleep/sleep.sh
+	/usr/share/applications/firefox.desktop
+	/var/lib/iwd/*
+	/home/$user/.bash_profile
+	/home/$user/.bashrc
+	/home/$user/.config/autostart
+	/home/$user/.config/baloofilerc
+	/home/$user/.config/bleachbit/bleachbit.ini
+	/home/$user/.config/chromium-flags.conf
+	/home/$user/.config/dconf
+	/home/$user/.config/dolphinrc
+	/home/$user/.config/epy/*
+	/home/$user/.config/fontconfig/fonts.conf
+	/home/$user/.config/gtkrc
+	/home/$user/.config/gtkrc-2.0
+	/home/$user/.config/gnome-session/sessions/gnome-wayland.session
+	/home/$user/.config/gwenviewrc
+	/home/$user/.config/htop
+	/home/$user/.config/kactivitymanagerd-pluginsrc
+	/home/$user/.config/kactivitymanagerd-statsrc
+	/home/$user/.config/kactivitymanagerdrc
+	/home/$user/.config/kcminputrc
+	/home/$user/.config/kded5rc
+	/home/$user/.config/kdedefaults/package
+	/home/$user/.config/kdeglobals
+	/home/$user/.config/kfontinstuirc
+	/home/$user/.config/kglobalshortcutsrc
+	/home/$user/.config/konsolerc
+	/home/$user/.config/konsolesshconfig
+	/home/$user/.config/krunnerrc
+	/home/$user/.config/kscreenlockerrc
+	/home/$user/.config/ksplashrc
+	/home/$user/.config/ksmserverrc
+	/home/$user/.config/kwinoutputconfig.json
+	/home/$user/.config/kwinrc
+	/home/$user/.config/kwinrulesrc
+	/home/$user/.config/okularrc
+	/home/$user/.config/plasma-org.kde.plasma.desktop-appletsrc
+	/home/$user/.config/plasmashellrc
+	/home/$user/.config/powerdevilrc
+	/home/$user/.config/powermanagementprofilesrc
+	/home/$user/.config/systemsettingsrc
+	/home/$user/.config/Trolltech.conf
+	/home/$user/.config/vlc/*
+	/home/$user/.config/weston.ini
+	/home/$user/.config/xdg-desktop-portal/*
+	/home/$user/.hushlogin
+	/home/$user/.local/bin/*
+	/home/$user/.local/lib/*
+	/home/$user/.local/share/applications/*
+	/home/$user/.local/share/aurorae/*
+	/home/$user/.local/share/color-schemes/*
+	/home/$user/.local/share/dolphin/*
+	/home/$user/.local/share/fonts/*
+	/home/$user/.local/share/gnome-shell/extensions/*
+	/home/$user/.local/share/icons/*
+	/home/$user/.local/share/konsole/*.profile
+	/home/$user/.local/share/kxmlgui5/*
+	/home/$user/.local/share/plasma/*
+	/home/$user/.local/share/user-places.xbel
+	/home/$user/.local/share/wallpapers/*
+	/home/$user/.vimrc
+	/home/$user/.mozilla/*"
+
+	CONFIG_FILES2="
+	/etc/dracut.conf.d/myflags.conf
+	/etc/hostname
+	/etc/hosts
+	/etc/iwd/main.conf
+	/etc/locale.conf
+	/etc/locale.gen
+	/etc/localtime
+	/etc/mkinitcpio.conf
+	/etc/NetworkManager/conf.d/dhcp-client.conf
+	/etc/NetworkManager/conf.d/wifi_backend.conf
+	/etc/NetworkManager/system-connections/*
+	/etc/pacman.conf
+	/etc/pacman-offline.conf
+	/etc/pacman.d/mirrorlist
+	/etc/security/limits.conf
+	/etc/sudoers.d
+	/etc/sudoers.d/1-wheel
+	/etc/sudoers.d/10-arch
+	/etc/sysctl.d/50-coredump.conf
+	/etc/sysctl.d/99-cache-pressure.conf
+	/etc/sysctl.d/99-net-keepalive.conf
+	/etc/sysctl.d/99-net-timeout.conf
+	/etc/sysctl.d/99-swappiness.conf
+	/etc/systemd/coredump.conf.d/custom.conf
+	/etc/systemd/system/user-power.service
+	/etc/systemd/system/getty@tty1.service.d/autologin.conf
+	/etc/udev/rules.d/powersave.rules
+	/etc/vconsole.conf
+	/etc/wpa_supplicant
+	/usr/lib/systemd/system-sleep/sleep.sh
+	/usr/share/applications/firefox.desktop
+	/var/lib/dhcpcd
+	/var/lib/iwd
+	/home/$user/.bash_profile
+	/home/$user/.bashrc
+	/home/$user/.config
+	/home/$user/.hushlogin
+	/home/$user/.local
+	/home/$user/.mozilla
+	/home/$user/.vimrc"
 
 
+	if [ "$1" ]; then
+		disk="$1"
+	else
+		choose_disk
+	fi
 
-CONFIG_FILES="
+	check_viable_disk
 
-/etc/default/grub
-/etc/hostname
-/etc/hosts
-/etc/iwd/main.conf
-/etc/locale.conf
-/etc/locale.gen
-/etc/localtime
-/etc/mkinitcpio.conf
-/etc/NetworkManager/conf.d/dhcp-client.conf
-/etc/NetworkManager/conf.d/wifi_backend.conf
-/etc/NetworkManager/system-connections/*
-/etc/pacman.conf
-/etc/pacman-offline.conf
-/etc/pacman.d/mirrorlist
-/etc/security/limits.conf
-/etc/sudoers.d
-/etc/sudoers.d/1-wheel
-/etc/sudoers.d/10-arch
-/etc/sysctl.d/50-coredump.conf
-/etc/sysctl.d/99-cache-pressure.conf
-/etc/sysctl.d/99-net-keepalive.conf
-/etc/sysctl.d/99-net-timeout.conf
-/etc/sysctl.d/99-swappiness.conf
-/etc/systemd/coredump.conf.d/custom.conf
-/etc/systemd/system/user-power.service
-/etc/systemd/system/getty@tty1.service.d/autologin.conf
-/etc/udev/rules.d/powersave.rules
-/etc/vconsole.conf
-/usr/lib/initcpio/hooks/liveroot
-/usr/lib/initcpio/install/liveroot
-/usr/lib/systemd/system-sleep/sleep.sh
-/usr/share/applications/firefox.desktop
-/var/lib/iwd/*
-/home/$user/.bash_profile
-/home/$user/.bashrc
-/home/$user/.config/autostart
-/home/$user/.config/baloofilerc
-/home/$user/.config/bleachbit/bleachbit.ini
-/home/$user/.config/chromium-flags.conf
-/home/$user/.config/dconf
-/home/$user/.config/dolphinrc
-/home/$user/.config/epy/*
-/home/$user/.config/fontconfig/fonts.conf
-/home/$user/.config/gtkrc
-/home/$user/.config/gtkrc-2.0
-/home/$user/.config/gnome-session/sessions/gnome-wayland.session
-/home/$user/.config/gwenviewrc
-/home/$user/.config/htop
-/home/$user/.config/kactivitymanagerd-pluginsrc
-/home/$user/.config/kactivitymanagerd-statsrc
-/home/$user/.config/kactivitymanagerdrc
-/home/$user/.config/kcminputrc
-/home/$user/.config/kded5rc
-/home/$user/.config/kdedefaults/package
-/home/$user/.config/kdeglobals
-/home/$user/.config/kfontinstuirc
-/home/$user/.config/kglobalshortcutsrc
-/home/$user/.config/konsolerc
-/home/$user/.config/konsolesshconfig
-/home/$user/.config/krunnerrc
-/home/$user/.config/kscreenlockerrc
-/home/$user/.config/ksplashrc
-/home/$user/.config/ksmserverrc
-/home/$user/.config/kwinoutputconfig.json
-/home/$user/.config/kwinrc
-/home/$user/.config/kwinrulesrc
-/home/$user/.config/okularrc
-/home/$user/.config/plasma-org.kde.plasma.desktop-appletsrc
-/home/$user/.config/plasmashellrc
-/home/$user/.config/powerdevilrc
-/home/$user/.config/powermanagementprofilesrc
-/home/$user/.config/systemsettingsrc
-/home/$user/.config/Trolltech.conf
-/home/$user/.config/vlc/*
-/home/$user/.config/weston.ini
-/home/$user/.config/xdg-desktop-portal/*
-/home/$user/.hushlogin
-/home/$user/.local/bin/*
-/home/$user/.local/lib/*
-/home/$user/.local/share/applications/*
-/home/$user/.local/share/aurorae/*
-/home/$user/.local/share/color-schemes/*
-/home/$user/.local/share/dolphin/*
-/home/$user/.local/share/fonts/*
-/home/$user/.local/share/gnome-shell/extensions/*
-/home/$user/.local/share/icons/*
-/home/$user/.local/share/konsole/*.profile
-/home/$user/.local/share/kxmlgui5/*
-/home/$user/.local/share/plasma/*
-/home/$user/.local/share/user-places.xbel
-/home/$user/.local/share/wallpapers/*
-/home/$user/.vimrc
-/home/$user/.mozilla/*"
+	disk_info
 
-CONFIG_FILES2="
-/etc/dracut.conf.d/myflags.conf
-/etc/hostname
-/etc/hosts
-/etc/iwd/main.conf
-/etc/locale.conf
-/etc/locale.gen
-/etc/localtime
-/etc/mkinitcpio.conf
-/etc/NetworkManager/conf.d/dhcp-client.conf
-/etc/NetworkManager/conf.d/wifi_backend.conf
-/etc/NetworkManager/system-connections/*
-/etc/pacman.conf
-/etc/pacman-offline.conf
-/etc/pacman.d/mirrorlist
-/etc/security/limits.conf
-/etc/sudoers.d
-/etc/sudoers.d/1-wheel
-/etc/sudoers.d/10-arch
-/etc/sysctl.d/50-coredump.conf
-/etc/sysctl.d/99-cache-pressure.conf
-/etc/sysctl.d/99-net-keepalive.conf
-/etc/sysctl.d/99-net-timeout.conf
-/etc/sysctl.d/99-swappiness.conf
-/etc/systemd/coredump.conf.d/custom.conf
-/etc/systemd/system/user-power.service
-/etc/systemd/system/getty@tty1.service.d/autologin.conf
-/etc/udev/rules.d/powersave.rules
-/etc/vconsole.conf
-/etc/wpa_supplicant
-/usr/lib/systemd/system-sleep/sleep.sh
-/usr/share/applications/firefox.desktop
-/var/lib/dhcpcd
-/var/lib/iwd
-/home/$user/.bash_profile
-/home/$user/.bashrc
-/home/$user/.config
-/home/$user/.hushlogin
-/home/$user/.local
-/home/$user/.mozilla
-/home/$user/.vimrc"
-
-
-if [ "$1" ]; then
-	disk="$1"
-else
-	choose_disk
-fi
-
-check_viable_disk
-
-disk_info
-
-check_online
+	check_online
 
 
 # Make font big and readable
-if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ]; then
-	setfont ter-132b
-fi
+	if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ]; then
+		setfont ter-132b
+	fi
 
-while :; do
+	while :; do
 
-choices=("1. Back to main menu 
-2. Edit $arch_file
-3. Chroot
-4. Packages/script
-5. Partition disk
-6. Install base
-7. Hypervisor setup
-8. Setup fstab
-9. Install boot manager
-10. General setup
-11. Setup user
-12. Setup network
-13. Install aur
-14. Install tweaks
-15. Install mksh
-16. Install liveroot
-17. Setup acpid
-18. Choose initramfs
-19. Mount $mnt
-20. Unmount $mnt
-22. Connect wireless
-27. Auto-install
-30. Custom install
-31. Setup ~ files
-32. Copy/sync/update/wipe ->
+	choices=("1. Back to main menu 
+	2. Edit $arch_file
+	3. Chroot
+	4. Packages/script
+	5. Partition disk
+	6. Install base
+	7. Hypervisor setup
+	8. Setup fstab
+	9. Install boot manager
+	10. General setup
+	11. Setup user
+	12. Setup network
+	13. Install aur
+	14. Install tweaks
+	15. Install mksh
+	16. Install liveroot
+	17. Setup acpid
+	18. Choose initramfs
+	19. Mount $mnt
+	20. Unmount $mnt
+	22. Connect wireless
+	27. Auto-install
+	30. Custom install
+	31. Setup ~ files
+	32. Copy/sync/update/wipe ->
 33. Install aur packages ->
 34. Install group packages ->")
 
