@@ -1913,6 +1913,9 @@ clone () {
 		rsync $2 --info=progress2 $rsync_excludes $3 $4
 
   		install_grub
+		arch-chroot $mnt pacman -S --noconfirm linux	
+		#arch-chroot $mnt mkinitcpio -P
+		choose_initramfs mkinitcpio
 
 	else
 		echo "Exiting."
