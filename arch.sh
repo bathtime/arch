@@ -89,7 +89,7 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
-fstype='f2fs'			# btrfs,ext4,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
+fstype='bcachefs'			# btrfs,ext4,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
 subvols=()					# used for btrfs 	TODO: bcachefs
 snapshot_dir="/.snapshots"
 encrypt=false
@@ -2740,12 +2740,12 @@ benchmark () {
 		cryptsetup benchmark >> $bench 
 					
 		echo "\nRunning sysbench cpu test...\n"
-		sysbench --test=cpu --cpu-max-prime=150 run >> $bench
-		sysbench --test=cpu --cpu-max-prime=150 run --num-threads=4 >> $bench
+		sysbench --test=cpu --cpu-max-prime=500 run >> $bench
+		sysbench --test=cpu --cpu-max-prime=500 run --num-threads=4 >> $bench
 	 
 		echo "\nRunning sysbench file IO benchmark...\n"
-		sysbench --test=fileio --file-total-size=3G --file-test-mode=seqwr run >> $bench
-		sysbench --test=fileio --file-total-size=3G cleanup
+		sysbench --test=fileio --file-total-size=8G --file-test-mode=seqwr run >> $bench
+		sysbench --test=fileio --file-total-size=8G cleanup
 	 
 		echo "\nRunning hdparm test...\n"
 		hdparm -Tt $disk >> $bench
@@ -3081,8 +3081,8 @@ echo
 13. Wipe freespace     
 14. Shred $disk
 15. Create squashfs image
-16. Take bcachefs snapshot
-17. Restore bcachefs snapshot")
+16. Take btrfs/bcachefs snapshot
+17. Restore btrfs/bcachefs snapshot")
 
 									config_choice=0
 									while [ ! "$config_choice" = "1" ]; do
