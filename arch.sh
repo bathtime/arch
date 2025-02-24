@@ -303,7 +303,6 @@ choose_disk () {
 
 		done
 
-	
 	if [ "$(echo $disk | grep nvme)" ]; then
 		bootPart="p$bootPartNum"
 		espPart="p$espPartNum"
@@ -2724,15 +2723,16 @@ aur_package_install () {
 	echo "Installing $aur_path/$aur_app/$aur_app-*.zst..."
 	pacman -U $aur_path/$aur_app/$aur_app-*.zst
 
-	EOF
+EOF
 
-	}
+}
 
-	benchmark () {
+
+benchmark () {
 		
 		check_pkg cryptsetup sysbench fio hdparm
 
-		bench=/home/$user/.local/bin/benchmarks.txt
+		bench="/home/$user/.local/bin/benchmarks.txt"
 		date >> $bench
 		echo -e "\nFile system type: $fstype\n\n"
 
@@ -2748,9 +2748,9 @@ aur_package_install () {
 		sysbench --test=fileio --file-total-size=3G cleanup
 	 
 		echo "\nRunning hdparm test...\n"
-		hdparm -Tt $disk
+		hdparm -Tt $disk >> $bench
 
-	}
+}
 									
 
 	CONFIG_FILES="
@@ -2906,37 +2906,37 @@ aur_package_install () {
 
 
 # Make font big and readable
-	if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ]; then
-		setfont ter-132b
-	fi
+if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ]; then
+	setfont ter-132b
+fi
 
-	while :; do
+while :; do
 
 	choices=("1. Back to main menu 
-	2. Edit $arch_file
-	3. Chroot
-	4. Packages/script
-	5. Partition disk
-	6. Install base
-	7. Hypervisor setup
-	8. Setup fstab
-	9. Install boot manager
-	10. General setup
-	11. Setup user
-	12. Setup network
-	13. Install aur
-	14. Install tweaks
-	15. Install mksh
-	16. Install liveroot
-	17. Setup acpid
-	18. Choose initramfs
-	19. Mount $mnt
-	20. Unmount $mnt
-	22. Connect wireless
-	27. Auto-install
-	30. Custom install
-	31. Setup ~ files
-	32. Copy/sync/update/wipe ->
+2. Edit $arch_file
+3. Chroot
+4. Packages/script
+5. Partition disk
+6. Install base
+7. Hypervisor setup
+8. Setup fstab
+9. Install boot manager
+10. General setup
+11. Setup user
+12. Setup network
+13. Install aur
+14. Install tweaks
+15. Install mksh
+16. Install liveroot
+17. Setup acpid
+18. Choose initramfs
+19. Mount $mnt
+20. Unmount $mnt
+22. Connect wireless
+27. Auto-install
+30. Custom install
+31. Setup ~ files
+32. Copy/sync/update/wipe ->
 33. Install aur packages ->
 34. Install group packages ->")
 
@@ -3163,4 +3163,6 @@ echo
 done
 
 unmount_disk
+
+
 
