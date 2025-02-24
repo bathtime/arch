@@ -351,3 +351,182 @@ Startup finished in 3.508s (firmware) + 1.395s (loader) + 752ms (kernel) + 759ms
 graphical.target reached after 1.878s in userspace.
 
 
+
+
+
+
+
+Mon Feb 24 06:49:36 PM EST 2025
+/dev/nvme0n1 476.9G INTEL SSDPEKNU512GZ nvme (host)
+/dev/nvme0n1p4 on / type ext4 (rw,noatime,commit=60)
+
+
+
+
+
+Running cryptsetup benchmark...
+
+# Tests are approximate using memory only (no storage IO).
+PBKDF2-sha1      2624720 iterations per second for 256-bit key
+PBKDF2-sha256    4639716 iterations per second for 256-bit key
+PBKDF2-sha512    1789378 iterations per second for 256-bit key
+PBKDF2-ripemd160 1073261 iterations per second for 256-bit key
+PBKDF2-whirlpool  754371 iterations per second for 256-bit key
+argon2i       9 iterations, 1048576 memory, 4 parallel threads (CPUs) for 256-bit key (requested 2000 ms time)
+argon2id      9 iterations, 1048576 memory, 4 parallel threads (CPUs) for 256-bit key (requested 2000 ms time)
+#     Algorithm |       Key |      Encryption |      Decryption
+        aes-cbc        128b      1790.5 MiB/s      6390.6 MiB/s
+    serpent-cbc        128b       109.9 MiB/s       783.4 MiB/s
+    twofish-cbc        128b       273.1 MiB/s       481.0 MiB/s
+        aes-cbc        256b      1382.3 MiB/s      5214.3 MiB/s
+    serpent-cbc        256b       113.3 MiB/s       783.8 MiB/s
+    twofish-cbc        256b       281.9 MiB/s       480.0 MiB/s
+        aes-xts        256b      7720.3 MiB/s      7701.8 MiB/s
+    serpent-xts        256b       692.3 MiB/s       703.0 MiB/s
+    twofish-xts        256b       445.5 MiB/s       453.0 MiB/s
+        aes-xts        512b      7046.7 MiB/s      7030.1 MiB/s
+    serpent-xts        512b       741.3 MiB/s       705.7 MiB/s
+    twofish-xts        512b       447.6 MiB/s       452.1 MiB/s
+
+Running sysbench cpu test...
+
+sysbench 1.0.20 (using system LuaJIT 2.1.1720049189)
+
+Running the test with following options:
+Number of threads: 1
+Initializing random number generator from current time
+
+
+Prime numbers limit: 500
+
+Initializing worker threads...
+
+Threads started!
+
+CPU speed:
+    events per second: 215007.65
+
+General statistics:
+    total time:                          10.0001s
+    total number of events:              2150352
+
+Latency (ms):
+         min:                                    0.00
+         avg:                                    0.00
+         max:                                    0.07
+         95th percentile:                        0.00
+         sum:                                 9855.14
+
+Threads fairness:
+    events (avg/stddev):           2150352.0000/0.00
+    execution time (avg/stddev):   9.8551/0.00
+
+WARNING: --num-threads is deprecated, use --threads instead
+sysbench 1.0.20 (using system LuaJIT 2.1.1720049189)
+
+Running the test with following options:
+Number of threads: 4
+Initializing random number generator from current time
+
+
+Prime numbers limit: 500
+
+Initializing worker threads...
+
+Threads started!
+
+CPU speed:
+    events per second: 746141.70
+
+General statistics:
+    total time:                          10.0000s
+    total number of events:              7462324
+
+Latency (ms):
+         min:                                    0.01
+         avg:                                    0.01
+         max:                                    0.07
+         95th percentile:                        0.01
+         sum:                                39287.13
+
+Threads fairness:
+    events (avg/stddev):           1865581.0000/4034.29
+    execution time (avg/stddev):   9.8218/0.00
+
+
+Running sysbench file IO benchmark...
+
+sysbench 1.0.20 (using system LuaJIT 2.1.1720049189)
+
+Running the test with following options:
+Number of threads: 1
+Initializing random number generator from current time
+
+
+Extra file open flags: (none)
+128 files, 64MiB each
+8GiB total file size
+Block size 16KiB
+Periodic FSYNC enabled, calling fsync() each 100 requests.
+Calling fsync() at the end of test, Enabled.
+Using synchronous I/O mode
+Doing sequential write (creation) test
+Initializing worker threads...
+
+Threads started!
+
+
+File operations:
+    reads/s:                      0.00
+    writes/s:                     18699.30
+    fsyncs/s:                     23939.70
+
+Throughput:
+    read, MiB/s:                  0.00
+    written, MiB/s:               292.18
+
+General statistics:
+    total time:                          10.0046s
+    total number of events:              426506
+
+Latency (ms):
+         min:                                    0.00
+         avg:                                    0.02
+         max:                                   23.89
+         95th percentile:                        0.02
+         sum:                                 9954.48
+
+Threads fairness:
+    events (avg/stddev):           426506.0000/0.00
+    execution time (avg/stddev):   9.9545/0.00
+
+
+Running hdparm test...
+
+
+/dev/nvme0n1:
+ Timing cached reads:   40664 MB in  2.00 seconds = 20366.45 MB/sec
+ Timing buffered disk reads: 2450 MB in  3.00 seconds = 816.62 MB/sec
+
+Running dd to measure write speed...
+
+1024+0 records in
+1024+0 records out
+1073741824 bytes (1.1 GB, 1.0 GiB) copied, 0.814371 s, 1.3 GB/s
+
+Running dd to measure read speed...
+
+1024+0 records in
+1024+0 records out
+1073741824 bytes (1.1 GB, 1.0 GiB) copied, 0.449052 s, 2.4 GB/s
+
+Running dd to measure buffer-cache speed...
+
+1024+0 records in
+1024+0 records out
+1073741824 bytes (1.1 GB, 1.0 GiB) copied, 0.11467 s, 9.4 GB/s
+
+System boot speed (booster initramfs):
+
+Startup finished in 3.478s (firmware) + 1.393s (loader) + 759ms (kernel) + 757ms (initrd) + 1.810s (userspace) = 8.199s 
+graphical.target reached after 1.810s in userspace.
