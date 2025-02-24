@@ -2732,8 +2732,9 @@ benchmark () {
 		
 		check_pkg cryptsetup sysbench fio hdparm
 
-		bench="/home/$user/.local/bin/benchmarks.txt"
+		bench="/home/$user/benchmarks.txt"
 		date >> $bench
+		lsblk --output=PATH,SIZE,MODEL,TRAN -dn /dev/sda >> $bench
 		echo -e "\nFile system type: $fstype\n\n"
 
 		echo "\nRunning cryptsetup benchmark...\n"
