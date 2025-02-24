@@ -2770,6 +2770,9 @@ benchmark () {
 		echo -e "\nRunning dd to measure buffer-cache speed...\n" >> $bench
 		time dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress 2>> $bench
 
+		echo -e "\nSystem boot speed (booster initramfs):\n" >> $bench
+		systemd-analyze >> $bench
+
 		rm $tempfile
 		
 		echo -e "\nTests completed. View $bench for results.\n"
