@@ -89,7 +89,7 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
-fstype='xfs'			# btrfs,ext4,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
+fstype='f2fs'			# btrfs,ext4,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
 subvols=()					# used for btrfs 	TODO: bcachefs
 snapshot_dir="/.snapshots"
 encrypt=false
@@ -429,7 +429,7 @@ sleep 2
 	echo -e "\nMounting $mnt..."
 
 
-	mount --mkdir $disk$rootPart $mnt
+	mount -t $fstype --mkdir $disk$rootPart $mnt
 
 	cd $mnt
 
@@ -478,7 +478,7 @@ mount_disk () {
 			bcachefs unlock -k session $disk$rootPart
 		fi
 
-		mount --mkdir $disk$rootPart $mnt
+		mount -t $fstype --mkdir $disk$rootPart $mnt
 
 		fi
 
@@ -2552,7 +2552,7 @@ last_modified () {
 edit_arch () {
 
 	if [ "$(ls $arch_path | grep $arch_file)" ]; then
-		vim $mnt$arch_path/$arch_file && exit
+		vim $arch_path/$arch_file && exit
 	fi
 
 }
@@ -2741,7 +2741,7 @@ benchmark () {
 		echo -e "\n\n\n\n" >> $bench
 		date >> $bench
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "$disk" | sed "s#$host.*#& (host)#g" >> $bench  
-		echo -e "File system type: $fstype\n\n\n\n" >> $bench
+		echo -e "$(mount | grep ' / ')\n\n\n\n" >> $bench
 
 		echo -e "\nRunning cryptsetup benchmark...\n" >> $bench
 		cryptsetup benchmark >> $bench
