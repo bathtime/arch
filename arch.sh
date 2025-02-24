@@ -1912,10 +1912,13 @@ clone () {
 	
 		rsync $2 --info=progress2 $rsync_excludes $3 $4
 
-  		install_grub
+  		#install_grub
 		arch-chroot $mnt pacman -S --noconfirm linux	
-		#arch-chroot $mnt mkinitcpio -P
-		choose_initramfs mkinitcpio
+  		install_grub
+		#choose_initramfs mkinitcpio
+		choose_initramfs dracut
+		choose_initramfs booster 
+		setup_fstab
 
 	else
 		echo "Exiting."
