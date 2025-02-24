@@ -89,7 +89,7 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
-fstype='bcachefs'			# btrfs,ext4,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
+fstype='xfs'			# btrfs,ext4,f2fs,xfs,jfs,nilfs22   TODO: bcachefs
 subvols=()					# used for btrfs 	TODO: bcachefs
 snapshot_dir="/.snapshots"
 encrypt=false
@@ -263,7 +263,7 @@ choose_disk () {
 		echo -e "\nDrives found (current mount: /):\n"
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g"
-		choices='quit edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / logout reboot suspend hibernate poweroff stats benchmark'
+		choices='quit edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / logout reboot suspend hibernate poweroff stats'
 		
 
 		echo -e "\nWhich drive?\n"
@@ -297,7 +297,6 @@ choose_disk () {
 									break
 								fi
 								;;
-				benchmark)	benchmark ;;
 				'')   		echo -e "\nInvalid option!\n" ;;
 			esac
 
@@ -2732,25 +2731,40 @@ benchmark () {
 		
 		check_pkg cryptsetup sysbench fio hdparm
 
-		bench="/home/$user/benchmarks.txt"
-		date >> $bench
-		lsblk --output=PATH,SIZE,MODEL,TRAN -dn /dev/sda >> $bench
-		echo -e "\nFile system type: $fstype\n\n"
+		bench="$mnt/benchmarks.txt"
+		tempfile="$mnt/temp.tmp"
+		cd $mnt/
+
+		echo -e "\n\n\n\n" >> $bench
+		date | tee -a $bench
+		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "$disk" | sed "s#$host.*#& (host)#g" | tee -a $bench  
+		echo -e "File system type: $fstype\n\n\n\n" | tee -a $bench
 
 		echo "\nRunning cryptsetup benchmark...\n"
-		cryptsetup benchmark >> $bench 
+		cryptsetup benchmark | tee -a $bench
 					
 		echo "\nRunning sysbench cpu test...\n"
-		sysbench --test=cpu --cpu-max-prime=500 run >> $bench
-		sysbench --test=cpu --cpu-max-prime=500 run --num-threads=4 >> $bench
+		sysbench --test=cpu --cpu-max-prime=500 run | tee -a $bench
+		sysbench --test=cpu --cpu-max-prime=500 run --num-threads=4 | tee -a $bench 
 	 
 		echo "\nRunning sysbench file IO benchmark...\n"
-		sysbench --test=fileio --file-total-size=8G --file-test-mode=seqwr run >> $bench
+		sysbench --test=fileio --file-total-size=8G --file-test-mode=seqwr run | tee -a $bench
 		sysbench --test=fileio --file-total-size=8G cleanup
 	 
 		echo "\nRunning hdparm test...\n"
-		hdparm -Tt $disk >> $bench
+		hdparm -Tt $disk
 
+		echo "\nRunning dd to measure write speed...\n"
+		time dd if=/dev/zero of=$tempfile bs=1M count=1024 conv=fdatasync,notrunc status=progress 2>> $bench
+
+		echo 3 > /proc/sys/vm/drop_caches
+		echo "\nRunning dd to measure read speed...\n" 2>> bench
+		time dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress 2>> $bench
+
+		echo "\nRunning dd to measure buffer-cache speed...\n"
+		time dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress 2>> $bench
+
+		rm $tempfile
 }
 
 
@@ -2844,7 +2858,8 @@ while :; do
 31. Setup ~ files
 32. Copy/sync/update/wipe ->
 33. Install aur packages ->
-34. Install group packages ->")
+34. Install group packages ->
+35. Benchmark")
 
 
 
@@ -3058,6 +3073,7 @@ echo
 
 									done ;;
 
+		benchmark|35)			benchmark ;;
 		'')						;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
