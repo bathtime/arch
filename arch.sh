@@ -1910,7 +1910,7 @@ clone () {
 
 		echo -e "\nRunning rsync...\n"
 	
-		time rsync $2 --info=progress2 $rsync_excludes $3 $4
+		rsync $2 --info=progress2 $rsync_excludes $3 $4
 
   		install_grub
 
@@ -3066,7 +3066,7 @@ echo
                 						quit|1)			echo "Quitting!"; break ;;
 											unsquash|2)		extract_archive ;;
 											clone|3)			create_partitions
-																clone Cloning '-aSW --del' / $mnt/
+																time clone Cloning '-aSW --del' / $mnt/
 
 							[ "$fstype" = "btrfs" ] && pacstrap_install btrfs-progs grub-btrfs
 							[ "$fstype" = "xfs" ] && pacstrap_install xfsprogs
@@ -3077,7 +3077,7 @@ echo
 
    														;;
 
-											clone|4)			clone Cloning '-aSW --del' / $mnt/ ;; 
+											clone|4)			time clone Cloning '-aSW --del' / $mnt/ ;; 
 											clone|5)			clone Cloning '-aSW --del' $mnt/ / ;;
 											copy|6)			clone Copying -aSW / $mnt/ ;;
 											copy|7)			clone Copying -aSW $mnt/ / ;;
