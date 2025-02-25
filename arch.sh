@@ -1948,7 +1948,13 @@ take_snapshot () {
 	[[ ! $snapshotname = '' ]] && snapshotname=" - $snapshotname"
 	echo $mnt
 
-	bcachefs subvolume snapshot "$mnt$snapshot_dir/$filename$snapshotname"
+	if [[ $fstype = bcachefs ]]; then
+		bcachefs subvolume snapshot "$mnt$snapshot_dir/$filename$snapshotname"
+	fi
+	if [[ $fstype = btrfs ]]; then
+		btrfs subvolume snapshot $mnt/ "$mnt$snapshot_dir/$filename$snapshotname"
+	fi
+
 	echo -e "\nCreated snapshot: $mnt$snapshot_dir/$filename$snapshotname\n"	
 	
 	ls -1N $mnt$snapshot_dir/
@@ -2358,7 +2364,7 @@ auto_install_kde () {
 
 	install_config
 
-	if [[ $fstype = bcachefs ]]; then
+	if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
 		take_snapshot "before first boot"
 	fi
 
@@ -2869,7 +2875,7 @@ while :; do
 27. Auto-install
 30. Custom install
 31. Setup ~ files
-32. Copy/sync/update/wipe ->
+32. Snapshot/sync/wipe ->
 33. Install aur packages ->
 34. Install group packages ->
 35. Benchmark")
