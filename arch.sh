@@ -712,15 +712,7 @@ choose_initramfs () {
 
 	case $choice in
 		quit|1)			;;
-		mkinitcpio|2)	pacstrap_install mkinitcpio
-
-							if [[ $mnt = '' ]]; then
-								mkinitcpio -P
-							else
-								arch-chroot $mnt mkinitcpio -P
-							fi
-
-							;;
+		mkinitcpio|2)	pacstrap_install mkinitcpio ;;
 		dracut|3)		pacstrap_install dracut 
 
 							echo 'hostonly="yes"
@@ -744,7 +736,7 @@ omit_dracutmodules+=" "' > $mnt/etc/dracut.conf.d/myflags.conf
 		booster|4)		pacstrap_install booster 
 							
 							# manual build
-							#booster build mybooster.img
+							booster build /boot/booster-linux.img --force
 
 							if [[ $mnt = '' ]]; then	
 								grub-mkconfig -o $mnt/boot/grub/grub.cfg
@@ -821,6 +813,9 @@ install_grub () {
    echo "$SWAP_UUID"
 
 	[[ $fstype = bcachefs ]] && extra_ops='rootfstype=bcachefs'
+	
+	# May cause grub-snapshots to not work correctly
+	#[[ $fstype = btrfs ]] && extra_ops='rootflags=subvol=@'
 
 
 	grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --boot-directory=$mnt/boot
@@ -1948,7 +1943,6 @@ take_snapshot () {
 	fi
 
 	[[ ! $snapshotname = '' ]] && snapshotname=" - $snapshotname"
-	echo $mnt
 
 	if [[ $fstype = bcachefs ]]; then
 		bcachefs subvolume snapshot "$mnt$snapshot_dir/$filename$snapshotname"
@@ -2279,18 +2273,30 @@ auto_install_root () {
 	install_grub
 	#install_liveroot
 	
-	choose_initramfs $initramfs
+	# Bootable snapshots will not work with mkinitcpio
+	if [[ $fstype = btrfs ]]; then
+		choose_initramfs dracut
+		#arch-chroot $mnt pacman -R --noconfirm mkinitcpio
+	else
+		choose_initramfs $initramfs
+	fi
+
 
 	general_setup
 	
 	#setup_iwd
 	setup_networkmanager
 	#setup_wpa
+
 	
 	install_tweaks
 	copy_script
 	copy_pkgs
-		
+
+	if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
+		take_snapshot "root installed"
+	fi
+
 }
 
 
@@ -2310,6 +2316,10 @@ auto_install_user () {
 	#setup_acpid
 	#install_tweaks
 	copy_pkgs
+
+	if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
+		take_snapshot "user installed"
+	fi
 
 }
 
@@ -2354,10 +2364,10 @@ auto_install_kde () {
  
 	pacstrap_install $kde_install
 
-	if [ "$fstype" = "btrfs" ]; then
-  		pacstrap_install timeshift xorg-xhost
+	#if [ "$fstype" = "btrfs" ]; then
+  		#pacstrap_install timeshift xorg-xhost
 		#setup_snapshots
-	fi
+	#fi
 	
 	copy_pkgs
 
@@ -2792,6 +2802,7 @@ benchmark () {
 
 CONFIG_FILES="
 /etc/dracut.conf.d/myflags.conf
+/etc/booster.yaml
 /etc/hostname
 /etc/hosts
 /etc/iwd/main.conf
