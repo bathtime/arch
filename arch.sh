@@ -2377,7 +2377,7 @@ auto_install_kde () {
 	install_config
 
 	if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
-		take_snapshot "before first boot"
+		take_snapshot "kde installed"
 	fi
 
 }
