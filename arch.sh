@@ -1954,6 +1954,18 @@ take_snapshot () {
 	echo -e "\nCreated snapshot: $mnt$snapshot_dir/$filename$snapshotname\n"	
 	
 	ls -1N $mnt$snapshot_dir/
+	echo
+
+	# To update grub to include bootable snapshots	
+	if [[ $fstype = btrfs ]]; then
+
+	   if [[ $mnt = '' ]]; then
+      	grub-mkconfig -o $mnt/boot/grub/grub.cfg
+   	else
+      	arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
+   	fi
+
+	fi
 
 }
 
@@ -2275,8 +2287,8 @@ auto_install_root () {
 	
 	# Bootable snapshots will not work with mkinitcpio
 	if [[ $fstype = btrfs ]]; then
+		choose_initramfs booster
 		choose_initramfs dracut
-		#arch-chroot $mnt pacman -R --noconfirm mkinitcpio
 	else
 		choose_initramfs $initramfs
 	fi
@@ -2311,6 +2323,10 @@ auto_install_user () {
 	if [[ $autologin = true ]]; then
 		auto_login $user
 	fi
+
+	# Auto-launch
+	sed -i 's/manager=.*$/manager=none/g' $mnt/home/$user/.bash_profile
+
 
 	#install_aur
 	#setup_acpid
@@ -3115,8 +3131,4 @@ echo
 	disk_info
 
 done
-
-unmount_disk
-
-
 
