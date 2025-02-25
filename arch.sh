@@ -89,7 +89,7 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
-fstype='bcachefs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=()					# used for btrfs 	TODO: bcachefs
 snapshot_dir="/.snapshots"
 encrypt=false
@@ -1205,7 +1205,7 @@ setup_iwd () {
 	mount_disk
 
 
-   setup_dhcp
+   #setup_dhcp
 
 
 	pacstrap_install iw iwd
@@ -1232,7 +1232,7 @@ setup_networkmanager () {
 
    mount_disk
 
-   setup_dhcp
+   #setup_dhcp
 
    pacstrap_install networkmanager 
                               
@@ -1251,7 +1251,7 @@ setup_wpa () {
 
 	mount_disk
 
-	setup_dhcp
+	#setup_dhcp
 
 
 	pacstrap_install iw wpa_supplicant
@@ -2057,11 +2057,12 @@ install_network () {
 
 	echo -e "\nWhich network manager would you like to install?\n"
 		
-	net_choices=(quit iwd wpa_supplicant networkmanager) 
+	net_choices=(quit dhcp iwd wpa_supplicant networkmanager) 
 	select net_choice in "${net_choices[@]}"
 	do
 		case $net_choice in
 			"quit")				break ;;
+			"dhcp")				setup_dhcp; break ;;
 			"iwd")				setup_iwd; break ;;
 			"dhcp")				setup_dhcp; break ;;
 			"wpa_supplicant")	setup_wpa; break ;;
