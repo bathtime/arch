@@ -95,11 +95,8 @@ snapshot_dir="/.snapshots"
 encrypt=false
 efi_path=/efi
 
-#kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold"
-
 # This method uses the blk-mq to implicitly set the I/O scheduler to none. 
-#kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=lz4 zswap.max_pool_percent=20 zswap.zpool=z3fold scsi_mod.use_blk_mq=1"
-kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
+kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
 
 # systemd.gpt_auto=0
 
@@ -288,6 +285,8 @@ choose_disk () {
 				stats)		
 								echo; free -h; echo
 								systemd-analyze | sed 's/in .*=/in/;s/graph.*//'
+								echo $(systemd-analyze  blame | wc -l) systemd services
+
 								;;
 				/)				disk=$host; search_disks=0; break ;;
 				*)    		if [[ $disk = '' ]]; then
