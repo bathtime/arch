@@ -1936,9 +1936,12 @@ take_snapshot () {
 	mount_disk
 	
 	filename=$(date +"%Y-%m-%d @ %H:%M:%S")
+	
+	echo -e "\nList of snapshots:\n"
+	ls -1N $mnt$snapshot_dir/
 
 	if [[ $1 = '' ]]; then
-		echo -e "\nWhat would you like to call this snapshot?\n"
+		echo -e "\n\nWhat would you like to call this snapshot?\n"
 		read snapshotname
 	else
 		snapshotname="$1"
