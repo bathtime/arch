@@ -89,7 +89,7 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
-fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='bcachefs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=()					# used for btrfs 	TODO: bcachefs
 snapshot_dir="/.snapshots"
 encrypt=false
@@ -3092,7 +3092,7 @@ echo
 											squashfs|15)	create_archive ;;
 											snapshot|16)	take_snapshot ;;
 											restore|17)		restore_snapshot ;;
-              							'')				last_modified ;;
+              							'')				;;
                 						*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 										esac
 
