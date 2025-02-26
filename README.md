@@ -19,7 +19,7 @@ Supported filesystems: ext4, btrfs, xfs, f2fs, bcachefs
 
 - Ability to clone drive to USB
 - Clone from one filesystem type to another (ext4, btrfs, xfs, bcachefs, f2fs)
-- bcachefs rsync allows for complete rollback of root drive (not fully tested. use are your own risk!)
+- btrfs and bcachefs rsync allows for complete rollback of root drive (not fully tested. use are your own risk!)
 
 
 **BUGS:**
