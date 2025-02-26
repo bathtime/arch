@@ -96,7 +96,8 @@ encrypt=false
 efi_path=/efi
 
 # This method uses the blk-mq to implicitly set the I/O scheduler to none. 
-kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
+#kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
+kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
 
 # systemd.gpt_auto=0
 
@@ -1909,6 +1910,7 @@ clone () {
 		echo -e "\nRunning rsync...\n"
 	
 		rsync $2 --info=progress2 $rsync_excludes $3 $4
+		#tar -C $3 -cf - . | tar -C $4 -xf -
 
   		#install_grub
 		arch-chroot $mnt pacman -S --noconfirm linux	
@@ -2668,8 +2670,6 @@ wipe_freespace () {
 disk_info () {
 
 	echo -ne "\nDisk: $(lsblk --output=PATH,SIZE,MODEL,TRAN -dn $disk) "
-	#mounted_on="$(lsblk -no MOUNTPOINT $disk$rootPart)"
-	#fstype="$(lsblk -n -o FSTYPE $disk$rootPart)"
 
 	if [[ "$mounted_on" = "" ]]; then
 		echo "(unmounted)"
