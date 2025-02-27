@@ -1,6 +1,13 @@
 # arch
 A script to install Arch linux on a USB stick or machine.
 
+/etc/updatedb.conf:
+
+PRUNEFS = "9p afs autofs binfmt_misc ceph cgroup cgroup2 cifs coda configfs curlfpfsdebugfs devfs devtmpfs ecryptfs ftpfs fuse.ceph fuse.cryfs fuse.encfs fuse.glusterfs fuse.gvfsd-fuse fuse.mfs fuse.rclone fuse.rozofs fuse.sshfs fusec fusemb gfs gfs2 gpfs hugetlbfs iso9660 lustre lustre_lite mfs mqueue ncpfs nfs nfs4 ocfs ocfs2 proc pstore ramfs pstorefs rootfs rpc_pipefs securityfs smbfs sysfs tmpfs tracefs udev ubf usbfs"
+PRUNEPATHS = "/tmp /media /dev /sys /proc /run /var/spool"
+PRUNENAMES = ".snapshots"
+
+
 
 Running from an arch iso:
 
