@@ -47,6 +47,11 @@ error() {
 trap 'error "${BASH_SOURCE}" "${LINENO}" "$?" "${BASH_COMMAND}"' ERR
 trap 'echo;echo; read -s -r -n 1 -p "<ctrl> + c pressed. Press any key to continue... "; set +e' SIGINT
 
+# Make font big and readable
+if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ]; then
+	setfont ter-132b
+fi
+
 
 
 error_check () {
@@ -90,8 +95,9 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
 fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=()					# used for btrfs 	TODO: bcachefs
-snapshot_dir="/.snapshots"
+subvols=(/snapshots /var/logs)					# used for btrfs 	TODO: bcachefs
+subvolPrefix='/@'
+snapshot_dir="/snapshots"
 encrypt=false
 efi_path=/efi
 
@@ -397,7 +403,8 @@ create_partitions () {
 
 	case $fstype in
 
-		btrfs)		check_pkg btrfs-progs rsync
+		btrfs)		check_pkg btrfs-progs
+						check_pkg rsync
 						mkfs.btrfs -f -L ROOT $disk$rootPart ;;
 		ext4)			
 						#mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart 
@@ -440,8 +447,26 @@ sleep 2
 
 	if [ "$fstype" = "btrfs" ]; then
 
-		for subvol in '' "${subvols[@]}"; do
-			btrfs su cr /mnt/@"$subvol"
+		#for subvol in '' "${subvols[@]}"; do echo "Creating subvolume: $mnt$subvolPrefix$subvol"
+		#	btrfs su cr "$mnt$subvolPrefix$subvol"
+		#done
+			btrfs su cr "$mnt$subvolPrefix"
+
+		for subvol in "${subvols[@]}"; do
+
+		   echo "Creating subvolume: $mnt$subvolPrefix$subvol"
+
+  			dir_name=$(dirname "$mnt$subvolPrefix$subvol")
+   		echo "Dirname: $dir_name ($mnt$subvolPrefix)"
+
+   		if [ ! "$dir_name" = "$mnt$subvolPrefix" ]; then
+      		echo -e "\nCreating directory: $dir_name...\n"
+				mkdir -p "$dir_name"
+   		fi
+			
+			echo "Creating: $mnt$subvolPrefix$subvol"
+			btrfs su cr "$mnt$subvolPrefix$subvol"
+
 		done
 
 	fi
@@ -474,7 +499,8 @@ mount_disk () {
 			mountopts="noatime,discard=async"
 
 			for subvol in '' "${subvols[@]}"; do
-				mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
+				#mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
+				mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/"${subvol//_//}"
 			done
 
 		else
@@ -576,7 +602,7 @@ Server = file:///var/cache/pacman/pkg/
 
 	packages="$base_install"
 
-	[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs grub-btrfs"
+	[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs grub-btrfs rsync"
 	[ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
 	[ "$fstype" = "jfs" ] && packages="$packages jfsutils"
 	[ "$fstype" = "f2fs" ] && packages="$packages f2fs-tools"
