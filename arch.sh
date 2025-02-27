@@ -95,7 +95,7 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
 fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(/snapshots /var/logs)					# used for btrfs 	TODO: bcachefs
+subvols=(/snapshots /var/log)					# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/snapshots"
 encrypt=false
@@ -2029,7 +2029,7 @@ restore_snapshot () {
 		#--info=progress2 : instead of --progress is useful for large transfers
 		# arch recommended: -aAXHv
 
-		rsync_params="-axHAXvSW --del --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/"
+		rsync_params="-axHAXvSW --del --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=/snapshots/"
 		
 		rsync --dry-run $rsync_params "$mnt$snapshot_dir/$snapshot/" $mnt/ | less
 
