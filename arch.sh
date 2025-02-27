@@ -89,7 +89,7 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
-fstype='bcachefs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=()					# used for btrfs 	TODO: bcachefs
 snapshot_dir="/.snapshots"
 encrypt=false
@@ -397,7 +397,7 @@ create_partitions () {
 
 	case $fstype in
 
-		btrfs)		check_pkg btrfs-progs
+		btrfs)		check_pkg btrfs-progs rsync
 						mkfs.btrfs -f -L ROOT $disk$rootPart ;;
 		ext4)			
 						#mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart 
@@ -415,7 +415,7 @@ create_partitions () {
 						;;
 		nilfs2)		check_pkg nilfs-utils
 						mkfs.nilfs2 -f -L ROOT $disk$rootPart ;;
-		bcachefs)	check_pkg bcachefs-tools
+		bcachefs)	check_pkg bcachefs-tools rsync
 
 						if [[ $encrypt = true ]]; then
 							bcachefs format -f -L ROOT --encrypted $disk$rootPart
@@ -1974,16 +1974,17 @@ take_snapshot () {
 
 restore_snapshot () {
 
-	mount_disk
-	#bcachefs fsck $mnt$disk$rootPart
-	
-
-	echo -e "\nList of snapshots:\n"
-
-	ls -1N $mnt$snapshot_dir/
+	mount_disk	
 
 	echo -e "\nWhich snapshot would you like to recover?\n"
-	read snapshot
+   cd $mnt$snapshot_dir
+
+   select snapshot in *
+      do
+         case snapshot in
+         *) echo -e "\nYou chose: $snapshot\n"; break ;;
+      esac
+   done
 
 	if [ -d "$mnt$snapshot_dir/$snapshot" ] && [ ! "$snapshot" = '' ]; then
 
@@ -2771,8 +2772,9 @@ benchmark () {
 		check_pkg cryptsetup sysbench fio hdparm
 
 		bench="$mnt/benchmarks.txt"
-		tempfile="$mnt/temp.tmp"
+		tempfile="$mnt/home/user/temp.tmp"
 		cd $mnt/
+		rm -rf $tempfile
 
 		echo -e "\nRunning tests and saving to $bench. Please be patient...\n"
 
@@ -2781,20 +2783,6 @@ benchmark () {
 		date >> $bench
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "$disk" | sed "s#$host.*#& (host)#g" >> $bench  
 		echo -e "$(mount | grep ' / ')\n\n\n\n" >> $bench
-
-		echo -e "\nRunning cryptsetup benchmark...\n" >> $bench
-		cryptsetup benchmark >> $bench
-					
-		echo -e "\nRunning sysbench cpu test...\n" >> $bench
-		sysbench --test=cpu --cpu-max-prime=500 run >> $bench
-		sysbench --test=cpu --cpu-max-prime=500 run --num-threads=4 >> $bench 
-	 
-		echo -e "\nRunning sysbench file IO benchmark...\n" >> $bench
-		sysbench --test=fileio --file-total-size=8G --file-test-mode=seqwr run >> $bench
-		sysbench --test=fileio --file-total-size=8G cleanup
-	 
-		echo -e "\nRunning hdparm test...\n" >> $bench
-		hdparm -Tt $disk >> $bench
 
 		echo -e "\nRunning dd to measure write speed...\n" >> $bench
 		time dd if=/dev/zero of=$tempfile bs=1M count=1024 conv=fdatasync,notrunc status=progress 2>> $bench
@@ -2811,7 +2799,9 @@ benchmark () {
 
 		rm $tempfile
 		
-		echo -e "\nTests completed. View $bench for results.\n"
+		echo -e "\nTests completed. \n"
+
+		cat $bench
 }
 
 
