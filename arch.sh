@@ -2626,6 +2626,9 @@ install_snapper () {
 		mount -a
 		btrfs subvolume list /
 
+		# The restore was successful but the migration of the nested subvolumes failed
+		# Please migrate the those subvolumes manually
+
 	else
 		arch-chroot $mnt btrfs subvolume list /
 
