@@ -113,7 +113,7 @@ autologin=true
 aur_app=none
 aur_path=/home/$user/aur
 
-base_install="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar man-db dosfstools"
+base_install="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar man-db dosfstools git base-devel"
 
 user_install="sudo"
 
@@ -2931,6 +2931,10 @@ benchmark () {
 
 
 CONFIG_FILES="
+/etc/conf.d/snapper
+/etc/snapper/configs
+/etc/systemd/system/timers.target.wants/snapper-timeline.timer
+
 /etc/dracut.conf.d/myflags.conf
 /etc/booster.yaml
 /etc/hostname
