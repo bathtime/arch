@@ -2616,9 +2616,10 @@ install_snapper () {
 	#setup_fstab
 
    if [[ $mnt = '' ]]; then
-		
+
+		snapshot_dir=/.snapshots
 		btrfs subvolume list /
-		umouint $snapshot_dir
+		umount $snapshot_dir
 		rm -rf $snapshot_dir
 		snapper -c root create-config /
 		btrfs subvolume delete $snapshot_dir
