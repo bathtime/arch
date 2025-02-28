@@ -2077,9 +2077,9 @@ rsync_snapshot () {
 		echo -e "\nRunning dry run first..."
 		sleep 1
 
-		rsync_params="-axHAXvSW --del --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=/snapshots/"
+		rsync_params="-axHAXSW --del --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=/snapshots/"
 		
-		rsync --dry-run $rsync_params / "$mnt$snapshot_dir/$snapshot/" | less
+		rsync --dry-run -v $rsync_params / "$mnt$snapshot_dir/$snapshot/" | less
 
 		echo -e "\nType 'y' to proceed with rsync or any other key to exit..."
 		read choice
