@@ -2419,7 +2419,7 @@ auto_install_root () {
 		choose_initramfs $initramfs
 	fi
 
-	install_snapper
+	#install_snapper
 	
 	
 
