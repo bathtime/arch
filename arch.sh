@@ -113,7 +113,7 @@ autologin=true
 aur_app=none
 aur_path=/home/$user/aur
 
-base_install="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar man-db dosfstools git base-devel"
+base_install="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar man-db dosfstools"
 
 user_install="sudo"
 
@@ -134,6 +134,7 @@ timezone=Canada/Eastern
 offline=0
 reinstall=0
 copy_on_host='1'				# Set to '0' when installing from an arch iso in ram
+backup_install='false'		# should we do snapshots/rysncs during install to restore
 
 initramfs='booster'		# mkinitcpio, dracut, booster
 
@@ -2107,7 +2108,7 @@ bork_system () {
 }
 
 
-delete_snapshot () {
+delote_snapshot () {
 
 	mount_disk	
 
@@ -2415,6 +2416,9 @@ auto_install_root () {
 		choose_initramfs $initramfs
 	fi
 
+	
+	install_snapper
+	
 
 	general_setup
 	
@@ -2427,8 +2431,10 @@ auto_install_root () {
 	copy_script
 	copy_pkgs
 
-	if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
-		take_snapshot "root installed"
+	if [[ $backup_install = true ]]; then
+		if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
+			take_snapshot "root installed"
+		fi
 	fi
 
 }
@@ -2455,10 +2461,12 @@ auto_install_user () {
 	#install_tweaks
 	copy_pkgs
 
-	if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
-		take_snapshot "user installed"
+	if [[ $backup_install = true ]]; then
+		if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
+			take_snapshot "root installed"
+		fi
 	fi
-
+	
 }
 
 
@@ -2514,8 +2522,10 @@ auto_install_kde () {
 
 	install_config
 
-	if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
-		take_snapshot "kde installed"
+	if [[ $backup_install = true ]]; then
+		if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
+			take_snapshot "root installed"
+		fi
 	fi
 
 }
@@ -2594,6 +2604,24 @@ auto_install_all () {
 	sed -i 's/manager=.*$/manager=choice/g' $mnt/home/$user/.bash_profile
 
 	install_config
+}
+
+
+install_snapper () (
+
+	pacstrap_install snapper
+
+	
+   if [[ $mnt = '' ]]; then
+		btrfs subvolume delete $snapshot_dir
+		snapper -c root create-config /
+		read -p "Did it work? (install_snapper)"
+	else
+		arch-chroot $mnt btrfs subvolume delete $snapshot_dir
+      arch-chroot $mnt snapper -c root create-config /
+		read -p "Did it work? (install_snapper)"
+   fi
+
 }
 
 
@@ -2931,10 +2959,6 @@ benchmark () {
 
 
 CONFIG_FILES="
-/etc/conf.d/snapper
-/etc/snapper/configs
-/etc/systemd/system/timers.target.wants/snapper-timeline.timer
-
 /etc/dracut.conf.d/myflags.conf
 /etc/booster.yaml
 /etc/hostname
