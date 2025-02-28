@@ -75,7 +75,8 @@ arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
 
 mnt=/mnt
-boot='/boot'		# leave blank to not mount boot separately
+#boot='/boot'		# leave blank to not mount boot separately
+boot=''		# leave blank to not mount boot separately
 
 if [[ ! $boot = '' ]]; then
 	espPartNum=1
@@ -95,7 +96,7 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
 fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(/.snapshots /var/log)					# used for btrfs 	TODO: bcachefs
+subvols=(/var/log)					# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/.snapshots"
 encrypt=false
@@ -465,7 +466,6 @@ sleep 2
 			#	mkdir -p "$dir_name"
    		#fi
 			
-			echo "Creating: $mnt$subvolPrefix$subvol"
 			#btrfs su cr "$mnt$subvolPrefix$subvol"
 			
 			btrfs su cr --parents "$mnt$subvolPrefix$subvol"
