@@ -2416,7 +2416,7 @@ auto_install_root () {
 		choose_initramfs $initramfs
 	fi
 
-	#install_snapper
+	install_snapper
 	
 	
 
@@ -2620,13 +2620,13 @@ install_snapper () {
 		#rm -rf $snapshot_dir
 		#snapper -c root create-config /
 		btrfs subvolume list /
-		pacman -U /home/user/.local/bin/*.zst
+		#pacman -U /home/user/.local/bin/*.zst
 	else
 		#rm -rf $mnt$snapshot_dir
 		#arch-chroot $mnt btrfs subvolume delete $snapshot_dir
       #arch-chroot $mnt snapper -c root create-config /
 		arch-chroot $mnt btrfs subvolume list /
-		arch-chroot $mnt sudo pacman -U /home/user/.local/bin/*.zst
+		#arch-chroot $mnt sudo pacman -U /home/user/.local/bin/*.zst
 
    fi
 	
