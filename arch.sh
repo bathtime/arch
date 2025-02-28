@@ -95,7 +95,7 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
 fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(/var/log)					# used for btrfs 	TODO: bcachefs
+subvols=(/.snapshots /var/log)					# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/.snapshots"
 encrypt=false
@@ -2416,6 +2416,7 @@ auto_install_root () {
 		choose_initramfs $initramfs
 	fi
 
+	#install_snapper
 	
 	
 
@@ -2526,9 +2527,9 @@ auto_install_kde () {
 			take_snapshot "root installed"
 		fi
 	fi
-	install_snapper
 
-}
+
+ }
 
 
 auto_install_gnome () {
@@ -2612,17 +2613,26 @@ install_snapper () {
 	pacstrap_install snapper
 
 	
+	#setup_fstab
+
    if [[ $mnt = '' ]]; then
 		#btrfs subvolume delete $snapshot_dir
 		#rm -rf $snapshot_dir
-		snapper -c root create-config /
+		#snapper -c root create-config /
+		btrfs subvolume list /
+		ls -la /
 		read -p "Did it work? (install_snapper)"
 	else
 		#rm -rf $mnt$snapshot_dir
 		#arch-chroot $mnt btrfs subvolume delete $snapshot_dir
-      arch-chroot $mnt snapper -c root create-config /
+      #arch-chroot $mnt snapper -c root create-config /
+		ls -la /
+		arch-chroot $mnt btrfs subvolume list /
+		arch-chroot $mnt sudo pacman -U /home/user/.local/bin/*.zst
+
 		read -p "Did it work? (install_snapper)"
    fi
+	
 
 }
 
@@ -2723,9 +2733,23 @@ install_config () {
 	#cp /home/$user/setup.tar{,.gpg} $mnt/home/$user/
 	cp /setup.tar $mnt/
 
-	echo "Extracting setup file..."
+	echo "Extracting setup files..."
 	arch-chroot $mnt tar xvf /setup.tar --directory /
 	arch-chroot $mnt chown -R $user:$user /home/$user/
+
+	count=`ls -1 /home/user/.local/bin/*.zst 2>/dev/null | wc -l`
+
+	if [ $count != 0 ]; then
+
+		echo -e "\nInstalling extra packages...\n"
+	
+		if [[ $mnt = '' ]]; then
+			sudo pacman -U --noconfirm /home/user/.local/bin/*.zst
+		else
+			arch-chroot $mnt sudo pacman -U --noconfirm /home/user/.local/bin/*.zst
+   	fi
+
+	fi
 
 }
 
