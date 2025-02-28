@@ -94,10 +94,10 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
-fstype='ext4'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(/snapshots /var/log)					# used for btrfs 	TODO: bcachefs
+fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+subvols=(/.snapshots /var/log)					# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
-snapshot_dir="/snapshots"
+snapshot_dir="/.snapshots"
 encrypt=false
 efi_path=/efi
 
@@ -2094,6 +2094,19 @@ rsync_snapshot () {
 }
 
 
+bork_system () {
+
+	if [[ $mnt = '' ]]; then
+		pacman -Rnsc plasma
+	else
+		arch-chroot $mnt pacman -Rnsc -noconfirm plasma 
+	fi
+
+	rm -rf $mnt/etc
+
+}
+
+
 delete_snapshot () {
 
 	mount_disk	
@@ -3155,7 +3168,8 @@ echo
 16. Take btrfs/bcachefs snapshot
 17. Restore btrfs/bcachefs snapshot
 18. Delete btrfs/bcachefs snapshot
-19. Rsync snapshot")
+19. Rsync snapshot
+20. Bork system")
 
 									config_choice=0
 									while [ ! "$config_choice" = "1" ]; do
@@ -3198,6 +3212,7 @@ echo
 											restore|17)		restore_snapshot ;;
 											delete|18)		delete_snapshot ;;
 											rsync|19)		rsync_snapshot ;;
+											bork|20)			bork_system ;;
               							'')				;;
                 						*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 										esac
