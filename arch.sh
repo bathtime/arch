@@ -2059,8 +2059,6 @@ rsync_snapshot () {
 
 	mount_disk	
 
-	filename=$(date +"%Y-%m-%d @ %H:%M:%S")
-	
 	echo -e "\nList of snapshots:\n"
 	ls -1N $mnt$snapshot_dir/
 
@@ -2071,15 +2069,13 @@ rsync_snapshot () {
 		snapshotname="$1"
 	fi
 
-	[[ ! $snapshotname = '' ]] && snapshotname=" - $snapshotname"
-
 
 		echo -e "\nRunning dry run first..."
 		sleep 1
 
 		rsync_params="-axHAXSW --del --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=/snapshots/"
 		
-		rsync --dry-run -v $rsync_params / "$mnt$snapshot_dir/$snapshot/" | less
+		rsync --dry-run -v $rsync_params / "$mnt$snapshot_dir/$snapshotname" | less
 
 		echo -e "\nType 'y' to proceed with rsync or any other key to exit..."
 		read choice
@@ -2087,7 +2083,7 @@ rsync_snapshot () {
 		if [[ $choice = y ]]; then
 
 			echo -e "\nRunning rsync...\n"
-			rsync $rsync_params --info=progress2 / "$snapshot_dir/$snapshot/"
+			rsync $rsync_params --info=progress2 / "$snapshot_dir/$snapshotname"
 	
 		else
 			echo "Exiting."
