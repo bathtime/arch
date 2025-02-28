@@ -2893,20 +2893,21 @@ benchmark () {
 		echo -e "$(mount | grep ' / ')\n\n" >> $bench
 
 		echo -e "\nRunning dd to measure write speed...\n" >> $bench
-		time dd if=/dev/zero of=$tempfile bs=1M count=1024 conv=fdatasync,notrunc status=progress 2>> $bench
+		dd if=/dev/zero of=$tempfile bs=1M count=1024 conv=fdatasync,notrunc status=progress 2>> $bench
 
 		echo 3 > /proc/sys/vm/drop_caches
 		echo -e "\nRunning dd to measure read speed...\n" >> $bench
-		time dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress 2>> $bench
+		dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress 2>> $bench
 
 		echo -e "\nRunning dd to measure buffer-cache speed...\n" >> $bench
-		time dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress 2>> $bench
+		dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress 2>> $bench
+
+		echo -e "\nRunning bash open/close test to measure buffer-cache speed...\n" >> $bench
+		time for (( i=1; i<=100; i++ )); do bash -c 'exit'; done
 
 		echo -e "\nSystem boot speed (booster initramfs):\n" >> $bench
 		systemd-analyze >> $bench
 
-		echo -e "$(mount | grep ' / ')\n\n" >> $bench
-		
 		rm $tempfile
 		
 		echo -e "\nTests completed. \n"
