@@ -2645,6 +2645,8 @@ mount: /.snapshots: wrong fs type, bad option, bad superblock on /dev/sda4, miss
 mount: /var/log: fsconfig system call failed: No such file or directory.
        dmesg(1) may have more information after failed mount system call.'
 
+# Failed to start swtich root
+
 	else
 		arch-chroot $mnt btrfs subvolume list /
 
