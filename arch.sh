@@ -457,16 +457,18 @@ sleep 2
 
 		   echo "Creating subvolume: $mnt$subvolPrefix$subvol"
 
-  			dir_name=$(dirname "$mnt$subvolPrefix$subvol")
-   		echo "Dirname: $dir_name ($mnt$subvolPrefix)"
+  			#dir_name=$(dirname "$mnt$subvolPrefix$subvol")
+   		#echo "Dirname: $dir_name ($mnt$subvolPrefix)"
 
-   		if [ ! "$dir_name" = "$mnt$subvolPrefix" ]; then
-      		echo -e "\nCreating directory: $dir_name...\n"
-				mkdir -p "$dir_name"
-   		fi
+   		#if [ ! "$dir_name" = "$mnt$subvolPrefix" ]; then
+      	#	echo -e "\nCreating directory: $dir_name...\n"
+			#	mkdir -p "$dir_name"
+   		#fi
 			
 			echo "Creating: $mnt$subvolPrefix$subvol"
-			btrfs su cr "$mnt$subvolPrefix$subvol"
+			#btrfs su cr "$mnt$subvolPrefix$subvol"
+			
+			btrfs su cr --parents "$mnt$subvolPrefix$subvol"
 
 		done
 
@@ -497,6 +499,7 @@ mount_disk () {
 
 			#mountopts="nodatacow,nodatasum,noatime,compress-force=zstd:1,discard=async"
 			#mountopts="nodatacow,nodatasum,noatime,discard=async"
+			#mountopts="noatime,discard=async,subvolid=5"
 			mountopts="noatime,discard=async"
 
 			for subvol in '' "${subvols[@]}"; do
@@ -843,7 +846,7 @@ install_grub () {
 	[[ $fstype = bcachefs ]] && extra_ops='rootfstype=bcachefs'
 	
 	# May cause grub-snapshots to not work correctly
-	#[[ $fstype = btrfs ]] && extra_ops='rootflags=subvol=@'
+	[[ $fstype = btrfs ]] && extra_ops='rootflags=subvol=@'
 
 
 	grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --boot-directory=$mnt/boot
