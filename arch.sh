@@ -2616,17 +2616,18 @@ install_snapper () {
 	#setup_fstab
 
    if [[ $mnt = '' ]]; then
-		#btrfs subvolume delete $snapshot_dir
-		#rm -rf $snapshot_dir
-		#snapper -c root create-config /
+		
 		btrfs subvolume list /
-		#pacman -U /home/user/.local/bin/*.zst
+		umouint $snapshot_dir
+		rm -rf $snapshot_dir
+		snapper -c root create-config /
+		btrfs subvolume delete $snapshot_dir
+		btrfs subvolume create $snapshot_dir
+		mount -a
+		btrfs subvolume list /
+
 	else
-		#rm -rf $mnt$snapshot_dir
-		#arch-chroot $mnt btrfs subvolume delete $snapshot_dir
-      #arch-chroot $mnt snapper -c root create-config /
 		arch-chroot $mnt btrfs subvolume list /
-		#arch-chroot $mnt sudo pacman -U /home/user/.local/bin/*.zst
 
    fi
 	
