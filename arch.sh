@@ -95,7 +95,7 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
 fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(/.snapshots /var/log)					# used for btrfs 	TODO: bcachefs
+subvols=(/var/log)					# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/.snapshots"
 encrypt=false
@@ -2417,7 +2417,6 @@ auto_install_root () {
 	fi
 
 	
-	install_snapper
 	
 
 	general_setup
@@ -2527,6 +2526,7 @@ auto_install_kde () {
 			take_snapshot "root installed"
 		fi
 	fi
+	install_snapper
 
 }
 
@@ -2607,17 +2607,19 @@ auto_install_all () {
 }
 
 
-install_snapper () (
+install_snapper () {
 
 	pacstrap_install snapper
 
 	
    if [[ $mnt = '' ]]; then
-		btrfs subvolume delete $snapshot_dir
+		#btrfs subvolume delete $snapshot_dir
+		#rm -rf $snapshot_dir
 		snapper -c root create-config /
 		read -p "Did it work? (install_snapper)"
 	else
-		arch-chroot $mnt btrfs subvolume delete $snapshot_dir
+		#rm -rf $mnt$snapshot_dir
+		#arch-chroot $mnt btrfs subvolume delete $snapshot_dir
       arch-chroot $mnt snapper -c root create-config /
 		read -p "Did it work? (install_snapper)"
    fi
