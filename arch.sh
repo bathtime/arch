@@ -2629,6 +2629,22 @@ install_snapper () {
 		# The restore was successful but the migration of the nested subvolumes failed
 		# Please migrate the those subvolumes manually
 
+echo 'btrfs subvolume list /
+ID 256 gen 51 top level 5 path @_backup_2025-02-28T17:34:01.323Z_last snapshot before restore
+ID 258 gen 51 top level 256 path var/log
+ID 259 gen 12 top level 256 path var/lib/portables
+ID 260 gen 12 top level 256 path var/lib/machines
+ID 262 gen 43 top level 256 path .snapshots
+ID 263 gen 38 top level 262 path .snapshots/1/snapshot
+ID 264 gen 44 top level 262 path .snapshots/2/snapshot
+ID 265 gen 45 top level 5 path @'
+
+echo 'mount -a
+mount: /.snapshots: wrong fs type, bad option, bad superblock on /dev/sda4, missing codepage or helper program, or other error.
+       dmesg(1) may have more information after failed mount system call.
+mount: /var/log: fsconfig system call failed: No such file or directory.
+       dmesg(1) may have more information after failed mount system call.'
+
 	else
 		arch-chroot $mnt btrfs subvolume list /
 
