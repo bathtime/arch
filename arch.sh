@@ -2877,18 +2877,20 @@ benchmark () {
 		
 		check_pkg cryptsetup sysbench fio hdparm
 
-		bench="$mnt/benchmarks.txt"
-		tempfile="$mnt/home/user/temp.tmp"
+		bench="$mnt/root/bench.txt"
+		tempfile="$mnt/root/bench.tmp"
 		cd $mnt/
 		rm -rf $tempfile
 
 		echo -e "\nRunning tests and saving to $bench. Please be patient...\n"
 
 
-		echo -e "\n\n\n\n" >> $bench
 		date >> $bench
+		
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "$disk" | sed "s#$host.*#& (host)#g" >> $bench  
-		echo -e "$(mount | grep ' / ')\n\n\n\n" >> $bench
+		
+		
+		echo -e "$(mount | grep ' / ')\n\n" >> $bench
 
 		echo -e "\nRunning dd to measure write speed...\n" >> $bench
 		time dd if=/dev/zero of=$tempfile bs=1M count=1024 conv=fdatasync,notrunc status=progress 2>> $bench
@@ -2903,6 +2905,8 @@ benchmark () {
 		echo -e "\nSystem boot speed (booster initramfs):\n" >> $bench
 		systemd-analyze >> $bench
 
+		echo -e "$(mount | grep ' / ')\n\n" >> $bench
+		
 		rm $tempfile
 		
 		echo -e "\nTests completed. \n"
@@ -2945,6 +2949,7 @@ CONFIG_FILES="
 /etc/wpa_supplicant
 /usr/lib/systemd/system-sleep/sleep.sh
 /usr/share/applications/firefox.desktop
+/root/bench.txt
 /var/lib/dhcpcd
 /var/lib/iwd
 /home/$user/.bash_profile
