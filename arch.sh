@@ -94,7 +94,7 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
-fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='ext4'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(/snapshots /var/log)					# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/snapshots"
@@ -2055,6 +2055,46 @@ restore_snapshot () {
 
 }
 
+rsync_snapshot () {
+
+	mount_disk	
+
+	filename=$(date +"%Y-%m-%d @ %H:%M:%S")
+	
+	echo -e "\nList of snapshots:\n"
+	ls -1N $mnt$snapshot_dir/
+
+	if [[ $1 = '' ]]; then
+		echo -e "\n\nWhat would you like to call this rsync snapshot?\n"
+		read snapshotname
+	else
+		snapshotname="$1"
+	fi
+
+	[[ ! $snapshotname = '' ]] && snapshotname=" - $snapshotname"
+
+
+		echo -e "\nRunning dry run first..."
+		sleep 1
+
+		rsync_params="-axHAXvSW --del --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=/snapshots/"
+		
+		rsync --dry-run $rsync_params / "$mnt$snapshot_dir/$snapshot/" | less
+
+		echo -e "\nType 'y' to proceed with rsync or any other key to exit..."
+		read choice
+
+		if [[ $choice = y ]]; then
+
+			echo -e "\nRunning rsync...\n"
+			rsync $rsync_params --info=progress2 / "$snapshot_dir/$snapshot/"
+	
+		else
+			echo "Exiting."
+		fi
+
+}
+
 
 delete_snapshot () {
 
@@ -3110,7 +3150,8 @@ echo
 15. Create squashfs image
 16. Take btrfs/bcachefs snapshot
 17. Restore btrfs/bcachefs snapshot
-18. Delete btrfs/bcachefs snapshot")
+18. Delete btrfs/bcachefs snapshot
+19. Rsync snapshot")
 
 									config_choice=0
 									while [ ! "$config_choice" = "1" ]; do
@@ -3152,6 +3193,7 @@ echo
 											snapshot|16)	take_snapshot ;;
 											restore|17)		restore_snapshot ;;
 											delete|18)		delete_snapshot ;;
+											rsync|19)		rsync_snapshot ;;
               							'')				;;
                 						*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 										esac
