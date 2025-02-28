@@ -2059,6 +2059,8 @@ rsync_snapshot () {
 
 	mount_disk	
 
+	mkdir -p $mnt$snapshot_dir
+
 	echo -e "\nList of snapshots:\n"
 	ls -1N $mnt$snapshot_dir/
 
