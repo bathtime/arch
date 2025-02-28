@@ -2056,6 +2056,45 @@ restore_snapshot () {
 
 }
 
+delete_snapshot () {
+
+	mount_disk	
+
+	echo -e "\nWhich snapshot would you like to delete?\n"
+
+	cd $mnt$snapshot_dir
+	
+
+   select snapshot in *
+      do
+         case snapshot in
+         *) echo -e "\nYou chose: $snapshot\n"; break ;;
+      esac
+   done
+
+	if [ -d "$mnt$snapshot_dir/$snapshot" ] && [ ! "$snapshot" = '' ]; then
+
+		
+		echo -e "\nType 'y' to proceed with deletion any other key to exit..."
+		read choice
+
+		if [[ $choice = y ]]; then
+
+			echo -e "\nDeleting snapshot...\n"
+			btrfs subvolume delete "$mnt$snapshot_dir/$snapshot"
+			echo
+			ls -1N $mnt$snapshot_dir/
+			echo
+		else
+			echo "Exiting."
+		fi
+
+	else
+		echo "Snapshot directory does not exist. Exiting."
+	fi
+
+}
+
 
 extract_archive () {
 
@@ -3072,7 +3111,8 @@ echo
 14. Shred $disk
 15. Create squashfs image
 16. Take btrfs/bcachefs snapshot
-17. Restore btrfs/bcachefs snapshot")
+17. Restore btrfs/bcachefs snapshot
+18. Delete btrfs/bcachefs snapshot")
 
 									config_choice=0
 									while [ ! "$config_choice" = "1" ]; do
@@ -3113,6 +3153,7 @@ echo
 											squashfs|15)	create_archive ;;
 											snapshot|16)	take_snapshot ;;
 											restore|17)		restore_snapshot ;;
+											delete|18)		delete_snapshot ;;
               							'')				;;
                 						*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 										esac
