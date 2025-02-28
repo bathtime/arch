@@ -2768,9 +2768,12 @@ install_config () {
 	
 		if [[ $mnt = '' ]]; then
 			sudo pacman -U --noconfirm /home/user/.local/bin/*.zst
+			# Fix shared libraries error
+			sudo ln -s /usr/lib/libalpm.so.15 /usr/lib/libalpm.so.13
 		else
 			arch-chroot $mnt sudo pacman -U --noconfirm /home/user/.local/bin/*.zst
-   	fi
+   		arch-chroot $mnt ln -s /usr/lib/libalpm.so.15 /usr/lib/libalpm.so.13
+		fi
 
 	fi
 
