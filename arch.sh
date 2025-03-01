@@ -463,6 +463,8 @@ create_partitions () {
 		for subvol in '' "${subvols[@]}"; do
 			btrfs su cr --parents "$mnt$subvolPrefix$subvol"
 		done
+
+		#btrfs su cr --parents "$mnt/.snapshots"
 		
 	fi
 	
@@ -497,6 +499,8 @@ mount_disk () {
 				echo mount --mkdir -o "$mountopts,subvol=$subvolPrefix$subvol $disk$rootPart $mnt/$subvol"
 				mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/"${subvol//_//}"
 			done
+				
+			#mount --mkdir -o "$mountopts",subvol=/.snapshots $disk$rootPart $mnt/.snapshots
 
 		else
 
@@ -2418,7 +2422,7 @@ auto_install_root () {
 		choose_initramfs $initramfs
 	fi
 
-	#install_snapper
+	install_snapper
 	
 	
 
@@ -2614,7 +2618,6 @@ install_snapper () {
 	
 	mount_disk
 
-	pacstrap_install snapper
 
    if [[ $mnt = '' ]]; then
 
@@ -2631,11 +2634,15 @@ install_snapper () {
 
 	else
 
-		arch-chroot $mnt btrfs su list /
-		arch-chroot $mnt btrfs su create /.snapshots
+		#arch-chroot $mnt btrfs su list /
+		#arch-chroot $mnt btrfs su create /.snapshots
 
 		rm -rf $mnt/.snapshots
-		arch-chroot $mnt snapper -c root create-config /
+		
+		pacstrap_install snapper
+		
+		#snapper -c root create-config $mnt
+		#arch-chroot $mnt snapper -c root create-config /
 		
 		arch-chroot $mnt btrfs subvolume list /
 
