@@ -2645,6 +2645,8 @@ install_snapper () {
 
 		#systemctl daemon-reload
 		#UUID=76526f43-5af2-4bb3-a606-253c327aab62 /.snapshots          btrfs       rw,noatime,ssd,discard=async,space_cache=v2,subvol=/@/.snapshots  0 0
+	
+		cat /etc/fstab | sed 's#subvol=/@\s#subvol=/@/.snapshots #' | grep snapshots | sed 's#/.*btrfs#/.snapshots  ##' >> /etc/fstab
 		
 		arch-chroot $mnt btrfs subvolume list /
 
