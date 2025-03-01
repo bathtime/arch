@@ -2643,18 +2643,17 @@ install_snapper () {
 		
 		arch-chroot $mnt btrfs su create /.snapshots
 
-		#systemctl daemon-reload
 		#UUID=76526f43-5af2-4bb3-a606-253c327aab62 /.snapshots          btrfs       rw,noatime,ssd,discard=async,space_cache=v2,subvol=/@/.snapshots  0 0
 	
-		cat $mnt/etc/fstab | sed 's#subvol=/@\s#subvol=/@/.snapshots #' | grep snapshots | sed 's#/.*btrfs#/.snapshots  ##' >> $mnt/etc/fstab
-	
+		cat $mnt/etc/fstab | sed 's#subvol=/@\s#subvol=/@/.snapshots #' | grep snapshots | sed 's#/.*btrfs#/.snapshots  btrfs##' >> $mnt/etc/fstab	
+		
 		cat $mnt/etc/fstab
 		systemctl daemon-reload	
 		mount -a
 
 		arch-chroot $mnt btrfs subvolume list /
 		
-		read -p "How does it look?"
+		#read -p "How does it look?"
 
 		return
 
