@@ -461,9 +461,9 @@ create_partitions () {
 		
 	fi
 	
-	if [ "$fstype" = "bcachefs" ]; then
-		bcachefs subvolume create $mnt$snapshot_dir
-	fi
+	#if [ "$fstype" = "bcachefs" ]; then
+	#	bcachefs subvolume create $mnt$snapshot_dir
+	#fi
 
 	unmount_disk
 	mount_disk
@@ -496,8 +496,9 @@ mount_disk () {
 		else
 
 			if [[ $fstype = bcachefs ]]; then
-		
-				mount -t bcachefs --mkdir $disk$rootPart $mnt$snapshot_dir
+	
+				#not working
+				#mount -t bcachefs --mkdir $disk$rootPart $mnt$snapshot_dir
 
 				if [[ $encrypt = true ]] && [[ $fstype = bcachefs ]]; then
 					bcachefs unlock -k session $disk$rootPart
@@ -528,16 +529,16 @@ mount_disk () {
 	chmod -R 700 $mnt/root/.gnupg
 
 	if [ "$fstype" = "btrfs" ]; then
-		echo "MINE: not making snapshot directory."
+		:
 		#mkdir -p $mnt$snapshot_dir
 		#chattr +C -R $mnt/tmp
 		#chattr +C -R $mnt/var/tmp
 		#chattr +C -R $mnt/var/log
 	fi
 
-	#if [ "$fstype" = "bcachefs" ]; then
-	#	mkdir -p $mnt$snapshot_dir
-	#fi
+	if [ "$fstype" = "bcachefs" ]; then
+		mkdir -p $mnt$snapshot_dir
+	fi
 
 	
 	#warning: directory permissions differ on /mnt/var/tmp/
