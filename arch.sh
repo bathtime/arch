@@ -98,7 +98,7 @@ fsPercent='100'				# What percentage of space should the root drive take?
 fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(var/log)					# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
-snapshot_dir="/snapshots"
+snapshot_dir="/.snapshots"
 backup_install='false'		# should we do snapshots/rysncs during install to restore
 initramfs='booster'		# mkinitcpio, dracut, booster
 encrypt=false
@@ -290,7 +290,7 @@ choose_disk () {
 				suspend)		echo mem > /sys/power/state ;;
 				hibernate)	echo disk > /sys/power/state ;;
 				poweroff)	poweroff ;;
-				stats)		
+				stats)	 	
 								if [[ "$rootfs" = 'btrfs' ]]; then
 									btrfs su list /
 								fi
@@ -2418,7 +2418,7 @@ auto_install_root () {
 		choose_initramfs $initramfs
 	fi
 
-	install_snapper
+	#install_snapper
 	
 	
 
@@ -2611,14 +2611,13 @@ auto_install_all () {
 
 
 install_snapper () {
+	
+	mount_disk
 
 	pacstrap_install snapper
 
-	
-
    if [[ $mnt = '' ]]; then
 
-		snapshot_dir=/.snapshots
 		btrfs subvolume list /
 		umount $snapshot_dir
 		rm -rf $snapshot_dir
@@ -2632,11 +2631,21 @@ install_snapper () {
 
 	else
 
+		btrfs su list $mnt
+
+		read -p "How does it look?"
+
+		umount $mnt$snapshot_dir
 		rm -rf $mnt$snapshot_dir
+		rm -rf $mnt/.snapshots
 		
 		# Will always repopulate so no use deleting them
-		#btrfs su delete --subvolid $(btrfs su list /mnt | grep var/lib/portables | sed 's/ID //; s/ gen.*//') $mnt
-		#btrfs su delete --subvolid $(btrfs su list /mnt | grep var/lib/machines | sed 's/ID //; s/ gen.*//') $mnt
+		arch-chroot $mnt btrfs su delete --subvolid $(btrfs su list / | grep var/lib/portables | sed 's/ID //; s/ gen.*//') $mnt
+		arch-chroot $mnt btrfs su delete --subvolid $(btrfs su list / | grep var/lib/machines | sed 's/ID //; s/ gen.*//') $mnt
+		arch-chroot $mnt btrfs su delete --subvolid $(btrfs su list / | grep snapshots | sed 's/ID //; s/ gen.*//') $mnt
+
+		arch-chroot $mnt btrfs subvolume list /
+		read -p "Press any key to continue."
 
 		# Already covered so no need?
 		arch-chroot $mnt snapper -c root create-config /
@@ -2899,7 +2908,7 @@ sync_disk () {
 		last_dirty=$dirty
 		
 		# If it's taking too long, it might be stuck and need to be resynced
-		if [ $stall_count -gt 50 ]; then
+		if [ $stall_count -gt 30 ]; then
 			sync &
 			stall_count=0
 			echo "Resyncing..."
@@ -3089,6 +3098,7 @@ while :; do
 20. Unmount $mnt
 21. Update grub
 22. Connect wireless
+23. Install snapper
 27. Auto-install
 30. Custom install
 31. Setup ~ files
@@ -3159,7 +3169,8 @@ echo
       unmount|20)				unmount_disk  ;;
 		grub|21)					grub-mkconfig -o $mnt/boot/grub/grub.cfg ;;
 		connect|iwd|22)		connect_wireless ;;
-	root|27)					config_os=("1. Quit
+		snapper|23)				install_snapper ;;
+		auto|27)					config_os=("1. Quit
 2. Root
 3. User
 4. Weston
