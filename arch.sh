@@ -75,8 +75,8 @@ arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
 
 mnt=/mnt
-#boot='/boot'		# leave blank to not mount boot separately
-boot=''		# leave blank to not mount boot separately
+boot='/boot'		# leave blank to not mount boot separately
+#boot=''		# leave blank to not mount boot separately
 
 if [[ ! $boot = '' ]]; then
 	espPartNum=1
@@ -96,7 +96,7 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
 fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(/var/log)					# used for btrfs 	TODO: bcachefs
+subvols=(snapsnots var/log)					# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/.snapshots"
 encrypt=false
@@ -329,10 +329,6 @@ choose_disk () {
 
 	echo -e "\nDisk chosen: $disk (mounted on $mnt/)"
 
-
-
-
-
 	done
 }
 
@@ -438,7 +434,45 @@ create_partitions () {
 
 	parted -s $disk print
 
-sleep 2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+######## DO WE NEED SLEEP HERE? ?????? #####
+
+#sleep 2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	echo -e "\nMounting $mnt..."
 
@@ -449,29 +483,10 @@ sleep 2
 
 	if [ "$fstype" = "btrfs" ]; then
 
-		#for subvol in '' "${subvols[@]}"; do echo "Creating subvolume: $mnt$subvolPrefix$subvol"
-		#	btrfs su cr "$mnt$subvolPrefix$subvol"
-		#done
-			btrfs su cr "$mnt$subvolPrefix"
-
-		for subvol in "${subvols[@]}"; do
-
-		   echo "Creating subvolume: $mnt$subvolPrefix$subvol"
-
-  			#dir_name=$(dirname "$mnt$subvolPrefix$subvol")
-   		#echo "Dirname: $dir_name ($mnt$subvolPrefix)"
-
-   		#if [ ! "$dir_name" = "$mnt$subvolPrefix" ]; then
-      	#	echo -e "\nCreating directory: $dir_name...\n"
-			#	mkdir -p "$dir_name"
-   		#fi
-			
-			#btrfs su cr "$mnt$subvolPrefix$subvol"
-			
+		for subvol in '' "${subvols[@]}"; do
 			btrfs su cr --parents "$mnt$subvolPrefix$subvol"
-
 		done
-
+		
 	fi
 	
 	unmount_disk
@@ -481,9 +496,6 @@ sleep 2
 
 
 mount_disk () {
-
-	#fstype="$(lsblk -n -o FSTYPE $disk$rootPart)"
-	#echo "File type: $fstype"
 
 	[ "$mnt" = "" ] && return
 
@@ -497,15 +509,15 @@ mount_disk () {
 
 			echo -e "\nMounting...\n"
 
-			#mountopts="nodatacow,nodatasum,noatime,compress-force=zstd:1,discard=async"
-			#mountopts="nodatacow,nodatasum,noatime,discard=async"
-			#mountopts="noatime,discard=async,subvolid=5"
 			mountopts="noatime,discard=async"
 
 			for subvol in '' "${subvols[@]}"; do
-				#mount --mkdir -o "$mountopts",subvol=@"$subvol" $disk$rootPart $mnt/"${subvol//_//}"
+				echo mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/"${subvol//_//}"
+				echo mount --mkdir -o "$mountopts,subvol=$subvolPrefix$subvol $disk$rootPart $mnt/$subvol"
 				mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/"${subvol//_//}"
 			done
+
+			read -p "how did it go?"
 
 		else
 
