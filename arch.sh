@@ -2631,7 +2631,15 @@ install_snapper () {
 
 	else
 
-		btrfs su list $mnt
+		arch-chroot $mnt btrfs su list /
+		arch-chroot $mnt btrfs su create /.snapshots
+
+		rm -rf $mnt/.snapshots
+		arch-chroot $mnt snapper -c root create-config /
+		
+		arch-chroot $mnt btrfs subvolume list /
+
+		return
 
 		read -p "How does it look?"
 
@@ -2908,7 +2916,7 @@ sync_disk () {
 		last_dirty=$dirty
 		
 		# If it's taking too long, it might be stuck and need to be resynced
-		if [ $stall_count -gt 30 ]; then
+		if [ $stall_count -gt 50 ]; then
 			sync &
 			stall_count=0
 			echo "Resyncing..."
