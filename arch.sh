@@ -96,10 +96,10 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='100'				# What percentage of space should the root drive take?
 fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(var/log)					# used for btrfs 	TODO: bcachefs
+subvols=(snapshots var/log)					# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
-snapshot_dir="/.snapshots"
-backup_install='false'		# should we do snapshots/rysncs during install to restore
+snapshot_dir="/snapshots"
+backup_install='true'		# say 'true' to do snapshots/rysncs during install
 initramfs='booster'		# mkinitcpio, dracut, booster
 encrypt=false
 efi_path=/efi
@@ -2422,7 +2422,7 @@ auto_install_root () {
 		choose_initramfs $initramfs
 	fi
 
-	install_snapper
+	#install_snapper
 	
 	
 
@@ -2621,16 +2621,7 @@ install_snapper () {
 
    if [[ $mnt = '' ]]; then
 
-		btrfs subvolume list /
-		umount $snapshot_dir
-		rm -rf $snapshot_dir
-		snapper -c root create-config /
-		btrfs subvolume delete $snapshot_dir
-		btrfs subvolume create $snapshot_dir
-		mount -a
-		btrfs subvolume list /
-		setup_fstab
-		grub-mkconfig -o /boot/grub/grub.cfg
+echo exiting..
 
 	else
 
@@ -2641,19 +2632,19 @@ install_snapper () {
 		
 		pacstrap_install snapper
 		
-		arch-chroot $mnt btrfs su create /.snapshots
+#		arch-chroot $mnt btrfs su create /.snapshots
 
 		#UUID=76526f43-5af2-4bb3-a606-253c327aab62 /.snapshots          btrfs       rw,noatime,ssd,discard=async,space_cache=v2,subvol=/@/.snapshots  0 0
 	
-		cat $mnt/etc/fstab | sed 's#subvol=/@\s#subvol=/@/.snapshots #' | grep snapshots | sed 's#/.*btrfs#/.snapshots  btrfs##' >> $mnt/etc/fstab	
+#		cat $mnt/etc/fstab | sed 's#subvol=/@\s#subvol=/@/.snapshots #' | grep snapshots | sed 's#/.*btrfs#/.snapshots  btrfs##' >> $mnt/etc/fstab	
 		
-		cat $mnt/etc/fstab
-		systemctl daemon-reload	
-		mount -a
+#		cat $mnt/etc/fstab
+#		systemctl daemon-reload	
+#		mount -a
 
 		arch-chroot $mnt btrfs subvolume list /
 		
-		#read -p "How does it look?"
+#		read -p "How does it look?"
 
 		return
 
@@ -3033,10 +3024,11 @@ benchmark () {
 }
 
 
+#/etc/snapper
+#/etc/conf.d/snapper
+
 
 CONFIG_FILES="
-/etc/snapper
-/etc/conf.d/snapper
 
 /etc/dracut.conf.d/myflags.conf
 /etc/booster.yaml
