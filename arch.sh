@@ -290,8 +290,7 @@ choose_disk () {
 				suspend)		echo mem > /sys/power/state ;;
 				hibernate)	echo disk > /sys/power/state ;;
 				poweroff)	poweroff ;;
-				stats)		
-								echo; free -h; echo
+				stats)		echo; free -h; echo
 								systemd-analyze | sed 's/in .*=/in/;s/graph.*//'
 								echo $(systemd-analyze  blame | wc -l) systemd services
 
