@@ -2448,7 +2448,7 @@ auto_install_user () {
 
 	if [[ $backup_install = true ]]; then
 		if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
-			take_snapshot "root installed"
+			take_snapshot "user installed"
 		fi
 	fi
 	
@@ -2509,7 +2509,7 @@ auto_install_kde () {
 
 	if [[ $backup_install = true ]]; then
 		if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
-			take_snapshot "root installed"
+			take_snapshot "kde installed"
 		fi
 	fi
 
