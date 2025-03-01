@@ -3027,6 +3027,9 @@ benchmark () {
 
 
 CONFIG_FILES="
+/etc/conf.d/snapper
+/etc/snapper
+
 /etc/dracut.conf.d/myflags.conf
 /etc/booster.yaml
 /etc/hostname
