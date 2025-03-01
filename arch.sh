@@ -439,7 +439,7 @@ create_partitions () {
 
 ######## DO WE NEED SLEEP HERE? ?????? #####
 
-sleep 2
+#sleep 2
 
 
 
@@ -461,6 +461,10 @@ sleep 2
 		
 	fi
 	
+	if [ "$fstype" = "bcachefs" ]; then
+		bcachefs subvolume create $mnt$snapshot_dir
+	fi
+
 	unmount_disk
 	mount_disk
 
@@ -491,8 +495,14 @@ mount_disk () {
 
 		else
 
-			if [[ $encrypt = true ]] && [[ $fstype = bcachefs ]]; then
-				bcachefs unlock -k session $disk$rootPart
+			if [[ $fstype = bcachefs ]]; then
+		
+				mount -t bcachefs --mkdir $disk$rootPart $mnt$snapshot_dir
+
+				if [[ $encrypt = true ]] && [[ $fstype = bcachefs ]]; then
+					bcachefs unlock -k session $disk$rootPart
+				fi
+
 			fi
 
 			mount -t $fstype --mkdir $disk$rootPart $mnt
@@ -518,15 +528,16 @@ mount_disk () {
 	chmod -R 700 $mnt/root/.gnupg
 
 	if [ "$fstype" = "btrfs" ]; then
-		mkdir -p $mnt$snapshot_dir
+		echo "MINE: not making snapshot directory."
+		#mkdir -p $mnt$snapshot_dir
 		#chattr +C -R $mnt/tmp
 		#chattr +C -R $mnt/var/tmp
 		#chattr +C -R $mnt/var/log
 	fi
 
-	if [ "$fstype" = "bcachefs" ]; then
-		mkdir -p $mnt$snapshot_dir
-	fi
+	#if [ "$fstype" = "bcachefs" ]; then
+	#	mkdir -p $mnt$snapshot_dir
+	#fi
 
 	
 	#warning: directory permissions differ on /mnt/var/tmp/
@@ -2448,7 +2459,7 @@ auto_install_user () {
 
 	if [[ $backup_install = true ]]; then
 		if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
-			take_snapshot "user installed"
+			take_snapshot "root installed"
 		fi
 	fi
 	
@@ -2509,7 +2520,7 @@ auto_install_kde () {
 
 	if [[ $backup_install = true ]]; then
 		if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
-			take_snapshot "kde installed"
+			take_snapshot "root installed"
 		fi
 	fi
 
@@ -2950,6 +2961,8 @@ EOF
 
 benchmark () {
 		
+		check_pkg cryptsetup sysbench fio hdparm
+
 		bench="$mnt/root/bench.txt"
 		tempfile="$mnt/root/bench.tmp"
 		cd $mnt/
@@ -2965,10 +2978,6 @@ benchmark () {
 		
 		echo -e "$(mount | grep ' / ')\n\n" >> $bench
 
-		echo -e "\nSystem boot speed (booster initramfs):\n" >> $bench
-		systemd-analyze >> $bench
-
-
 		echo -e "\nRunning dd to measure write speed...\n" >> $bench
 		dd if=/dev/zero of=$tempfile bs=1M count=1024 conv=fdatasync,notrunc status=progress 2>> $bench
 
@@ -2982,13 +2991,14 @@ benchmark () {
 		echo -e "\nRunning bash open/close test to measure buffer-cache speed...\n" >> $bench
 		time for (( i=1; i<=100; i++ )); do bash -c 'exit'; done
 
+		echo -e "\nSystem boot speed (booster initramfs):\n" >> $bench
+		systemd-analyze >> $bench
+
 		rm $tempfile
 		
 		echo -e "\nTests completed. \n"
 
 		cat $bench
-
-		read -N 1 -p "Press any key to continue."
 }
 
 
