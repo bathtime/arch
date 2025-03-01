@@ -94,9 +94,9 @@ espPart=$espPartNum
 bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fsPercent='50'				# What percentage of space should the root drive take?
+fsPercent='100'				# What percentage of space should the root drive take?
 fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(snapshots var/log)					# used for btrfs 	TODO: bcachefs
+subvols=(var/log)					# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/snapshots"
 backup_install='false'		# should we do snapshots/rysncs during install to restore
@@ -2413,7 +2413,7 @@ auto_install_root () {
 		choose_initramfs $initramfs
 	fi
 
-	#install_snapper
+	install_snapper
 	
 	
 
@@ -2626,7 +2626,15 @@ install_snapper () {
 		grub-mkconfig -o /boot/grub/grub.cfg
 
 	else
+
+		rm -rf $mnt$snapshot_dir
+		btrfs su delete --subvolid $(btrfs su list /mnt | grep var/lib/portables | sed 's/ID //; s/ gen.*//') $mnt
+		btrfs su delete --subvolid $(btrfs su list /mnt | grep var/lib/machines | sed 's/ID //; s/ gen.*//') $mnt
+		snapper -c root create-config /
 		arch-chroot $mnt btrfs subvolume list /
+
+		read -p "Did it work?"
+
 
    fi
 	
