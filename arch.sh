@@ -2950,8 +2950,6 @@ EOF
 
 benchmark () {
 		
-		check_pkg cryptsetup sysbench fio hdparm
-
 		bench="$mnt/root/bench.txt"
 		tempfile="$mnt/root/bench.tmp"
 		cd $mnt/
