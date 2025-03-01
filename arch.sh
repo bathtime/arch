@@ -2633,14 +2633,15 @@ install_snapper () {
 	else
 
 		rm -rf $mnt$snapshot_dir
-		btrfs su delete --subvolid $(btrfs su list /mnt | grep var/lib/portables | sed 's/ID //; s/ gen.*//') $mnt
-		btrfs su delete --subvolid $(btrfs su list /mnt | grep var/lib/machines | sed 's/ID //; s/ gen.*//') $mnt
+		
+		# Will always repopulate so no use deleting them
+		#btrfs su delete --subvolid $(btrfs su list /mnt | grep var/lib/portables | sed 's/ID //; s/ gen.*//') $mnt
+		#btrfs su delete --subvolid $(btrfs su list /mnt | grep var/lib/machines | sed 's/ID //; s/ gen.*//') $mnt
+
 		# Already covered so no need?
-		snapper -c root create-config $mnt
+		arch-chroot $mnt snapper -c root create-config /
+		
 		arch-chroot $mnt btrfs subvolume list /
-
-		read -p "Did it work?"
-
 
    fi
 	
