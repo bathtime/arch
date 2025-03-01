@@ -3081,6 +3081,7 @@ while :; do
 18. Choose initramfs
 19. Mount $mnt
 20. Unmount $mnt
+21. Update grub
 22. Connect wireless
 27. Auto-install
 30. Custom install
@@ -3150,6 +3151,7 @@ echo
 		initramfs|18)			choose_initramfs ;;
       mount|19)				mount_disk  ;;
       unmount|20)				unmount_disk  ;;
+		grub|21)					grub-mkconfig -o $mnt/boot/grub/grub.cfg ;;
 		connect|iwd|22)		connect_wireless ;;
 	root|27)					config_os=("1. Quit
 2. Root
