@@ -2460,7 +2460,7 @@ auto_install_user () {
 
 	if [[ $backup_install = true ]]; then
 		if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
-			take_snapshot "root installed"
+			take_snapshot "user installed"
 		fi
 	fi
 	
@@ -2521,7 +2521,7 @@ auto_install_kde () {
 
 	if [[ $backup_install = true ]]; then
 		if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
-			take_snapshot "root installed"
+			take_snapshot "kde installed"
 		fi
 	fi
 
@@ -2993,7 +2993,7 @@ benchmark () {
 		dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress 2>> $bench
 
 		echo -e "\nRunning bash open/close test to measure buffer-cache speed...\n" >> $bench
-		time for (( i=1; i<=100; i++ )); do bash -c 'exit'; done
+		#time for (( i=1; i<=100; i++ )); do bash -c 'exit'; done
 
 		rm $tempfile
 		
