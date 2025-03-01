@@ -95,7 +95,7 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
-fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='bcachefs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(snapsnots var/log)					# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/.snapshots"
@@ -436,7 +436,7 @@ create_partitions () {
 
 ######## DO WE NEED SLEEP HERE? ?????? #####
 
-#sleep 2
+sleep 2
 
 
 	echo -e "\nMounting $mnt..."
