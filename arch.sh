@@ -2641,8 +2641,10 @@ install_snapper () {
 		
 		pacstrap_install snapper
 		
-		#snapper -c root create-config $mnt
-		#arch-chroot $mnt snapper -c root create-config /
+		arch-chroot $mnt btrfs su create /.snapshots
+
+		#systemctl daemon-reload
+		#UUID=76526f43-5af2-4bb3-a606-253c327aab62 /.snapshots          btrfs       rw,noatime,ssd,discard=async,space_cache=v2,subvol=/@/.snapshots  0 0
 		
 		arch-chroot $mnt btrfs subvolume list /
 
@@ -3027,8 +3029,8 @@ benchmark () {
 
 
 CONFIG_FILES="
-/etc/conf.d/snapper
 /etc/snapper
+/etc/conf.d/snapper
 
 /etc/dracut.conf.d/myflags.conf
 /etc/booster.yaml
