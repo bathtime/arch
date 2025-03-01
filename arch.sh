@@ -2988,7 +2988,7 @@ benchmark () {
 		dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress 2>> $bench
 
 		echo -e "\nRunning bash open/close test to measure buffer-cache speed...\n" >> $bench
-		#time for (( i=1; i<=100; i++ )); do bash -c 'exit'; done
+		{ time for (( i=1; i<=1000; i++ )); do bash -c 'exit' ;done } 2>> $bench
 
 		rm $tempfile
 		
