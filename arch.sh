@@ -2987,6 +2987,8 @@ benchmark () {
 		echo -e "\nTests completed. \n"
 
 		cat $bench
+
+		read -N 1 -p "Press any key to continue."
 }
 
 
