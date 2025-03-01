@@ -2631,7 +2631,7 @@ install_snapper () {
 		btrfs su delete --subvolid $(btrfs su list /mnt | grep var/lib/portables | sed 's/ID //; s/ gen.*//') $mnt
 		btrfs su delete --subvolid $(btrfs su list /mnt | grep var/lib/machines | sed 's/ID //; s/ gen.*//') $mnt
 		# Already covered so no need?
-		#snapper -c root create-config /
+		snapper -c root create-config $mnt
 		arch-chroot $mnt btrfs subvolume list /
 
 		read -p "Did it work?"
