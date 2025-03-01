@@ -268,7 +268,7 @@ choose_disk () {
 
 		echo -e "\nDrives found (current mount: /):\n"
 		
-		rootfs=$(mount | grep ' / ' | sed 's/(.*//; s/\/dev.* type //')
+		rootfs=$(mount | grep ' / ' | sed 's/(.*//; s/\/dev.* type //; s/ //')
 
 		#lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g" 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#&  $rootfs#g" | sed "s#$host.*#& (host)#g"
@@ -290,7 +290,12 @@ choose_disk () {
 				suspend)		echo mem > /sys/power/state ;;
 				hibernate)	echo disk > /sys/power/state ;;
 				poweroff)	poweroff ;;
-				stats)		echo; free -h; echo
+				stats)		
+								if [[ "$rootfs" = 'btrfs' ]]; then
+									btrfs su list /
+								fi
+
+								echo; free -h; echo
 								systemd-analyze | sed 's/in .*=/in/;s/graph.*//'
 								echo $(systemd-analyze  blame | wc -l) systemd services
 
