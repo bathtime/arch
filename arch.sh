@@ -103,7 +103,6 @@ encrypt=false
 efi_path=/efi
 
 # This method uses the blk-mq to implicitly set the I/O scheduler to none. 
-#kernel_ops="quiet nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
 kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
 
 # systemd.gpt_auto=0
@@ -135,7 +134,7 @@ timezone=Canada/Eastern
 offline=0
 reinstall=0
 copy_on_host='1'				# Set to '0' when installing from an arch iso in ram
-backup_install='false'		# should we do snapshots/rysncs during install to restore
+backup_install='true'		# should we do snapshots/rysncs during install to restore
 
 initramfs='booster'		# mkinitcpio, dracut, booster
 
@@ -435,43 +434,9 @@ create_partitions () {
 	parted -s $disk print
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ######## DO WE NEED SLEEP HERE? ?????? #####
 
 #sleep 2
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 	echo -e "\nMounting $mnt..."
@@ -517,15 +482,13 @@ mount_disk () {
 				mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/"${subvol//_//}"
 			done
 
-			read -p "how did it go?"
-
 		else
 
-		if [[ $encrypt = true ]] && [[ $fstype = bcachefs ]]; then
-			bcachefs unlock -k session $disk$rootPart
-		fi
+			if [[ $encrypt = true ]] && [[ $fstype = bcachefs ]]; then
+				bcachefs unlock -k session $disk$rootPart
+			fi
 
-		mount -t $fstype --mkdir $disk$rootPart $mnt
+			mount -t $fstype --mkdir $disk$rootPart $mnt
 
 		fi
 
