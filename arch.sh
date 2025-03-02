@@ -75,8 +75,8 @@ arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
 
 mnt=/mnt
-boot='/boot'		# leave blank to not mount boot separately
-#boot=''		# leave blank to not mount boot separately
+#boot='/boot'		# leave blank to not mount boot separately
+boot=''		# leave blank to not mount boot separately
 
 if [[ ! $boot = '' ]]; then
 	espPartNum=1
@@ -96,13 +96,13 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='100'				# What percentage of space should the root drive take?
 fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(snapshots var/log)					# used for btrfs 	TODO: bcachefs
+subvols=(var/log)					# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
-snapshot_dir="/snapshots"
-backup_install='true'		# say 'true' to do snapshots/rysncs during install
+snapshot_dir="/.snapshots"
+backup_install='false'		# say 'true' to do snapshots/rysncs during install
 initramfs='booster'		# mkinitcpio, dracut, booster
 encrypt=false
-efi_path=/efi
+efi_path=/boot/efi
 
 # This method uses the blk-mq to implicitly set the I/O scheduler to none. 
 kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
@@ -2449,7 +2449,7 @@ auto_install_root () {
 		choose_initramfs $initramfs
 	fi
 
-	#install_snapper
+	install_snapper
 	
 	
 
@@ -2648,7 +2648,20 @@ install_snapper () {
 
    if [[ $mnt = '' ]]; then
 
-echo exiting..
+		umount /.snapshots
+		rm -rf /.snapshots
+
+		snapper -c config create-config /
+
+		btrfs su delete /.snapshots
+		mkdir /.snapshots
+		mount -o subvol=@snapshots $disk$rootPart /.snapshots
+
+		genfstab -U /
+
+		mount -a
+		
+		chmod 750 /.snapshots
 
 	else
 
