@@ -273,7 +273,7 @@ choose_disk () {
 		#lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g" 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#&  $rootfs#g" | sed "s#$host.*#& (host)#g"
 
-		choices='quit sync edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / logout reboot suspend hibernate poweroff stats benchmark'
+		choices='quit sync edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / script logout reboot suspend hibernate poweroff stats benchmark'
 		
 
 		echo -e "\nWhich drive?\n"
@@ -286,6 +286,7 @@ choose_disk () {
 				$)				sudo -u $user bash ;;
 				\#)			bash ;;
 				sync)			sync_disk ;;
+				script)		download_script ;;
 				logout)		killall systemd ;;
 				reboot)		reboot ;;
 				suspend)		echo mem > /sys/power/state ;;
