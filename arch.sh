@@ -2563,8 +2563,8 @@ auto_install_kde () {
 
 	if [ "$fstype" = "btrfs" ]; then
   		#pacstrap_install timeshift xorg-xhost
-  		pacstrap_install timeshift
-		#setup_snapshots
+  		#pacstrap_install timeshift
+		setup_snapshots
 	fi
 	
 	copy_pkgs
@@ -2591,8 +2591,8 @@ auto_install_gnome () {
 	pacstrap_install $gnome_install
  
 	if [ "$fstype" = "btrfs" ]; then
-  		pacstrap_install timeshift
-		#setup_snapshots
+  		#pacstrap_install timeshift
+		setup_snapshots
 	fi
 		
 	copy_pkgs
@@ -2614,8 +2614,8 @@ auto_install_gnomekde () {
 	pacstrap_install $gnome_install $kde_install
 	
 	if [ "$fstype" = "btrfs" ]; then
-  		pacstrap_install timeshift xorg-xhost
-		#setup_snapshots
+  		#pacstrap_install timeshift xorg-xhost
+		setup_snapshots
 	fi
 	
 	copy_pkgs
