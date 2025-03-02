@@ -2092,6 +2092,23 @@ delete_snapshot () {
 
 }
 
+
+delete_timeshift_snapshots () {
+
+	ls -la /run/timeshift/*/backup/timeshift-btrfs/snapshots/
+
+	if [ -d /run/timeshift/*/backup/timeshift-btrfs/snapshots/ ]; then
+		
+		echo -e "\nDeleting timeshift backup snapshots. Please be patient...\n"
+
+		rm -rf /run/timeshift/*/backup/timeshift-btrfs/snapshots/
+	
+	else
+		echo -e "\nNo backup snapshots.\n"
+	fi
+}
+
+
 rsync_snapshot () {
 
 	mount_disk	
@@ -3302,7 +3319,8 @@ echo
 17. Restore btrfs/bcachefs snapshot
 18. Delete btrfs/bcachefs snapshot
 19. Rsync snapshot
-20. Bork system")
+20. Bork system
+21. Delete timeshift backups")
 
 									config_choice=0
 									while [ ! "$config_choice" = "1" ]; do
@@ -3346,6 +3364,7 @@ echo
 											delete|18)		delete_snapshot ;;
 											rsync|19)		rsync_snapshot ;;
 											bork|20)			bork_system ;;
+											timeshift|21)	delete_timeshift_snapshots ;;
               							'')				;;
                 						*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 										esac
