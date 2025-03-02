@@ -3067,6 +3067,8 @@ benchmark () {
 
 
 CONFIG_FILES="
+/usr/bin/librewolf
+/usr/lib/librewolf
 
 /etc/dracut.conf.d/myflags.conf
 /etc/booster.yaml
@@ -3099,16 +3101,14 @@ CONFIG_FILES="
 /etc/vconsole.conf
 /etc/wpa_supplicant
 /usr/lib/systemd/system-sleep/sleep.sh
-/usr/share/applications/firefox.desktop
-/root/bench.txt
 /var/lib/dhcpcd
 /var/lib/iwd
 /home/$user/.bash_profile
 /home/$user/.bashrc
 /home/$user/.config
 /home/$user/.hushlogin
+/home/$user/.librewolf
 /home/$user/.local
-/home/$user/.mozilla
 /home/$user/.vimrc"
 
 
