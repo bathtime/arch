@@ -95,7 +95,7 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='100'				# What percentage of space should the root drive take?
-fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='ext4'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(snapshots var/log)					# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/snapshots"
@@ -273,7 +273,7 @@ choose_disk () {
 		#lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g" 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#&  $rootfs#g" | sed "s#$host.*#& (host)#g"
 
-		choices='quit edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / logout reboot suspend hibernate poweroff stats'
+		choices='quit edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / logout reboot suspend hibernate poweroff stats benchmark'
 		
 
 		echo -e "\nWhich drive?\n"
@@ -290,6 +290,7 @@ choose_disk () {
 				suspend)		echo mem > /sys/power/state ;;
 				hibernate)	echo disk > /sys/power/state ;;
 				poweroff)	poweroff ;;
+				benchmark)	benchmark ;;
 				stats)	 	
 								if [[ "$rootfs" = 'btrfs' ]]; then
 									btrfs su list /
@@ -2980,7 +2981,7 @@ EOF
 
 benchmark () {
 		
-		check_pkg cryptsetup sysbench fio hdparm
+		#check_pkg cryptsetup sysbench fio hdparm
 
 		bench="$mnt/root/bench.txt"
 		tempfile="$mnt/root/bench.tmp"
@@ -2992,9 +2993,8 @@ benchmark () {
 
 		date >> $bench
 		
-		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "$disk" | sed "s#$host.*#& (host)#g" >> $bench  
-		
-		
+		mount | grep ' / ' >> $bench
+
 		echo -e "$(mount | grep ' / ')\n\n" >> $bench
 
 		echo -e "\nSystem boot speed (booster initramfs):\n" >> $bench
