@@ -95,7 +95,7 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='100'				# What percentage of space should the root drive take?
-fstype='ext4'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(snapshots var/log)					# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/snapshots"
@@ -2056,6 +2056,32 @@ restore_snapshot () {
 		else
 			echo "Exiting."
 		fi
+
+	else
+		echo "Snapshot directory does not exist. Exiting."
+	fi
+
+}
+
+
+delete_snapshot () {
+
+	mount_disk	
+
+	echo -e "\nWhich snapshot would you like to delete?\n"
+
+	cd $mnt$snapshot_dir
+	
+   select snapshot in *
+      do
+         case snapshot in
+         *) echo -e "\nYou chose: $snapshot\n"; break ;;
+      esac
+   done
+
+	if [ -d "$mnt$snapshot_dir/$snapshot" ] && [ ! "$snapshot" = '' ]; then
+
+		btrfs subvolume delete "$mnt$snapshot_dir/$snapshot"
 
 	else
 		echo "Snapshot directory does not exist. Exiting."
