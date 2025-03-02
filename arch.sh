@@ -127,7 +127,7 @@ gnome_install="gnome-shell polkit nautilus gnome-console xdg-user-dirs firefox d
 
 phosh_install="phosh phoc phosh-mobile-settings squeekboard firefox"
 
-kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole firefox ffmpegthumbs bleachbit ncdu"
+kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu"
 
 ucode=intel-ucode
 hostname=Arch
