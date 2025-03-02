@@ -75,8 +75,8 @@ arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
 
 mnt=/mnt
-#boot='/boot'		# leave blank to not mount boot separately
-boot=''		# leave blank to not mount boot separately
+boot='/boot'		# leave blank to not mount boot separately
+#boot=''		# leave blank to not mount boot separately
 
 if [[ ! $boot = '' ]]; then
 	espPartNum=1
@@ -96,13 +96,13 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 fsPercent='50'				# What percentage of space should the root drive take?
 fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(snapshots var/log)					# used for btrfs 	TODO: bcachefs
+subvols=(var/log)					# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/.snapshots"
 backup_install='false'		# say 'true' to do snapshots/rysncs during install
 initramfs='booster'		# mkinitcpio, dracut, booster
 encrypt=false
-efi_path=/boot/efi
+efi_path=/efi
 
 # This method uses the blk-mq to implicitly set the I/O scheduler to none. 
 kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
@@ -2445,13 +2445,10 @@ auto_install_root () {
 	if [[ $fstype = btrfs ]]; then
 		choose_initramfs booster
 		choose_initramfs dracut
+		#install_snapper
 	else
 		choose_initramfs $initramfs
 	fi
-
-	install_snapper
-	
-	
 
 	general_setup
 	
@@ -2543,10 +2540,11 @@ auto_install_kde () {
  
 	pacstrap_install $kde_install
 
-	#if [ "$fstype" = "btrfs" ]; then
+	if [ "$fstype" = "btrfs" ]; then
   		#pacstrap_install timeshift xorg-xhost
+  		pacstrap_install timeshift
 		#setup_snapshots
-	#fi
+	fi
 	
 	copy_pkgs
 
@@ -2670,6 +2668,7 @@ install_snapper () {
 
 		rm -rf $mnt/.snapshots
 		
+		#pacstrap_install snapper
 		pacstrap_install snapper
 		
 #		arch-chroot $mnt btrfs su create /.snapshots
