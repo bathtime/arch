@@ -432,7 +432,9 @@ create_partitions () {
 							bcachefs format -f -L ROOT --encrypted $disk$rootPart
 							bcachefs unlock -k session $disk$rootPart
 						else
-							bcachefs format -f -L ROOT $disk$rootPart
+## TESTING ###
+							#bcachefs format -f -L ROOT $disk$rootPart
+							bcachefs format --block_size=4096 -f -L ROOT $disk$rootPart
 						fi
 						;;
 	esac
@@ -498,7 +500,7 @@ mount_disk () {
 			mountopts="noatime,discard=async"
 
 			for subvol in '' "${subvols[@]}"; do
-				echo mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/"${subvol//_//}"
+			#	echo mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/"${subvol//_//}"
 				echo mount --mkdir -o "$mountopts,subvol=$subvolPrefix$subvol $disk$rootPart $mnt/$subvol"
 				mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/"${subvol//_//}"
 			done
