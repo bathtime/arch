@@ -281,7 +281,7 @@ choose_disk () {
 	select disk in $choices
 		do
 			case $disk in
-				quit)			exit ;;
+				quit)			sync_disk; exit ;;
 				edit)			vim $arch_path/$arch_file; exit ;;
 				$)				sudo -u $user bash ;;
 				\#)			bash ;;
@@ -2106,6 +2106,7 @@ delete_timeshift_snapshots () {
 	else
 		echo -e "\nNo backup snapshots.\n"
 	fi
+
 }
 
 
