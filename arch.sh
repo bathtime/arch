@@ -3021,44 +3021,30 @@ benchmark () {
 		
 	mount_disk
 
-	bench="$mnt/bench.txt"
 	tempfile="$mnt/bench.tmp"
 
 	cd $mnt/
 	rm -rf $tempfile
 
-	echo -e "\nRunning tests and saving to $bench. Please be patient...\n"
-
-
-	date >> $bench
-		
-	mount | grep ' / ' >> $bench
-
-	echo -e "$(mount | grep ' / ')\n\n" >> $bench
-
-	echo -e "\nSystem boot speed (booster initramfs):\n" >> $bench
-	systemd-analyze >> $bench
-
-	echo -e "\nRunning dd to measure write speed...\n" >> $bench
-	dd if=/dev/zero of=$tempfile bs=1M count=1024 conv=fdatasync,notrunc status=progress 2>> $bench
+	echo -e "\nRunning dd to measure write speed...\n"
+	dd if=/dev/zero of=$tempfile bs=1M count=1024 conv=fdatasync,notrunc status=progress
 
 	echo 3 > /proc/sys/vm/drop_caches
-	echo -e "\nRunning dd to measure read speed...\n" >> $bench
-	dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress 2>> $bench
+	echo -e "\nRunning dd to measure read speed...\n"
+	dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress
 
-	echo -e "\nRunning dd to measure buffer-cache speed...\n" >> $bench
-	dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress 2>> $bench
+	echo -e "\nRunning dd to measure buffer-cache speed...\n"
+	dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress
 
-	echo -e "\nRunning bash open/close test to measure buffer-cache speed...\n" >> $bench
-	{ time for (( i=1; i<=1000; i++ )); do bash -c 'exit' ;done } 2>> $bench
+	echo -e "\nRunning bash open/close test to measure buffer-cache speed..."
+	time for (( i=1; i<=1000; i++ )); do bash -c 'exit' ;done
 
 	rm $tempfile
-		
-	echo -e "\nTests completed. \n"
+	
 
-	cat $bench
-
-	read -N 1 -p "Press any key to continue."
+	echo -e "\nPress any key to continue."
+	read -s -N 1
+	echo
 
 }
 
