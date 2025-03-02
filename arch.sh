@@ -3019,45 +3019,46 @@ EOF
 
 benchmark () {
 		
-		#check_pkg cryptsetup sysbench fio hdparm
+	mount_disk
 
-		bench="$mnt/root/bench.txt"
-		tempfile="$mnt/root/bench.tmp"
-		cd $mnt/
-		rm -rf $tempfile
+	bench="$mnt/bench.txt"
+	tempfile="$mnt/bench.tmp"
 
-		echo -e "\nRunning tests and saving to $bench. Please be patient...\n"
+	cd $mnt/
+	rm -rf $tempfile
+
+	echo -e "\nRunning tests and saving to $bench. Please be patient...\n"
 
 
-		date >> $bench
+	date >> $bench
 		
-		mount | grep ' / ' >> $bench
+	mount | grep ' / ' >> $bench
 
-		echo -e "$(mount | grep ' / ')\n\n" >> $bench
+	echo -e "$(mount | grep ' / ')\n\n" >> $bench
 
-		echo -e "\nSystem boot speed (booster initramfs):\n" >> $bench
-		systemd-analyze >> $bench
+	echo -e "\nSystem boot speed (booster initramfs):\n" >> $bench
+	systemd-analyze >> $bench
 
-		echo -e "\nRunning dd to measure write speed...\n" >> $bench
-		dd if=/dev/zero of=$tempfile bs=1M count=1024 conv=fdatasync,notrunc status=progress 2>> $bench
+	echo -e "\nRunning dd to measure write speed...\n" >> $bench
+	dd if=/dev/zero of=$tempfile bs=1M count=1024 conv=fdatasync,notrunc status=progress 2>> $bench
 
-		echo 3 > /proc/sys/vm/drop_caches
-		echo -e "\nRunning dd to measure read speed...\n" >> $bench
-		dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress 2>> $bench
+	echo 3 > /proc/sys/vm/drop_caches
+	echo -e "\nRunning dd to measure read speed...\n" >> $bench
+	dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress 2>> $bench
 
-		echo -e "\nRunning dd to measure buffer-cache speed...\n" >> $bench
-		dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress 2>> $bench
+	echo -e "\nRunning dd to measure buffer-cache speed...\n" >> $bench
+	dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress 2>> $bench
 
-		echo -e "\nRunning bash open/close test to measure buffer-cache speed...\n" >> $bench
-		{ time for (( i=1; i<=1000; i++ )); do bash -c 'exit' ;done } 2>> $bench
+	echo -e "\nRunning bash open/close test to measure buffer-cache speed...\n" >> $bench
+	{ time for (( i=1; i<=1000; i++ )); do bash -c 'exit' ;done } 2>> $bench
 
-		rm $tempfile
+	rm $tempfile
 		
-		echo -e "\nTests completed. \n"
+	echo -e "\nTests completed. \n"
 
-		cat $bench
+	cat $bench
 
-		read -N 1 -p "Press any key to continue."
+	read -N 1 -p "Press any key to continue."
 
 }
 
@@ -3135,7 +3136,7 @@ while :; do
 	choices=("1. Back to main menu 
 2. Edit $arch_file
 3. Chroot
-4. Packages/script
+4. Auto-install
 5. Partition disk
 6. Install base
 7. Hypervisor setup
@@ -3155,7 +3156,7 @@ while :; do
 21. Update grub
 22. Connect wireless
 23. Install snapper
-27. Auto-install
+24. Packages/script
 30. Custom install
 31. Setup ~ files
 32. Snapshot/sync/wipe ->
@@ -3178,55 +3179,7 @@ echo
 		Quit|quit|q|exit|1)	choose_disk ;;
 		arch|2)					edit_arch ;;
 		Chroot|chroot|3)		do_chroot ;;
-		packages|4)				config_choices=("1. Quit to main menu
-2. Reset pacman keys
-3. Update mirror list
-4. Copy packages
-5. Download script
-6. Copy script")
-
-									config_choice=0
-									while [ ! "$config_choice" = "1" ]; do
-
-										echo
-										echo "${config_choices[@]}" | column
-										echo  
-
-										read -p "Which option? " config_choice
-
-        								case $config_choice in
-                						quit|1)			echo "Quitting!"; break ;;
-											reset|keys|2)	reset_keys ;;
-											mirrorlist|3)	update_mirrorlist ;;
-											pkgs|4)			copy_pkgs ;;
-											script|5)		download_script ;;
-											copy_script|6)	copy_script ;;
-              							'')				last_modified ;;
-                						*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
-										esac
-
-									done ;;
-
-		partition|5)			create_partitions ;;
-		base|6)					install_base ;;
-		hypervisor|7)			hypervisor_setup ;;
-		fstab|8)					setup_fstab ;;
-		boot|9)					install_bootloader ;;
-		setup|10)				general_setup ;;
-		user|11)					setup_user ;;
-      network|12)				install_network ;;
-		aur|13)					install_aur ;;
-		tweaks|14)				install_tweaks ;;
-      mksh|15)					install_mksh ;;
-		liveroot|16)			install_liveroot ;;
-		acpid|17)				setup_acpid ;;
-		initramfs|18)			choose_initramfs ;;
-      mount|19)				mount_disk  ;;
-      unmount|20)				unmount_disk  ;;
-		grub|21)					grub-mkconfig -o $mnt/boot/grub/grub.cfg ;;
-		connect|iwd|22)		connect_wireless ;;
-		snapper|23)				install_snapper ;;
-		auto|27)					config_os=("1. Quit
+		auto|4)					config_os=("1. Quit
 2. Root
 3. User
 4. Weston
@@ -3256,6 +3209,54 @@ echo
                 						'')				;;
 	              						*)					echo -e "\nInvalid option ($config_os)!\n" ;;
 										esac ;;
+
+		partition|5)			create_partitions ;;
+		base|6)					install_base ;;
+		hypervisor|7)			hypervisor_setup ;;
+		fstab|8)					setup_fstab ;;
+		boot|9)					install_bootloader ;;
+		setup|10)				general_setup ;;
+		user|11)					setup_user ;;
+      network|12)				install_network ;;
+		aur|13)					install_aur ;;
+		tweaks|14)				install_tweaks ;;
+      mksh|15)					install_mksh ;;
+		liveroot|16)			install_liveroot ;;
+		acpid|17)				setup_acpid ;;
+		initramfs|18)			choose_initramfs ;;
+      mount|19)				mount_disk  ;;
+      unmount|20)				unmount_disk  ;;
+		grub|21)					grub-mkconfig -o $mnt/boot/grub/grub.cfg ;;
+		connect|iwd|22)		connect_wireless ;;
+		snapper|23)				install_snapper ;;
+		packages|24)				config_choices=("1. Quit to main menu
+2. Reset pacman keys
+3. Update mirror list
+4. Copy packages
+5. Download script
+6. Copy script")
+
+									config_choice=0
+									while [ ! "$config_choice" = "1" ]; do
+
+										echo
+										echo "${config_choices[@]}" | column
+										echo  
+
+										read -p "Which option? " config_choice
+
+        								case $config_choice in
+                						quit|1)			echo "Quitting!"; break ;;
+											reset|keys|2)	reset_keys ;;
+											mirrorlist|3)	update_mirrorlist ;;
+											pkgs|4)			copy_pkgs ;;
+											script|5)		download_script ;;
+											copy_script|6)	copy_script ;;
+              							'')				last_modified ;;
+                						*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
+										esac
+
+									done ;;
 
 		custom|30)				custom_install ;;
 		setup|31)			config_choices=("1. Quit
