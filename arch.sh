@@ -273,7 +273,7 @@ choose_disk () {
 		#lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g" 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#&  $rootfs#g" | sed "s#$host.*#& (host)#g"
 
-		choices='quit edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / logout reboot suspend hibernate poweroff stats benchmark'
+		choices='quit sync edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / logout reboot suspend hibernate poweroff stats benchmark'
 		
 
 		echo -e "\nWhich drive?\n"
@@ -285,6 +285,7 @@ choose_disk () {
 				edit)			vim $arch_path/$arch_file; exit ;;
 				$)				sudo -u $user bash ;;
 				\#)			bash ;;
+				sync)			sync_disk ;;
 				logout)		killall systemd ;;
 				reboot)		reboot ;;
 				suspend)		echo mem > /sys/power/state ;;
@@ -1953,7 +1954,8 @@ clone () {
 		choose_initramfs dracut
 		choose_initramfs booster 
 		setup_fstab
-		sync_disk
+		
+		#sync_disk
 
 	else
 		echo "Exiting."
@@ -2938,8 +2940,10 @@ disk_info () {
 
 sync_disk () {
 
-	echo
-	sync &
+	echo -e "\nSyncing disk. Press <ctrl> + c to cancel...\n"
+	sync
+
+	return
 
 	dirty=$(cat /proc/meminfo | awk '/Dirty:/ { print $2 }')
 	initial_dirty=$dirty
@@ -3374,7 +3378,6 @@ echo
 		'')						;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
-
 
 	sync_disk
 	disk_info
