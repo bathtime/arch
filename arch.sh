@@ -75,8 +75,8 @@ arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
 
 mnt=/mnt
-boot='/boot'		# leave blank to not mount boot separately
-#boot=''		# leave blank to not mount boot separately
+boot='/boot'				# leave blank to not mount boot separately
+#boot=''						# leave blank to not mount boot separately
 
 if [[ ! $boot = '' ]]; then
 	espPartNum=1
@@ -94,13 +94,14 @@ espPart=$espPartNum
 bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
-fsPercent='50'				# What percentage of space should the root drive take?
-fstype='btrfs'			# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(var/log)					# used for btrfs 	TODO: bcachefs
+startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
+fsPercent='50'					# What percentage of space should the root drive take?
+fstype='btrfs'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+subvols=(var/log)				# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/.snapshots"
 backup_install='false'		# say 'true' to do snapshots/rysncs during install
-initramfs='booster'		# mkinitcpio, dracut, booster
+initramfs='booster'			# mkinitcpio, dracut, booster
 encrypt=false
 efi_path=/efi
 
@@ -370,12 +371,11 @@ create_partitions () {
 
 	if [ ! $boot = '' ]; then
 
-	#		set $bootPartNum boot on \
-	
+
 	parted -s $disk mklabel gpt \
 			mkpart ESP fat32 1Mib 512Mib \
 			mkpart BOOT ext2 512Mib 1024Mib \
-			mkpart SWAP linux-swap 1024Mib 8512Mib \
+			mkpart SWAP linux-swap 1024Mib $startSwap \
 			set $espPartNum esp on \
 			set $swapPartNum swap on
 				
@@ -385,7 +385,7 @@ create_partitions () {
 
 		parted -s $disk mklabel gpt \
 			mkpart ESP fat32 1Mib 512Mib \
-			mkpart SWAP linux-swap 1024Mib 8512Mib \
+			mkpart SWAP linux-swap 1024Mib $startSwap \
 			set $espPartNum esp on \
 			set $swapPartNum swap on
 		
@@ -393,9 +393,9 @@ create_partitions () {
 
 	if [ $fstype = bcachefs ]; then
 		# Parted doesn't recognise bcachefs filesystem
-		parted -s $disk mkpart ROOT ext4 8512Mib $fsPercent%
+		parted -s $disk mkpart ROOT ext4 $startSwap $fsPercent%
 	else
-		parted -s $disk mkpart ROOT $fstype 8512Mib $fsPercent%
+		parted -s $disk mkpart ROOT $fstype $startSwap $fsPercent%
 	fi
 
 	parted -s $disk print
