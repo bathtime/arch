@@ -100,7 +100,7 @@ fstype='btrfs'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(var/log)				# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/.snapshots"
-backup_install='false'		# say 'true' to do snapshots/rysncs during install
+backup_install='true'		# say 'true' to do snapshots/rysncs during install
 initramfs='booster'			# mkinitcpio, dracut, booster
 encrypt=false
 efi_path=/efi
@@ -294,7 +294,7 @@ choose_disk () {
 				hibernate)	echo disk > /sys/power/state ;;
 				poweroff)	poweroff ;;
 				benchmark)	benchmark ;;
-				stats)	 	
+				stats)	  	
 								if [[ "$rootfs" = 'btrfs' ]]; then
 									btrfs su list /
 								fi
@@ -1497,8 +1497,37 @@ WantedBy=multi-user.target' > $mnt/usr/lib/systemd/system/acpid.service
 
 setup_snapshots () {
 
-	# Use to copy bcachefs snapshot files
-	# cp --reflink=never
+	UUID=$(blkid -s UUID -o value $disk$rootPart)
+
+	mkdir -p $mnt/etc/timeshift
+	
+	
+	cat > $mnt/etc/timeshift/timeshift.json << EOF
+{
+  "backup_device_uuid" : "$UUID",
+  "parent_device_uuid" : "",
+  "do_first_run" : "false",
+  "btrfs_mode" : "true",
+  "include_btrfs_home_for_backup" : "false",
+  "include_btrfs_home_for_restore" : "false",
+  "stop_cron_emails" : "true",
+  "schedule_monthly" : "false",
+  "schedule_weekly" : "false",
+  "schedule_daily" : "false",
+  "schedule_hourly" : "true",
+  "schedule_boot" : "false",
+  "count_monthly" : "2",
+  "count_weekly" : "3",
+  "count_daily" : "5",
+  "count_hourly" : "6",
+  "count_boot" : "5",
+  "snapshot_size" : "0",
+  "snapshot_count" : "0",
+  "date_format" : "%Y-%m-%d %H:%M:%S",
+  "exclude" : [],
+  "exclude-apps" : []
+}
+EOF
 
 	pacstrap_install timeshift cronie
 
@@ -1510,7 +1539,6 @@ setup_snapshots () {
 install_tweaks () {
 
 	mount_disk
-
 	
 	pacstrap_install terminus-font ncdu
 
@@ -2484,14 +2512,13 @@ auto_install_root () {
 	copy_script
 	copy_pkgs
 
-	if [[ $backup_install = true ]]; then
-		if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
-			take_snapshot "root installed"
-		fi
-	fi
+	#if [[ $backup_install = true ]]; then
+	#	if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
+	#		take_snapshot "root installed"
+	#	fi
+	#fi
 
 }
-
 
 
 auto_install_user () {
@@ -2514,11 +2541,11 @@ auto_install_user () {
 	#install_tweaks
 	copy_pkgs
 
-	if [[ $backup_install = true ]]; then
-		if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
-			take_snapshot "user installed"
-		fi
-	fi
+	#if [[ $backup_install = true ]]; then
+	#	if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
+	#		take_snapshot "user installed"
+	#	fi
+	#fi
 	
 }
 
@@ -2563,12 +2590,6 @@ auto_install_kde () {
  
 	pacstrap_install $kde_install
 
-	if [ "$fstype" = "btrfs" ]; then
-  		#pacstrap_install timeshift xorg-xhost
-  		#pacstrap_install timeshift
-		setup_snapshots
-	fi
-	
 	copy_pkgs
 
 	# Auto-launch
@@ -2576,14 +2597,23 @@ auto_install_kde () {
 
 	install_config
 
-	if [[ $backup_install = true ]]; then
-		if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
-			take_snapshot "kde installed"
-		fi
+	#if [[ $backup_install = true ]]; then
+	#	if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
+	#		take_snapshot "kde installed"
+	#	fi
+	#fi
+
+	if [ "$fstype" = "btrfs" ]; then
+		
+		setup_snapshots
+		
+		if [[ $backup_install = true ]]; then
+         arch-chroot $mnt timeshift --create --comments "System installed" --tags D
+      fi
+
 	fi
-
-
- }
+	
+}
 
 
 auto_install_gnome () {
