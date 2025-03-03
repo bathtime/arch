@@ -101,6 +101,7 @@ subvols=(var/log)				# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/.snapshots"
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
+timeshift_on=true
 initramfs='booster'			# mkinitcpio, dracut, booster
 encrypt=false
 efi_path=/efi
@@ -1440,10 +1441,11 @@ WantedBy=multi-user.target' > $mnt/usr/lib/systemd/system/acpid.service
 
 setup_snapshots () {
 
+	[ ! $timeshift_on = true ] && [ ! $fstype = btrfs ] && return 
+
 	UUID=$(blkid -s UUID -o value $disk$rootPart)
 
 	mkdir -p $mnt/etc/timeshift
-	
 	
 	cat > $mnt/etc/timeshift/timeshift.json << EOF
 {
@@ -1906,7 +1908,7 @@ clone () {
 
 	echo -e "\n$1 $3 -> $4. Please be patient...\n"
 	
-	rsync_excludes=" --exclude=/etc/fstab --exclude=/etc/default/grub --exclude=/root.squashfs --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=/snapshots/"
+	rsync_excludes=" --exclude=/run/timeshift/ --exclude=/etc/timeshift/timeshift.json --exclude=/etc/fstab --exclude=/etc/default/grub --exclude=/root.squashfs --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=/snapshots/"
 
 
 	rsync --dry-run -v $2 $rsync_excludes $3 $4 | less
@@ -1928,7 +1930,8 @@ clone () {
 		choose_initramfs dracut
 		choose_initramfs booster 
 		setup_fstab
-		
+		fs_packages
+
 		#sync_disk
 
 	else
@@ -1990,9 +1993,6 @@ restore_snapshot () {
 
 	cd $mnt$snapshot_dir
 	
-	#cd /run/timeshift/1790/backup/timeshift-btrfs/snapshots/
-	# must add '@/' to timeshift directory!!
-
    select snapshot in *
       do
          case snapshot in
@@ -2017,7 +2017,7 @@ restore_snapshot () {
 		#--info=progress2 : instead of --progress is useful for large transfers
 		# arch recommended: -aAXHv
 
-		rsync_params="-axHAXvSW --del --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=/snapshots/"
+		rsync_params="-axHAXvSW --del --exclude=/etc/timeshift/timeshift.json --exclude=/run/timeshift/ --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=/snapshots/"
 		
 		rsync --dry-run $rsync_params "$mnt$snapshot_dir/$snapshot/" $mnt/ | less
 
@@ -2049,8 +2049,8 @@ delete_snapshot () {
 	cd $mnt$snapshot_dir
 	
    select snapshot in *
-      do
-         case snapshot in
+	do
+		case snapshot in
          *) echo -e "\nYou chose: $snapshot\n"; break ;;
       esac
    done
@@ -2074,9 +2074,9 @@ delete_timeshift_snapshots () {
 		
 		echo -e "\nDeleting timeshift backup snapshots. Please be patient...\n"
 
-		#btrfs subvolume delete "$mnt$snapshot_dir/$snapshot"
 		btrfs subvolume delete $mnt/run/timeshift/*/backup/timeshift-btrfs/snapshots/*/@/	
 		rm -rf /run/timeshift/*/backup/timeshift-btrfs/snapshots/
+	
 	else
 		echo -e "\nNo backup snapshots.\n"
 	fi
@@ -2104,7 +2104,7 @@ rsync_snapshot () {
 		echo -e "\nRunning dry run first..."
 		sleep 1
 
-		rsync_params="-axHAXSW --del --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=/snapshots/"
+		rsync_params="-axHAXSW --del --exclude=/run/timeshift/ --exclude=/etc/timeshift/timeshift.json --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=/snapshots/"
 		
 		rsync --dry-run -v $rsync_params / "$mnt$snapshot_dir/$snapshotname" | less
 
@@ -3114,8 +3114,7 @@ clone_menu () {
 			quit|1)			echo "Quitting!"; break ;;
 			unsquash|2)		extract_archive ;;
 			clone|3)			create_partitions
-								time clone Cloning '-aSW --del' / $mnt/
-								fs_packages	;;
+								time clone Cloning '-aSW --del' / $mnt/ ;;
 			clone|4)			time clone Cloning '-aSW --del' / $mnt/ ;; 
 			clone|5)			clone Cloning '-aSW --del' $mnt/ / ;;
 			copy|6)			clone Copying -aSW / $mnt/ ;;
