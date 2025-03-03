@@ -2074,8 +2074,9 @@ delete_timeshift_snapshots () {
 		
 		echo -e "\nDeleting timeshift backup snapshots. Please be patient...\n"
 
+		#btrfs subvolume delete "$mnt$snapshot_dir/$snapshot"
+		btrfs subvolume delete $mnt/run/timeshift/*/backup/timeshift-btrfs/snapshots/*/@/	
 		rm -rf /run/timeshift/*/backup/timeshift-btrfs/snapshots/
-	
 	else
 		echo -e "\nNo backup snapshots.\n"
 	fi
