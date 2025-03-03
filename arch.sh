@@ -96,7 +96,7 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='btrfs'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='bcachefs'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(var/log)				# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/.snapshots"
@@ -1441,7 +1441,7 @@ WantedBy=multi-user.target' > $mnt/usr/lib/systemd/system/acpid.service
 
 setup_snapshots () {
 
-	[ ! $timeshift_on = true ] && [ ! $fstype = btrfs ] && return 
+	[ ! $timeshift_on = true ] || [ ! $fstype = btrfs ] && return 
 
 	UUID=$(blkid -s UUID -o value $disk$rootPart)
 
@@ -1931,6 +1931,7 @@ clone () {
 		choose_initramfs booster 
 		setup_fstab
 		fs_packages
+		setup_snapshots
 
 		#sync_disk
 
@@ -2135,43 +2136,6 @@ bork_system () {
 
 }
 
-
-delote_snapshot () {
-
-	mount_disk	
-
-	echo -e "\nWhich snapshot would you like to delete?\n"
-
-	cd $mnt$snapshot_dir
-
-   select snapshot in *
-      do
-         case snapshot in
-         *) echo -e "\nYou chose: $snapshot\n"; break ;;
-      esac
-   done
-
-	if [ -d "$mnt$snapshot_dir/$snapshot" ] && [ ! "$snapshot" = '' ]; then
-		
-		echo -e "\nType 'y' to proceed with deletion any other key to exit..."
-		read choice
-
-		if [[ $choice = y ]]; then
-
-			echo -e "\nDeleting snapshot...\n"
-			btrfs subvolume delete "$mnt$snapshot_dir/$snapshot"
-			echo
-			ls -1N $mnt$snapshot_dir/
-			echo
-		else
-			echo "Exiting."
-		fi
-
-	else
-		echo "Snapshot directory does not exist. Exiting."
-	fi
-
-}
 
 
 extract_archive () {
