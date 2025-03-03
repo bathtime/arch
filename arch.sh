@@ -96,7 +96,7 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='bcachefs'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='ext4'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(var/log)				# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/.snapshots"
@@ -3246,11 +3246,11 @@ CONFIG_FILES="
 /etc/udev/rules.d/powersave.rules
 /etc/vconsole.conf
 /etc/wpa_supplicant
-/usr/lib/systemd/system-sleep/sleep.sh
 /usr/bin/librewolf
-/usr/lib/librewolf
 /var/lib/dhcpcd
 /var/lib/iwd
+/usr/lib/librewolf
+/usr/lib/systemd/system-sleep/sleep.sh
 
 /home/$user/.bash_profile
 /home/$user/.bashrc
