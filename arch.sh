@@ -75,10 +75,9 @@ arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
 
 mnt=/mnt
-boot='/boot'				# leave blank to not mount boot separately
-#boot=''						# leave blank to not mount boot separately
+bootOwnPartion='true'	# make separate boot partition (true/false)?
 
-if [[ ! $boot = '' ]]; then
+if [[ $bootOwnPartition = 'true' ]]; then
 	espPartNum=1
 	bootPartNum=2
 	swapPartNum=3
@@ -96,7 +95,7 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='ext4'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='btrfs'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(var/log)				# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/.snapshots"
@@ -205,9 +204,9 @@ unmount_disk () {
 		sleep .1
 	fi
 
-	if [[ $(mount | grep -E $disk$bootPart | grep -E "on $mnt$boot") ]] && [[ ! $boot = '' ]]; then
-		echo "Unmounting $mnt$boot..."
-		umount -n -R $mnt$boot
+	if [[ $(mount | grep -E $disk$bootPart | grep -E "on $mnt/boot") ]] && [[ $bootOwnPartition = true ]]; then
+		echo "Unmounting $mnt/boot..."
+		umount -n -R $mnt/boot
 		sleep .1
 	fi
 
@@ -380,8 +379,7 @@ create_partitions () {
 
 	check_pkg parted dosfstools
 
-	if [ ! $boot = '' ]; then
-
+	if [ $bootOwnPartition = true ]; then
 
 		parted -s $disk mklabel gpt \
 			mkpart ESP fat32 1Mib 512Mib \
@@ -517,8 +515,8 @@ mount_disk () {
 
 	fi
 	
-	if [[ ! $(mount | grep -E $disk$bootPart | grep -E "on $mnt$boot") ]] && [[ ! $boot = '' ]]; then
-		mount --mkdir $disk$bootPart $mnt$boot
+	if [[ ! $(mount | grep -E $disk$bootPart | grep -E "on $mnt/boot") ]] && [[ $bootOwnPartition = true ]]; then
+		mount --mkdir $disk$bootPart $mnt/boot
 	fi
 
 	if [[ ! $(mount | grep -E $disk$espPart | grep -E "on $mnt$efi_path") ]]; then
@@ -877,7 +875,7 @@ EOF2
 	fi
 
 	# btrfs cannot store saved default so will result in spare file error
-	if [[ $fstype = btrfs ]] && [[ $boot = '' ]]; then
+	if [[ $fstype = btrfs ]] && [[ $bootOwnPartition = true ]]; then
 		sed -i 's/^GRUB_DEFAULT=.*/GRUB_DEFAULT=0/' $mnt/etc/default/grub	
 		sed -i 's/^GRUB_SAVEDEFAULT=.*/GRUB_SAVEDEFAULT=false/' $mnt/etc/default/grub
 	fi
@@ -1933,8 +1931,6 @@ clone () {
 		fs_packages
 		setup_snapshots
 
-		#sync_disk
-
 	else
 		echo "Exiting."
 	fi
@@ -2897,7 +2893,7 @@ disk_info () {
 
 sync_disk () {
 
-	echo -e "\nSyncing disk. Press <ctrl> + c to cancel...\n"
+	echo -e "\nSyncing disk. Please be patient...\n"
 	sync
 
 	return
@@ -3036,8 +3032,6 @@ install_group () {
 	done
 
 }
-
-
 
 
 
