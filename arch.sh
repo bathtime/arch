@@ -461,7 +461,7 @@ create_partitions () {
 
 	mount -t $fstype --mkdir $disk$rootPart $mnt
 
-	cd $mnt
+	cd /
 
 	if [ "$fstype" = "btrfs" ]; then
 
@@ -2609,6 +2609,7 @@ auto_install_kde () {
 		
 		if [[ $backup_install = true ]]; then
          arch-chroot $mnt timeshift --create --comments "System installed" --tags D
+         arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
       fi
 
 	fi
