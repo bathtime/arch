@@ -171,6 +171,7 @@ check_viable_disk () {
 
 	if [[ ! "$(lsblk --output=PATH -d -n | grep $disk)" ]]; then
 		echo -e "\nNo such disk found ($disk). Exiting.\n"
+		sleep 2
 		exit
 	fi
 
@@ -182,6 +183,7 @@ check_on_root () {
   
 	if [[ $(mount | grep -G "$disk.*on / type") ]]; then 
 		echo -e "\nDevice mounted on root. Will not run. Exiting.\n"
+		sleep 2
 		exit
 	fi
 
@@ -192,9 +194,6 @@ check_on_root () {
 unmount_disk () {
 
 	sync_disk
-
-	#error_check 0 
-	#error_bypass=1
 
 	[ "$mnt" = '' ] && return
 
@@ -251,9 +250,6 @@ unmount_disk () {
 		echo -e "\nDisk already unmounted!\n"
 	fi
 
-	#error_check 1
-	#error_bypass=0
-
 }
 
 
@@ -271,7 +267,6 @@ choose_disk () {
 		
 		rootfs=$(mount | grep ' / ' | sed 's/(.*//; s/\/dev.* type //; s/ //')
 
-		#lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#& (host)#g" 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#&  $rootfs#g" | sed "s#$host.*#& (host)#g"
 
 		choices='quit sync edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / script logout reboot suspend hibernate poweroff stats benchmark'
@@ -302,19 +297,23 @@ choose_disk () {
 								echo; free -h; echo
 								systemd-analyze | sed 's/in .*=/in/;s/graph.*//'
 								echo $(systemd-analyze  blame | wc -l) systemd services
-
 								;;
 				/)				disk=$host; search_disks=0; break ;;
 				*)    		if [[ $disk = '' ]]; then
-						   		echo -e "\nInvalid option!\n"
+						   		
+									echo -e "\nInvalid option!\n"
+								
 								else
+									
 									if [[ "$(mount | awk '/ on \/ / { print $1}' | sed 's/p*[0-9]$//g')" = $disk ]]; then
 										mnt=''
 									else
 										mnt='/mnt'
 									fi
+
 									search_disks=0
 									break
+								
 								fi
 								;;
 				'')   		echo -e "\nInvalid option!\n" ;;
@@ -357,6 +356,18 @@ delete_partitions () {
 }
 
 
+fs_packages () {
+
+	case $fstype in
+		btrfs)		pacstrap_install btrfs-progs grub-btrfs ;;
+		bcachefs)	pacstrap_install bcachefs-tools ;;
+		xfs)			pacstrap_install xfsprogs ;;
+		f2fs)			pacstrap_install f2fs-tools ;;
+		jfs)			pacstrap_install jfsutils ;;
+		nilfs2)		pacstrap_install nilfs-utils ;;
+	esac
+}
+
 
 create_partitions () {
 
@@ -368,11 +379,10 @@ create_partitions () {
 
 	check_pkg parted dosfstools
 
-
 	if [ ! $boot = '' ]; then
 
 
-	parted -s $disk mklabel gpt \
+		parted -s $disk mklabel gpt \
 			mkpart ESP fat32 1Mib 512Mib \
 			mkpart BOOT ext2 512Mib 1024Mib \
 			mkpart SWAP linux-swap 1024Mib $startSwap \
@@ -405,29 +415,21 @@ create_partitions () {
 	mkfs.fat -F 32 -n EFI $disk$espPart 
 	mkswap -L SWAP $disk$swapPart
 
+	# Install packages required for filesystem
+	fs_packages
+
 	case $fstype in
 
-		btrfs)		check_pkg btrfs-progs
-						check_pkg rsync
-						mkfs.btrfs -f -L ROOT $disk$rootPart ;;
-		ext4)			
-						#mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart 
-						mkfs.ext4 -F -b 4096 -q -t ext4 -L ROOT $disk$rootPart 
+		btrfs)		mkfs.btrfs -f -L ROOT $disk$rootPart ;;
+		ext4)			mkfs.ext4 -F -b 4096 -q -t ext4 -L ROOT $disk$rootPart 
 						echo "Using tune2fs to create fast commit journal area. Please be patient..." 
 						tune2fs -O fast_commit $disk$rootPart
-						tune2fs -l $disk$rootPart | grep features 
-						;;
-		xfs)			check_pkg xfsprogs			
-						mkfs.xfs -f -L ROOT $disk$rootPart ;;
-		jfs)			check_pkg jfsutils			
-						mkfs.jfs -f -L ROOT $disk$rootPart ;;
-		f2fs)			check_pkg f2fs-tools
-						mkfs.f2fs -f -l ROOT $disk$rootPart 
-						;;
-		nilfs2)		check_pkg nilfs-utils
-						mkfs.nilfs2 -f -L ROOT $disk$rootPart ;;
-		bcachefs)	check_pkg bcachefs-tools rsync
-
+						tune2fs -l $disk$rootPart | grep features ;;
+		xfs)			mkfs.xfs -f -L ROOT $disk$rootPart ;;
+		jfs)			mkfs.jfs -f -L ROOT $disk$rootPart ;;
+		f2fs)			mkfs.f2fs -f -l ROOT $disk$rootPart ;;
+		nilfs2)		mkfs.nilfs2 -f -L ROOT $disk$rootPart ;;
+		bcachefs)		
 						if [[ $encrypt = true ]]; then
 							bcachefs format -f -L ROOT --encrypted $disk$rootPart
 							bcachefs unlock -k session $disk$rootPart
@@ -439,25 +441,12 @@ create_partitions () {
 						;;
 	esac
 
-
 	parted -s $disk print
 
-
-
-
-
-
-######## DO WE NEED SLEEP HERE? ?????? #####
-
-#sleep 2
-
-
-
-
-
+	######## DO WE NEED SLEEP HERE? ?????? #####
+	sleep 2
 
 	echo -e "\nMounting $mnt..."
-
 
 	mount -t $fstype --mkdir $disk$rootPart $mnt
 
@@ -467,6 +456,7 @@ create_partitions () {
 
 		for subvol in '' "${subvols[@]}"; do
 			btrfs su cr --parents "$mnt$subvolPrefix$subvol"
+
 		done
 
 		#btrfs su cr --parents "$mnt/.snapshots"
@@ -487,7 +477,6 @@ mount_disk () {
 
 	[ "$mnt" = "" ] && return
 
-	#error_check 0
 	check_on_root
 
 	if [[ ! $(mount | grep -E $disk$rootPart | grep -E "on $mnt") ]]; then
@@ -560,8 +549,6 @@ mount_disk () {
 	
 	chmod -R 1777 $mnt/var/tmp
 
-	#error_check 1
-
 }
 
 
@@ -599,12 +586,11 @@ Server = file:///var/cache/pacman/pkg/
 
 	reset_keys
 
-	#check_pkg arch-install-scripts reflector
 	check_pkg arch-install-scripts
 
+	#check_pkg reflector
 	#echo -e "\nRunning reflector...\n"
 	#reflector > /etc/pacman.d/mirrorlist
-	
 
 	[ "$(cat /etc/pacman.d/mirrorlist)" = "" ] && update_mirrorlist
 
@@ -623,9 +609,6 @@ Server = file:///var/cache/pacman/pkg/
 
 	pacstrap_install $packages
 
-
-	### Tweak pacman.conf
-
 	cp $mnt/etc/pacman.conf $mnt/etc/pacman.conf.pacnew
 
 	sed -i 's/#Color/Color/' $mnt/etc/pacman.conf
@@ -637,8 +620,6 @@ Server = file:///var/cache/pacman/pkg/
 
 
 auto_login () {
-
-	###  Prepare auto-login  ###
 
 	login_user=$1
 
@@ -659,8 +640,7 @@ hypervisor_setup () {
 
 	choices=(exit auto kvm vmware oracle microsoft)
 
-   select choice in "${choices[@]}"
-		do
+   select choice in "${choices[@]}"; do
 		case $choice in
 			auto)			hypervisor=$(systemd-detect-virt) 
 							echo "Detected: $hypervisor" ;;
@@ -680,6 +660,7 @@ hypervisor_setup () {
 			'')   		echo -e "\nInvalid option!\n" ;;
 		esac
 	done
+
 }
 
 
@@ -713,19 +694,9 @@ setup_fstab () {
 	sed -i '/portal/d' $mnt/etc/fstab
 
 	sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,commit=60      0 1/' $mnt/etc/fstab
-	#sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,barrier=0,nobh,commit=60      0 1/' $mnt/etc/fstab
-
-	# external journal
-	#sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,relatime,journal_checksum,journal_async_commit      0 1/' $mnt/etc/fstab
 
 	# Make /efi read-only
 	#sed -i 's/\/efi.*vfat.*rw/\/efi     vfat     ro/' $mnt/etc/fstab
-
-#	[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/cache')" ] && echo "tmpfs    /var/cache  tmpfs   rw,nodev,nosuid,mode=1755,size=2G   0 0" >> $mnt/etc/fstab
-	#[ ! "$(cat $mnt/etc/fstab | grep 'none swap defaults 0 0')" ] && echo -e "UUID=$SWAP_UUID none swap defaults 0 0\n" >> $mnt/etc/fstab
-	#[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/log')" ]   && echo "tmpfs    /var/log    tmpfs   rw,nodev,nosuid,mode=1775,size=2G   0 0" >> $mnt/etc/fstab
-	#[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /var/tmp')" ]   && echo "tmpfs    /var/tmp    tmpfs   rw,nodev,nosuid,mode=1777,size=2G   0 0" >> $mnt/etc/fstab
-	#[ ! "$(cat $mnt/etc/fstab | grep 'tmpfs    /home/user/.cache')" ]   && echo "tmpfs    /home/user/.cache    tmpfs  rw,size=1G,nr_inodes=5k,noexec,nodev,nosuid,uid=user,mode=1777 0 0" >> $mnt/etc/fstab
 
 	systemctl daemon-reload
 
@@ -1027,11 +998,8 @@ install_SYSTEMDBOOT () {
 
 general_setup () {
 
-	#check_on_root
 	mount_disk
 
-	#rm -rf $mnt/var/tmp && ln -s $mnt/tmp $mnt/var/tmp
-	
 	#	echo "$password" | passwd --stdin && echo "Root password created."
 	echo "root:$password" | chpasswd --root=$mnt/ && echo "Root password created."
 
@@ -1090,21 +1058,8 @@ setup_user () {
 	pacstrap_install sudo
 
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
-
-#		if [[ $mnt = '' ]]; then
-			useradd --root=$mnt/ -m $user -G wheel -p "$password"
-			echo "$user:$password" | chpasswd --root=$mnt/ && echo "User password created."
-#		else
-#			arch-chroot $mnt useradd -m $user -G wheel
-#			arch-chroot $mnt echo "$password" | passwd $user --stdin
-#arch-chroot $mnt useradd -m $user -G wheel
-
-#		arch-chroot $mnt /bin/bash -e << EOF
-#		printf "$password\n$password\n" | passwd "$user"
-#EOF
-
-#		fi
-
+		useradd --root=$mnt/ -m $user -G wheel -p "$password"
+		echo "$user:$password" | chpasswd --root=$mnt/ && echo "User password created."
 	fi
 	
 	if [ "$(grep -c "^$user" $mnt/etc/passwd)" -eq 0 ]; then
@@ -1135,7 +1090,6 @@ setup_user () {
 	echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/1-wheel
 	echo "$user ALL = NOPASSWD: /usr/local/bin/arch.sh" > $mnt/etc/sudoers.d/10-arch
 	chmod 0440 $mnt/etc/sudoers.d/{1-wheel,10-arch}
-
 	
 	
 	# Autologin to tty1
@@ -1162,61 +1116,50 @@ fi
 export EDITOR=/usr/bin/vim
 #export QT_QPA_PLATFORM=wayland
 export QT_IM_MODULE=Maliit
-#export MOZ_ENABLE_WAYLAND=1
-#export XDG_RUNTIME_DIR=/run/$USER/1000
-#export RUNLEVEL=3
-#export QT_LOGGING_RULES="*=false"
-#export GTK_USE_PORTAL=1
-#export XDG_RUNTIME_DIR="/run/user/$UID"
-#export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
-#export XDG_SESSION_TYPE=wayland
-#dbus-launch
-#export $(dbus-launch)
-#
-
 export QT_AUTO_SCREEN_SCALE_FACTOR=1
 export KWIN_IM_SHOW_ALWAYS=1
 
 manager=''
-#default_manager=gnome
 default_manager=kde-dbus
 
 if [[ -z $DISPLAY && $(tty) == /dev/tty1 && $XDG_SESSION_TYPE == tty ]]; then
 
-#       read -t 2 -s -n1 -p "Press <w> to choose a window manager..." key;echo;echo;
+#	read -t 2 -s -n1 -p "Press <w> to choose a window manager..." key;echo;echo;
 
-        if [ "$key" = "w" ]; then
-      if [ "$manager" = "choice" ] || [ "$manager" = "" ]; then
-        echo -e "Choose a window manager:
-        1. none
-        2. weston
-        3. kde
-        4. kde-mobile
-        5. gnome
-        6. phosh
-        7. kde (dbus)\n"
+	if [ "$key" = "w" ]; then
+		if [ "$manager" = "choice" ] || [ "$manager" = "" ]; then
+			echo -e "Choose a window manager:
+		1. none
+		2. weston
+		3. kde
+		4. kde-mobile
+		5. gnome
+		6. phosh
+		7. kde (dbus)\n"
          read manager
-        fi
-        fi
+      fi
+	fi
 
-        [ "$manager" = "" ] && manager=$default_manager
+	[ "$manager" = "" ] && manager=$default_manager
 
-        case $manager in
-        1|none)                 ;;
-      2|weston)         exec weston --shell=desktop ;;
-      3|kde)            startplasma-wayland ;;
-      4|kde-mobile)     startplasmamobile ;;
-      5|gnome)          MOZ_ENABLE_WAYLAND=1 gnome-session --session=gnome-wayland ;;
-                6|phosh)                                phosh-session ;;
-                7|kde-dbus)                     /usr/lib/plasma-dbus-run-session-if-needed /usr/bin/startplasma-wayland ;;
-        esac
+	case $manager in
+		1|none)			;;
+		2|weston)		exec weston --shell=desktop ;;
+		3|kde)			startplasma-wayland ;;
+		4|kde-mobile)	startplasmamobile ;;
+		5|gnome)			MOZ_ENABLE_WAYLAND=1 gnome-session --session=gnome-wayland ;;
+		6|phosh)			phosh-session ;;
+ 		7|kde-dbus)		/usr/lib/plasma-dbus-run-session-if-needed /usr/bin/startplasma-wayland ;;
+	esac
 
 fi
 
 ' > $mnt/home/$user/.bash_profile
 
 	touch $mnt/home/$user/.hushlogin
-		echo '[[ $- != *i* ]] && return
+	
+	echo '[[ $- != *i* ]] && return
+	
 alias ls="ls --color=auto"
 alias grep="grep --color=auto"
 alias vi="vim"
@@ -2888,8 +2831,6 @@ install_config () {
 
 last_modified () {
 
-	#cd /home/user
-	#find . -cmin -1 -printf '%t %p\n' | sort -k 1 -n | cut -d' ' -f2-
 	find / -cmin -1 -printf '%t %p\n' | sort -k 1 -n | cut -d' ' -f2- | grep -v /proc
 
 }
@@ -2910,7 +2851,6 @@ wipe_disk () {
 
 	check_on_root
 	unmount_disk
-
 
 	echo -e "\nDisk: $disk_info\n\nType 'yes' to wipe using $1 method.\n"
 	read choiceWipe
@@ -2933,22 +2873,22 @@ wipe_disk () {
 
 
 clean () {
-							echo -e "\nCleaning files...\n"
-								rm -rfv /var/log /var/tmp /tmp/{*,.*} /home/$user/.cache/{*,.*} \
-								/root/.cache/{*,.*} /root/.bash_history 
-								
 
-								echo
-								echo -e "\nClearing pagecache, dentries, and inodes...\n\nBefore:"
-								free -h
-								sudo sync; echo 3 > /proc/sys/vm/drop_caches
-								echo -e "\nAfter:"
-								free -h
+	echo -e "\nCleaning files...\n"
+	rm -rfv		/var/log /var/tmp /tmp/{*,.*} /home/$user/.cache/{*,.*} \
+					/root/.cache/{*,.*} /root/.bash_history 
+
+	echo
+	echo -e "\nClearing pagecache, dentries, and inodes...\n\nBefore:"
+	free -h
+	sudo sync; echo 3 > /proc/sys/vm/drop_caches
+	echo -e "\nAfter:"
+	free -h
+
 }
 
 
 wipe_freespace () {
-
 
 	echo -e "\nWiping freespace on $disk using zero method. Please be patient...\n"
 	echo -e "Run 'watch -n 1 -x df / --sync' in another terminal to see progress.\n"
@@ -3038,7 +2978,6 @@ aur_package_install () {
 	check_on_root
 	mount_disk
 
-
 	#aur_app=brave-bin
 	#aur_git='https://aur.archlinux.org/brave-bin.git'
 
@@ -3105,14 +3044,216 @@ benchmark () {
 }
 
 
-#/etc/snapper
-#/etc/conf.d/snapper
+install_group () {
+
+	config_choices=("1. Quit
+2. kde
+3. gnome")			
+
+	config_choice=0
+
+	while [ ! "$config_choice" = "1" ]; do
+
+		echo
+		echo "${config_choices[@]}" | column
+		echo  
+
+		read -p "Which option? " config_choice
+
+   	case $config_choice in
+   		quit|1)		echo "Quitting!"; break; ;;
+   		kde|2)		pacstrap_install $kde_install ;;
+   		gnome|3)		pacstrap_install $gnome_install ;;
+   		'')			last_modified ;;
+   		*)				echo -e "\nInvalid option ($config_choice)!\n" ;;
+		esac
+
+	done
+
+}
+
+
+
+
+
+clone_menu () {
+	
+	config_choices=("1. Quit to main menu
+2. Unsquash to target
+3. Part + Clone / -> $disk
+4. Clone / -> $disk
+5. Clone $disk -> /
+6. Copy / -> $disk
+7. Copy $disk -> /
+8. Copy /home -> $disk$rootPart/
+9. Copy $disk$rootPart/home -> /
+10. Update / <-> $disk
+11. Wipe (zero)
+12. Wipe (urandom)
+13. Wipe freespace     
+14. Shred $disk
+15. Create squashfs image
+16. Take btrfs/bcachefs snapshot
+17. Restore btrfs/bcachefs snapshot
+18. Delete btrfs/bcachefs snapshot
+19. Rsync snapshot
+20. Bork system
+21. Delete timeshift backups")
+
+	config_choice=0
+	while [ ! "$config_choice" = "1" ]; do
+
+		echo
+		echo "${config_choices[@]}" | column
+		echo  
+
+		read -p "Which option? " config_choice
+
+		case $config_choice in
+			quit|1)			echo "Quitting!"; break ;;
+			unsquash|2)		extract_archive ;;
+			clone|3)			create_partitions
+								time clone Cloning '-aSW --del' / $mnt/
+								fs_packages	;;
+			clone|4)			time clone Cloning '-aSW --del' / $mnt/ ;; 
+			clone|5)			clone Cloning '-aSW --del' $mnt/ / ;;
+			copy|6)			clone Copying -aSW / $mnt/ ;;
+			copy|7)			clone Copying -aSW $mnt/ / ;;
+			copy|8)			clone Copying -aSW /home $mnt/ ;;
+			copy|9)			clone Copying -aSW $mnt/home / ;;
+			update|10)		clone Updating -auSW / $mnt/
+								clone Updating -auSW $mnt/ / ;;
+			wipe|11)			wipe_disk zero ;;
+			wipe|12)			wipe_disk urandom ;;
+			wipe-free|13)	wipe_freespace ;;
+			shred|14)		unmount_disk; shred -n 1 -v -z $disk ;;
+			squashfs|15)	create_archive ;;
+			snapshot|16)	take_snapshot ;;
+			restore|17)		restore_snapshot ;;
+			delete|18)		delete_snapshot ;;
+			rsync|19)		rsync_snapshot ;;
+			bork|20)			bork_system ;;
+			timeshift|21)	delete_timeshift_snapshots ;;
+      	'')				;;
+      	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
+		esac
+
+	done 
+
+}
+
+
+setup_menu () {
+
+	config_choices=("1. Quit
+2. Backup config
+3. Restore config
+4. Install config
+5. Cleanup system
+6. Last modified
+7. Copy config
+8. Copy packages")			config_choice=0
+
+	while [ ! "$config_choice" = "1" ]; do
+
+		echo
+		echo "${config_choices[@]}" | column
+		echo  
+
+		read -p "Which option? " config_choice
+
+  		case $config_choice in
+  			quit|1)		echo "Quitting!"; break; ;;
+  			backup|2)	backup_config ;;
+  			restore|3)	restore_config ;;
+  			install|4)	install_config ;;
+   		clean|5)		clean_system ;;
+   		last|6)		last_modified ;;
+			copy|7)		echo "Copying packages from /setup.tar to $mnt/..."
+							cp /setup.tar $mnt/ ;;
+			pkgs|8)		copy_pkgs ;;
+         '')			last_modified ;;
+         *)				echo -e "\nInvalid option ($config_choice)!\n" ;;
+		esac
+
+	done 
+
+}
+
+
+packages_menu () {
+
+	config_choices=("1. Quit to main menu
+2. Reset pacman keys
+3. Update mirror list
+4. Copy packages
+5. Download script
+6. Copy script")
+
+	config_choice=0
+	while [ ! "$config_choice" = "1" ]; do
+
+		echo
+		echo "${config_choices[@]}" | column
+		echo  
+
+		read -p "Which option? " config_choice
+
+   	case $config_choice in
+   		quit|1)				echo "Quitting!"; break ;;
+			reset|keys|2)		reset_keys ;;
+			mirrorlist|3)		update_mirrorlist ;;
+			pkgs|4)				copy_pkgs ;;
+			script|5)			download_script ;;
+			copy_script|6)		copy_script ;;
+   		'')					last_modified ;;
+			*)						echo -e "\nInvalid option ($config_choice)!\n" ;;
+		esac
+
+	done
+
+}
+
+
+auto_install_menu () {
+	
+	config_os=("1. Quit
+2. Root
+3. User
+4. Weston
+5. KDE
+6. Gnome
+7. Phosh
+8. Cage
+9. Gnome/Kde
+10. All")
+
+	echo
+	echo "${config_os[@]}" | column
+	echo  
+
+	read -p "Which option? " config_os
+
+   case $config_os in
+   	quit|1)			;;
+   	root|2)			auto_install_root ;;
+   	user|3)			auto_install_user ;;
+   	weston|4)		time auto_install_weston ;;
+   	kde|5)			time auto_install_kde ;;
+   	gnome|6)			time auto_install_gnome ;;
+   	phosh|7)			time auto_install_phosh ;;
+   	cage|8)			time auto_install_cage ;;
+		gnomekde|9)		time auto_install_gnomekde ;;
+      all|10)			time auto_install_all ;;
+     	'')				;;
+	  	*)					echo -e "\nInvalid option ($config_os)!\n" ;;
+	esac
+
+}
+
 
 
 CONFIG_FILES="
-/usr/bin/librewolf
-/usr/lib/librewolf
-
 /etc/dracut.conf.d/myflags.conf
 /etc/booster.yaml
 /etc/hostname
@@ -3144,8 +3285,11 @@ CONFIG_FILES="
 /etc/vconsole.conf
 /etc/wpa_supplicant
 /usr/lib/systemd/system-sleep/sleep.sh
+/usr/bin/librewolf
+/usr/lib/librewolf
 /var/lib/dhcpcd
 /var/lib/iwd
+
 /home/$user/.bash_profile
 /home/$user/.bashrc
 /home/$user/.config
@@ -3207,7 +3351,6 @@ while :; do
 35. Benchmark")
 
 
-
 echo
 echo "${choices[@]}" | column   
 
@@ -3221,37 +3364,7 @@ echo
 		Quit|quit|q|exit|1)	choose_disk ;;
 		arch|2)					edit_arch ;;
 		Chroot|chroot|3)		do_chroot ;;
-		auto|4)					config_os=("1. Quit
-2. Root
-3. User
-4. Weston
-5. KDE
-6. Gnome
-7. Phosh
-8. Cage
-9. Gnome/Kde
-10. All")
-										echo
-										echo "${config_os[@]}" | column
-										echo  
-
-										read -p "Which option? " config_os
-
-        								case $config_os in
-                						quit|1)			;;
-                						root|2)			auto_install_root ;;
-                						user|3)			auto_install_user ;;
-                						weston|4)		time auto_install_weston ;;
-                						kde|5)			time auto_install_kde ;;
-                						gnome|6)			time auto_install_gnome ;;
-                						phosh|7)			time auto_install_phosh ;;
-                						phosh|8)			time auto_install_cage ;;
-											gnomekde|9)		time auto_install_gnomekde ;;
-                						all|10)			time auto_install_all ;;
-                						'')				;;
-	              						*)					echo -e "\nInvalid option ($config_os)!\n" ;;
-										esac ;;
-
+		auto|4)					auto_install_menu ;;
 		partition|5)			create_partitions ;;
 		base|6)					install_base ;;
 		hypervisor|7)			hypervisor_setup ;;
@@ -3271,163 +3384,12 @@ echo
 		grub|21)					grub-mkconfig -o $mnt/boot/grub/grub.cfg ;;
 		connect|iwd|22)		connect_wireless ;;
 		snapper|23)				install_snapper ;;
-		packages|24)				config_choices=("1. Quit to main menu
-2. Reset pacman keys
-3. Update mirror list
-4. Copy packages
-5. Download script
-6. Copy script")
-
-									config_choice=0
-									while [ ! "$config_choice" = "1" ]; do
-
-										echo
-										echo "${config_choices[@]}" | column
-										echo  
-
-										read -p "Which option? " config_choice
-
-        								case $config_choice in
-                						quit|1)			echo "Quitting!"; break ;;
-											reset|keys|2)	reset_keys ;;
-											mirrorlist|3)	update_mirrorlist ;;
-											pkgs|4)			copy_pkgs ;;
-											script|5)		download_script ;;
-											copy_script|6)	copy_script ;;
-              							'')				last_modified ;;
-                						*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
-										esac
-
-									done ;;
-
+		packages|24)			packages_menu ;;
 		custom|30)				custom_install ;;
-		setup|31)			config_choices=("1. Quit
-2. Backup config
-3. Restore config
-4. Install config
-5. Cleanup system
-6. Last modified
-7. Copy config
-8. Copy packages")			config_choice=0
-
-									while [ ! "$config_choice" = "1" ]; do
-
-										echo
-										echo "${config_choices[@]}" | column
-										echo  
-
-										read -p "Which option? " config_choice
-
-        								case $config_choice in
-                						quit|1)		echo "Quitting!"; break; ;;
-                						backup|2)	backup_config ;;
-                						restore|3)	restore_config ;;
-                						install|4)	install_config ;;
-                						clean|5)		clean_system ;;
-                						last|6)		last_modified ;;
-											copy|7)		echo "Copying packages from /setup.tar to $mnt/..."
-															cp /setup.tar $mnt/ ;;
-											pkgs|8)		copy_pkgs ;;
-                						'')			last_modified ;;
-                						*)				echo -e "\nInvalid option ($config_choice)!\n" ;;
-										esac
-
-									done ;;
-
-		copy|32)			config_choices=("1. Quit to main menu
-2. Unsquash to target
-3. Part + Clone / -> $disk
-4. Clone / -> $disk
-5. Clone $disk -> /
-6. Copy / -> $disk
-7. Copy $disk -> /
-8. Copy /home -> $disk$rootPart/
-9. Copy $disk$rootPart/home -> /
-10. Update / <-> $disk
-11. Wipe (zero)
-12. Wipe (urandom)
-13. Wipe freespace     
-14. Shred $disk
-15. Create squashfs image
-16. Take btrfs/bcachefs snapshot
-17. Restore btrfs/bcachefs snapshot
-18. Delete btrfs/bcachefs snapshot
-19. Rsync snapshot
-20. Bork system
-21. Delete timeshift backups")
-
-									config_choice=0
-									while [ ! "$config_choice" = "1" ]; do
-
-										echo
-										echo "${config_choices[@]}" | column
-										echo  
-
-										read -p "Which option? " config_choice
-
-        								case $config_choice in
-                						quit|1)			echo "Quitting!"; break ;;
-											unsquash|2)		extract_archive ;;
-											clone|3)			create_partitions
-																time clone Cloning '-aSW --del' / $mnt/
-
-							[ "$fstype" = "btrfs" ] && pacstrap_install btrfs-progs grub-btrfs
-							[ "$fstype" = "xfs" ] && pacstrap_install xfsprogs
-							[ "$fstype" = "jfs" ] && pacstrap_install jfsutils
-							[ "$fstype" = "f2fs" ] && pacstrap_install f2fs-tools
-							[ "$fstype" = "bcachefs" ] && pacstrap_install bcachefs-tools rsync
-							[ "$fstype" = "nilfs2" ] && pacstrap_install nilfs-utils
-
-   														;;
-
-											clone|4)			time clone Cloning '-aSW --del' / $mnt/ ;; 
-											clone|5)			clone Cloning '-aSW --del' $mnt/ / ;;
-											copy|6)			clone Copying -aSW / $mnt/ ;;
-											copy|7)			clone Copying -aSW $mnt/ / ;;
-											copy|8)			clone Copying -aSW /home $mnt/ ;;
-											copy|9)			clone Copying -aSW $mnt/home / ;;
-											update|10)		clone Updating -auSW / $mnt/
-																clone Updating -auSW $mnt/ / ;;
-											wipe|11)			wipe_disk zero ;;
-											wipe|12)			wipe_disk urandom ;;
-											wipe-free|13)	wipe_freespace ;;
-											shred|14)		unmount_disk; shred -n 1 -v -z $disk ;;
-											squashfs|15)	create_archive ;;
-											snapshot|16)	take_snapshot ;;
-											restore|17)		restore_snapshot ;;
-											delete|18)		delete_snapshot ;;
-											rsync|19)		rsync_snapshot ;;
-											bork|20)			bork_system ;;
-											timeshift|21)	delete_timeshift_snapshots ;;
-              							'')				;;
-                						*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
-										esac
-
-									done ;;
-
+		setup|31)				setup_menu ;;
+		copy|32)					clone_menu ;;
 		setup|33)      		aur_package_install ;; 
-		packages|34)			config_choices=("1. Quit
-2. kde
-3. gnome")			config_choice=0
-
-									while [ ! "$config_choice" = "1" ]; do
-
-										echo
-										echo "${config_choices[@]}" | column
-										echo  
-
-										read -p "Which option? " config_choice
-
-        								case $config_choice in
-                						quit|1)		echo "Quitting!"; break; ;;
-                						kde|2)		pacstrap_install $kde_install ;;
-                						gnome|3)		pacstrap_install $gnome_install ;;
-                						'')			last_modified ;;
-                						*)				echo -e "\nInvalid option ($config_choice)!\n" ;;
-										esac
-
-									done ;;
-
+		packages|34)			install_group ;;
 		benchmark|35)			benchmark ;;
 		'')						;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
@@ -3437,4 +3399,5 @@ echo
 	disk_info
 
 done
+
 
