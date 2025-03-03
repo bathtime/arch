@@ -3218,8 +3218,8 @@ auto_install_menu () {
 
 
 CONFIG_FILES="
-/etc/dracut.conf.d/myflags.conf
 /etc/booster.yaml
+/etc/dracut.conf.d/myflags.conf
 /etc/hostname
 /etc/hosts
 /etc/iwd/main.conf
@@ -3229,22 +3229,20 @@ CONFIG_FILES="
 /etc/mkinitcpio.conf
 /etc/NetworkManager/conf.d/dhcp-client.conf
 /etc/NetworkManager/conf.d/wifi_backend.conf
-/etc/NetworkManager/system-connections/*
+/etc/NetworkManager/system-connections
 /etc/pacman.conf
 /etc/pacman-offline.conf
 /etc/pacman.d/mirrorlist
 /etc/security/limits.conf
-/etc/sudoers.d
-/etc/sudoers.d/1-wheel
-/etc/sudoers.d/10-arch
+/etc/sudoers.d/
 /etc/sysctl.d/50-coredump.conf
 /etc/sysctl.d/99-cache-pressure.conf
 /etc/sysctl.d/99-net-keepalive.conf
 /etc/sysctl.d/99-net-timeout.conf
 /etc/sysctl.d/99-swappiness.conf
 /etc/systemd/coredump.conf.d/custom.conf
-/etc/systemd/system/user-power.service
 /etc/systemd/system/getty@tty1.service.d/autologin.conf
+/etc/systemd/system/user-power.service
 /etc/udev/rules.d/powersave.rules
 /etc/vconsole.conf
 /etc/wpa_supplicant
