@@ -95,12 +95,12 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='ext4'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(var/log)	# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/snapshots"
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
-timeshift_on='false'			# Works only under btrfs
+timeshift_on='true'			# Works only under btrfs
 initramfs='booster'			# mkinitcpio, dracut, booster
 encrypt=false
 efi_path=/efi
@@ -1911,7 +1911,7 @@ COMPRESSION="lz4"
 COMPRESSION_OPTIONS=()
 MODULES_DECOMPRESS="no"' > $mnt/etc/mkinitcpio.conf
 
-	pacman --noconfirm -U /home/user/.local/bin/overlayroot*.zst
+#	pacman --noconfirm -U /home/user/.local/bin/overlayroot*.zst
 
 	echo -e "\nAdd 'overlayroot' to kernal parameters to run\n"
 
@@ -2530,13 +2530,13 @@ auto_install_kde () {
  
 	pacstrap_install $kde_install
 
-	overlay_root
 	copy_pkgs
 
 	# Auto-launch
 	sed -i 's/manager=.*$/manager=kde/g' $mnt/home/$user/.bash_profile
 
 	install_config
+	overlay_root
 
 	backup "KDE installed"
 
@@ -3222,8 +3222,15 @@ auto_install_menu () {
 }
 
 
+#/etc/mkinitcpio.conf
 
 CONFIG_FILES="
+
+/usr/lib/initcpio/install/overlayroot
+/usr/lib/initcpio/hooks/overlayroot
+/usr/bin/mount.overlayroot
+/etc/overlayroot.conf
+
 /etc/booster.yaml
 /etc/dracut.conf.d/myflags.conf
 /etc/hostname
@@ -3232,7 +3239,6 @@ CONFIG_FILES="
 /etc/locale.conf
 /etc/locale.gen
 /etc/localtime
-/etc/mkinitcpio.conf
 /etc/NetworkManager/conf.d/dhcp-client.conf
 /etc/NetworkManager/conf.d/wifi_backend.conf
 /etc/NetworkManager/system-connections
