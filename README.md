@@ -1,14 +1,6 @@
 # arch
 A script to install Arch linux on a USB stick or machine.
 
-zfs on cachyos:
-
-zfs list
-zpool set listsnapshots=on zpcachyos
-zfs destroy zpcachyos/ROOT/cos/home
-# make a copy of /home first
-zfs list -t snapshot
-
 
 Running from an arch iso:
 
