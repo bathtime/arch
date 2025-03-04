@@ -267,7 +267,7 @@ choose_disk () {
 		rootfs=$(mount | grep ' / ' | sed 's/(.*//; s/\/dev.* type //; s/ //')
 
 		if [[ "$(mount | grep 'on / type overlay')" ]]; then
-			echo -e "Main system mounted as overlay!\n"
+			echo -e "*** Main system mounted as overlay! ***\n"
 		fi
 
 
