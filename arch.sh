@@ -1556,20 +1556,28 @@ EOF
 }
 
 
-
-install_liveroot () {
+install_hooks () {
 
 	mount_disk
+	choice=$1
 
-	touch $mnt/etc/vconsole.conf
-
-	pacstrap_install rsync squashfs-tools
-
-	if [ "$fstype" = "btrfs" ]; then
-		[ "$(cat $mnt/usr/lib/initcpio/install/liveroot | grep 'add_binary btrfs')" ] || sed -i 's/build() {/& \n        add_binary btrfs/g' $mnt/usr/lib/initcpio/install/liveroot
+	if [[ $choice = '' ]]; then
+		echo -e "What hooks would you like to install?\n\n1. liveroot \n2. overlayroot\n3. exit\n"
+			read -p "Choice: " -n 2 choice
+	else
+		echo "Installing $choice hook..."
 	fi
 
-	echo 'MODULES=(lz4)
+			
+	case $choice in
+		1|liveroot)		touch $mnt/etc/vconsole.conf
+							pacstrap_install rsync squashfs-tools
+
+							if [ "$fstype" = "btrfs" ]; then
+								[ "$(cat $mnt/usr/lib/initcpio/install/liveroot | grep 'add_binary btrfs')" ] || sed -i 's/build() {/& \n        add_binary btrfs/g' $mnt/usr/lib/initcpio/install/liveroot
+							fi
+
+							echo 'MODULES=(lz4)
 BINARIES=()
 FILES=()
 #HOOKS=(base udev keyboard autodetect kms modconf sd-vconsole block filesystems liveroot resume)
@@ -1580,22 +1588,41 @@ COMPRESSION="lz4"
 COMPRESSION_OPTIONS=()
 MODULES_DECOMPRESS="no"' > $mnt/etc/mkinitcpio.conf
 
+							# So systemd won't remount as 'rw'
+							#systemctl --root=$mnt mask systemd-remount-fs.service
+
+							# Don't remount /efi either
+							#systemctl --root=$mnt mask efi.mount
+							;;
+		2|overlayroot)	
+							#https://aur.archlinux.org/packages/overlayroot
+							#https://github.com/hilderingt/archlinux-overlayroot
+	
+							echo 'MODULES=(lz4 overlay)
+BINARIES=()
+FILES=()
+#HOOKS=(base udev keyboard autodetect kms modconf sd-vconsole block filesystems liveroot resume)
+#HOOKS=(base udev keyboard autodetect kms modconf block filesystems liveroot resume)
+#HOOKS=(autodetect base keyboard kms block udev filesystems fsck liveroot resume)
+HOOKS=(base udev autodetect modconf kms keyboard keymap block filesystems fsck resume overlayroot)
+COMPRESSION="lz4"
+COMPRESSION_OPTIONS=()
+MODULES_DECOMPRESS="no"' > $mnt/etc/mkinitcpio.conf
+
+							#	pacman --noconfirm -U /home/user/.local/bin/overlayroot*.zst
+
+							echo -e "\nAdd 'overlayroot' to kernal parameters to run\n"
+							;;
+		*) echo -e "\nInvalid choice: $choice\n"; return ;;
+	esac
 
 	if [[ $mnt = '' ]]; then
-		mkinitcpio -P 
+		mkinitcpio -p linux 
 	else
-		arch-chroot $mnt mkinitcpio -P 
+		arch-chroot $mnt mkinitcpio -p linux 
 	fi
 
-
-	# So systemd won't remount as 'rw'
-	#systemctl --root=$mnt mask systemd-remount-fs.service
-
-	# Don't remount /efi either
-	#systemctl --root=$mnt mask efi.mount
-
 }
-
 
 
 reset_keys () {
@@ -1638,30 +1665,6 @@ download_script () {
 
 	curl -sL https://raw.githubusercontent.com/bathtime/arch/main/arch.sh > $mnt/$arch_path/$arch_file
 	chmod +x $mnt/$arch_path/$arch_file
-
-}
-
-install_overlay_root () {
-
-	#https://aur.archlinux.org/packages/overlayroot
-	#https://github.com/hilderingt/archlinux-overlayroot
-	
-	echo 'MODULES=(lz4 overlay)
-BINARIES=()
-FILES=()
-#HOOKS=(base udev keyboard autodetect kms modconf sd-vconsole block filesystems liveroot resume)
-#HOOKS=(base udev keyboard autodetect kms modconf block filesystems liveroot resume)
-#HOOKS=(autodetect base keyboard kms block udev filesystems fsck liveroot resume)
-HOOKS=(base udev autodetect modconf kms keyboard keymap block filesystems fsck resume overlayroot)
-COMPRESSION="lz4"
-COMPRESSION_OPTIONS=()
-MODULES_DECOMPRESS="no"' > $mnt/etc/mkinitcpio.conf
-
-	arch-chroot $mnt mkinitcpio -p linux
-
-#	pacman --noconfirm -U /home/user/.local/bin/overlayroot*.zst
-
-	echo -e "\nAdd 'overlayroot' to kernal parameters to run\n"
 
 }
 
@@ -2283,8 +2286,7 @@ auto_install_kde () {
 	sed -i 's/manager=.*$/manager=kde/g' $mnt/home/$user/.bash_profile
 
 	install_config
-	#install_overlay_root
-	install_liveroot
+	install_hooks overlayroot
 
 	backup "KDE installed"
 
@@ -2971,27 +2973,31 @@ auto_install_menu () {
 
 
 #/etc/mkinitcpio.conf
+#/etc/NetworkManager/conf.d/dhcp-client.conf
+#/etc/NetworkManager/conf.d/wifi_backend.conf
 
 CONFIG_FILES="
+
+/usr/bin/librewolf
+/usr/lib/librewolf
 
 /usr/lib/initcpio/install/liveroot
 /usr/lib/initcpio/hooks/liveroot
 
-/usr/lib/initcpio/install/overlayroot
-/usr/lib/initcpio/hooks/overlayroot
-/usr/bin/mount.overlayroot
 /etc/overlayroot.conf
+/usr/bin/mount.overlayroot
+/usr/lib/initcpio/hooks/overlayroot
+/usr/lib/initcpio/install/overlayroot
 
 /etc/booster.yaml
-/etc/dracut.conf.d/myflags.conf
+/etc/dracut.conf.d/
 /etc/hostname
 /etc/hosts
 /etc/iwd/main.conf
 /etc/locale.conf
 /etc/locale.gen
 /etc/localtime
-/etc/NetworkManager/conf.d/dhcp-client.conf
-/etc/NetworkManager/conf.d/wifi_backend.conf
+/etc/NetworkManager/conf.d/
 /etc/NetworkManager/system-connections
 /etc/pacman.conf
 /etc/pacman-offline.conf
@@ -3009,18 +3015,16 @@ CONFIG_FILES="
 /etc/udev/rules.d/powersave.rules
 /etc/vconsole.conf
 /etc/wpa_supplicant
-/usr/bin/librewolf
 /var/lib/dhcpcd
 /var/lib/iwd
-/usr/lib/librewolf
 /usr/lib/systemd/system-sleep/sleep.sh
 
 /home/$user/.bash_profile
 /home/$user/.bashrc
-/home/$user/.config
+/home/$user/.config/
 /home/$user/.hushlogin
 /home/$user/.librewolf
-/home/$user/.local
+/home/$user/.local/
 /home/$user/.vimrc"
 
 
@@ -3059,7 +3063,7 @@ while :; do
 13. Install aur
 14. Install tweaks
 15. Install mksh
-16. Install liveroot
+16. Install hooks
 17. Setup acpid
 18. Choose initramfs
 19. Mount $mnt
@@ -3101,7 +3105,7 @@ echo
 		aur|13)					install_aur ;;
 		tweaks|14)				install_tweaks ;;
       mksh|15)					install_mksh ;;
-		liveroot|16)			install_liveroot ;;
+		hooks|16)				install_hooks ;;
 		acpid|17)				setup_acpid ;;
 		initramfs|18)			choose_initramfs ;;
       mount|19)				mount_disk  ;;
