@@ -75,7 +75,7 @@ arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
 
 mnt=/mnt
-bootOwnPartion='true'	# make separate boot partition (true/false)?
+bootOwnPartition='true'	# make separate boot partition (true/false)?
 
 if [[ $bootOwnPartition = 'true' ]]; then
 	espPartNum=1
@@ -875,7 +875,7 @@ EOF2
 	fi
 
 	# btrfs cannot store saved default so will result in spare file error
-	if [[ $fstype = btrfs ]] && [[ $bootOwnPartition = true ]]; then
+	if [ "$fstype" = "btrfs" ] && [ "$bootOwnPartition" = "false" ]; then
 		sed -i 's/^GRUB_DEFAULT=.*/GRUB_DEFAULT=0/' $mnt/etc/default/grub	
 		sed -i 's/^GRUB_SAVEDEFAULT=.*/GRUB_SAVEDEFAULT=false/' $mnt/etc/default/grub
 	fi
