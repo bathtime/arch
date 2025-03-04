@@ -1,0 +1,6 @@
+zfs on cachyos:
+
+zfs list zpool set listsnapshots=on zpcachyos zfs destroy zpcachyos/ROOT/cos/home
+make a copy of /home first
+
+zfs list -t snapshot
