@@ -266,12 +266,8 @@ choose_disk () {
 		
 		rootfs=$(mount | grep ' / ' | sed 's/(.*//; s/\/dev.* type //; s/ //')
 
-		if [[ "$(mount | grep 'on / type overlay')" ]]; then
-			echo -e "*** Main system mounted as overlay! ***\n"
-		fi
-
-
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#&  $rootfs#g" | sed "s#$host.*#& (host)#g"
+
 		choices='quit sync edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / script logout reboot suspend hibernate poweroff stats benchmark'
 		
 
@@ -1570,255 +1566,9 @@ install_liveroot () {
 
 	pacstrap_install rsync squashfs-tools
 
-   echo '#!/usr/bin/bash
-
-   #fstype="ext4"
-   fsroot=""
-
-create_archive() {
-            
-   echo -e "Creating archive file...\n"
-
-   cd $real_root/"$fsroot"
-
-#mksquashfs . $real_root/"$fsroot"root.squashfs -noappend -no-recovery -mem-percent 20 -e boot/ -e efi/ -e root.squashfs -e dev/ -e proc/ -e sys -e tmp/ -e run -e mnt -e .snapshots/ -e home/user/.cache/ -e home/user/setup.tar -e var/cache/pacman/ -e root/.cache/ -e run/timeshift/ -e var/tmp/ -e var/log/ -e etc/pacman.d/gnupg/ -e home/user/.local/share/Trash/ -e usr/share/doc/ -e usr/share/man/ -e usr/share/wallpapers -e usr/share/gtk-doc -e usr/share/icons/breeze-dark -e usr/share/icons/Breeze_Light -e usr/share/icons/Adwaita -e usr/share/icons/AdwaitaLegacy -e usr/share/fonts/noto -e usr/lib/firmware/nvidia -e usr/lib/firmware/amdgpu
-
-#mksquashfs . $real_root/"$fsroot"root.squashfs -noappend -no-recovery -mem-percent 20 -e boot/ -e efi/ -e root.squashfs -e dev/ -e proc/ -e sys -e tmp/ -e run -e mnt -e .snapshots/ -e home/user/.cache/ -e home/user/setup.tar -e var/cache/pacman/ -e root/.cache/ -e run/timeshift/ -e var/tmp/ -e var/log/ -e etc/pacman.d/gnupg/ -e home/user/.local/share/Trash/ -e usr/share/doc/ -e usr/share/man/ -e usr/share/wallpapers -e usr/share/gtk-doc -e usr/share/fonts/noto -e usr/lib/firmware/nvidia -e usr/lib/firmware/amdgpu
-
-mksquashfs . $real_root/"$fsroot"root.squashfs -noappend -no-recovery -mem-percent 20 -comp lz4 -e root.squashfs -e dev/ -e proc/ -e sys -e tmp/ -e run -e mnt -e .snapshots/ -e home/user/.cache/ -e root/.cache/ -e var/tmp/ -e var/log/ -e home/user/.local/share/Trash/
-
-	ls -lah $real_root/"$fsroot"root.squashfs
-
-}
-
-create_overlay() {
-
-   echo -e "\nCreating overlay...\n"
-
-   local lower_dir=$(mktemp -d -p /)
-   local ram_dir=$(mktemp -d -p /)
-   mount --move ${new_root} ${lower_dir}
-   mount -t tmpfs cowspace ${ram_dir}
-   mkdir -p ${ram_dir}/upper ${ram_dir}/work
-   mount -t overlay -o lowerdir=${lower_dir},upperdir=${ram_dir}/upper,workdir=${ram_dir}/work rootfs ${new_root}
-
-}
-
-
-run_latehook() {
-
-
-   echo -e "\nPress any key for extra boot options.\n"
-
-   real_root=/real_root
-   new_root=/new_root
-   mkdir -p $real_root $new_root
-
-   disk=$(mount | grep " on /new_root " | sed "s/[0-9] on \/new_root.*//g")
-	fs_type=$(mount | grep " on /new_root " | sed "s/^.*type //;s/ (.*$//")
-
-	root_part=$(blkid | grep ROOT | sed "s/:.*$//")
-
-   ESP_UUID=$(blkid -s UUID -o value $disk"1")
-
-			if [ "$fs_type" = "btrfs" ]; then
-   			fsroot="@/"
-#				echo "Mounting $fs_type with $fsroot..."
-			fi
-
-        if read -t 2 -s -n 1; then
-
-                echo -e "\nPlease choose an option:\n\n\
-<s> snapshot\n\
-<w> snapshot + overlay\n\
-<f> snapshot + tmpfs\n\
-<o> overlay\n\
-<e> squashfs + overlay\n\
-<t> squashfs + tmpfs\n\
-<E> squashfs\n\
-<n> create/run squashfs + overlay\n\
-<r> rsync / to tmpfs\n\
-<h> rsync ~ to tmpfs\n\
-<H> blank ~ to tmpfs\n\
-<m> mozilla to tmpfs\n\
-<d> emergency shell\n\n\
-<enter> continue boot\n"
-
-                read -n 1 -s key
-
-
-                if [[ "$key" = "s" ]] || [[ "$key" = "w" ]] || [[ "$key" = "f" ]]; then
-
-                        mount --mkdir -o subvolid=256 ${root} $new_root
-      
-                        btrfs subvolume list -ts $new_root | less
-                        read -n 3 -p "Enter snapshot number (or press <enter> for current subvolume (256)): " subvol 
-
-                        if [ ! "$subvol" ]; then
-                                echo -e "\nDefault subvolum chosen.\n"
-                                subvol=256
-                        fi
-
-                        echo -e "\nPlease enter extra mount options (ex., ro ):"
-                        read options 
-                        [ "$options" ] && options=","$options
-
-                        echo -e "\nWill proceed with the following mount:\n\nmount -o subvolid=$subvol$options ${root} /\n"
-
-                        umount $new_root
-                        mount --mkdir -o subvolid=$subvol$options ${root} $new_root
-
-                        if [ "$?" -ne 0 ]; then
-                                echo "Could not mount subvol ($subvol). Chosing default (256)."
-                                sleep 2
-                                mount --mkdir -o subvolid=256 ${root} $new_root 
-                        fi
-
-                        [[ "$key" = "w" ]] && create_overlay
-
-
-                        if [[ "$key" = "f" ]]; then
-
-                                echo "TODO!"
-                                #mount -t tmpfs -o size=60% none $new_root
-                                #rsync -a --exclude=root.squashfs --exclude=/efi/ --exclude=/boot/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/cache/ --exclude=/var/log/ /real_root/@/ $new_root
-                                #umount -l /real_root
-
-                        fi
-
-                elif [[ "$key" = "o" ]]; then
-
-                        if [ "$fstype" = "btrfs" ]; then
-                                mount --mkdir -o subvolid=256 ${root} $new_root
-                        fi
-
-                        create_overlay
-
-                elif [[ "$key" = "e" ]] ||  [[ "$key" = "E" ]] || [[ "$key" = "n" ]] || [[ "$key" = "t" ]]; then
-
-                        mount ${root} $real_root
-
-                        [[ ! -f "$real_root/"$fsroot"root.squashfs" ]] || [[ "$key" = "n" ]] && create_archive
-
-                        echo "Extracting archive to RAM. Please be patient..."
-
-                        if [ "$key" = "t" ]; then
-                                mount -t tmpfs -o size=80% none $new_root
-                                unsquashfs -d /new_root -f $real_root/"$fsroot"root.squashfs
-                                echo -e "\nYou may now safely remove your USB stick.\n"
-                                sleep 1
-                        
-								elif [ "$key" = "e" ]; then
-                                mount "$real_root/"$fsroot"root.squashfs" $new_root -t squashfs -o loop
-                                create_overlay
-                        else
-                                mount "$real_root/"$fsroot"root.squashfs" $new_root -t squashfs -o loop
-                                create_overlay
-                        fi
-
-                        umount -l $real_root
-
-                elif [[ "$key" = "r" ]]; then
-
-                        mount ${root} $real_root
-                        mount -t tmpfs -o size=80% none $new_root
-
-                        echo "Copying root filesystem to RAM. Please be patient..."
-
-rsync --info=progress2 -a --exclude=/boot/ --exclude=/etc/fstab --exclude=/boot/refind_linux.conf --exclude=/root.squashfs --exclude=/home/user/.cache/ --exclude=/home/user/setup.tar --exclude /home/user/.local/share/Trash/ --exclude=/dev/ --exclude=/var/cache/pacman/ --exclude=/run/timeshift/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/mnt/ --exclude=/.snapshots/* --exclude=/var/tmp/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/* --exclude=/usr/share/doc/ --exclude=/usr/share/man/ --exclude=/usr/share/wallpapers --exclude=/usr/share/gtk-doc --exclude=/usr/share/icons/breeze-dark --exclude=/usr/share/icons/Breeze_Light --exclude=/usr/share/icons/Adwaita* --exclude=/usr/share/icons/Crule* --exclude=/usr/share/fonts/noto --exclude=/usr/lib/firmware/nvidia --exclude=/usr/lib/firmware/amdgpu --exclude=/etc/pacman.d/gnupg/ /real_root/"$fsroot" $new_root
-
-                        echo -e "\nYou may now safely remove your USB stick.\n"
-                        sleep 1
-                
-					 elif [[ "$key" = "h" ]]; then
-
-							   mount ${root} $real_root
-                        mount -t tmpfs -o size=80% none $new_root/home/user/
-
-                        echo "Copying ~ filesystem to RAM. Please be patient..."
-
-								rsync --info=progress2 -a --exclude Downloads/* --exclude=.cache/* --exclude setup.tar --exclude .local/share/Trash/* /real_root/"$fsroot"/home/user $new_root/home
-
-					elif [[ "$key" = "H" ]]; then
-
-							   mount ${root} $real_root
-                        mount -t tmpfs -o size=80% none $new_root/home/user/
-
-   				 elif [[ "$key" = "m" ]]; then
-
-							   mount ${root} $real_root
-
-								mkdir -p $new_root/home/user/.mozilla
-								mkdir -p $new_root/home/user/.config/BraveSoftware/Brave-Browser
-
-                        mount -t tmpfs -o size=80% none $new_root/home/user/.mozilla
-                        mount -t tmpfs -o size=80% none $new_root/home/user/.config/BraveSoftware/Brave-Browser
-
-                        echo "Copying ~/.mozilla to RAM. Please be patient..."
-								rsync --info=progress2 -a /real_root/"$fsroot"/home/user/.mozilla $new_root/home/user
-                        
-								echo "Copying ~/.config/BraveSoftware/Brave-Browser to RAM. Please be patient..."
-								rsync --info=progress2 -a /real_root/"$fsroot"/home/user/.config/BraveSoftware/Brave-Browser $new_root/home/user/.config/BraveSoftware
-
-             elif [[ "$key" = "d" ]]; then
-
-                        echo "Entering emergency shell."
-
-                        bash
-
-           		else
-
-                        echo "Continuing boot..."
-
- #                       umount $new_root
-
-  #                      mount --mkdir -o subvolid=256 ${root} $new_root
-#                			mount --uuid $ESP_UUID $new_root/efi
-
-                fi
-
-      #  else
-
-#				if [ "$fs_type" = "ext4" ]; then
-#				echo "Mounting $fs_type..."
-				#	umount $new_root
-				#	mount -o noatime,commit=60 "$root_part" $new_root
-#				fi
-                #echo -e "Running default option..."
-        #mount -o rw,noatime,fmask=0022,dmask=0022,codepage=437,iocharset=ascii,shortname=mixed,utf8,errors=remount-ro --uuid $ESP_UUID $new_root/efi
-
-        fi
-
-
-}' > $mnt/usr/lib/initcpio/hooks/liveroot
-	
-	cat $mnt/usr/lib/initcpio/hooks/liveroot
-
-	echo '#!/bin/sh
-
-build() {
-	add_binary rsync
-	add_binary bash
-	add_binary unsquashfs 
-	add_binary mksquashfs
-	add_module overlay
-	add_module loop
-	add_module squashfs
-	add_module vfat
-	add_runscript
-}
-
-help() {
-	cat << HELPEOF
-Run Arch as tmpfs, overlay, squashfs, or snapshot
-HELPEOF
-}' > $mnt/usr/lib/initcpio/install/liveroot
-
-
 	if [ "$fstype" = "btrfs" ]; then
 		[ "$(cat $mnt/usr/lib/initcpio/install/liveroot | grep 'add_binary btrfs')" ] || sed -i 's/build() {/& \n        add_binary btrfs/g' $mnt/usr/lib/initcpio/install/liveroot
 	fi
-
 
 	echo 'MODULES=(lz4)
 BINARIES=()
@@ -1831,20 +1581,13 @@ COMPRESSION="lz4"
 COMPRESSION_OPTIONS=()
 MODULES_DECOMPRESS="no"' > $mnt/etc/mkinitcpio.conf
 
-	#echo 'ALL_config="/etc/mkinitcpio.conf"
-#ALL_kver="/boot/vmlinuz-linux"
-#ALL_microcode=(/boot/*-ucode.img)
-
-#PRESETS=("default")
-
-#default_config="/etc/mkinitcpio.conf"
-#default_image="/boot/initramfs-linux.img"' > $mnt/etc/mkinitcpio.d/linux.preset
 
 	if [[ $mnt = '' ]]; then
 		mkinitcpio -P 
 	else
 		arch-chroot $mnt mkinitcpio -P 
 	fi
+
 
 	# So systemd won't remount as 'rw'
 	#systemctl --root=$mnt mask systemd-remount-fs.service
