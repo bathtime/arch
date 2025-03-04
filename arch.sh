@@ -1504,7 +1504,6 @@ ProcessSizeMax=0' > $mnt/etc/systemd/coredump.conf.d/custom.conf
 
 	echo '* hard core 0' > $mnt/etc/security/limits.conf
 	
-	overlay_root
 }
 
 
@@ -1642,7 +1641,7 @@ download_script () {
 
 }
 
-overlay_root () {
+install_overlay_root () {
 
 	#https://aur.archlinux.org/packages/overlayroot
 	#https://github.com/hilderingt/archlinux-overlayroot
@@ -2284,7 +2283,7 @@ auto_install_kde () {
 	sed -i 's/manager=.*$/manager=kde/g' $mnt/home/$user/.bash_profile
 
 	install_config
-	#overlay_root
+	#install_overlay_root
 	install_liveroot
 
 	backup "KDE installed"
@@ -2974,6 +2973,9 @@ auto_install_menu () {
 #/etc/mkinitcpio.conf
 
 CONFIG_FILES="
+
+/usr/lib/initcpio/install/liveroot
+/usr/lib/initcpio/hooks/liveroot
 
 /usr/lib/initcpio/install/overlayroot
 /usr/lib/initcpio/hooks/overlayroot
