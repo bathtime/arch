@@ -1911,6 +1911,8 @@ COMPRESSION="lz4"
 COMPRESSION_OPTIONS=()
 MODULES_DECOMPRESS="no"' > $mnt/etc/mkinitcpio.conf
 
+	arch-chroot $mnt mkinitcpio -l linux
+
 #	pacman --noconfirm -U /home/user/.local/bin/overlayroot*.zst
 
 	echo -e "\nAdd 'overlayroot' to kernal parameters to run\n"
