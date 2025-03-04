@@ -1658,7 +1658,7 @@ COMPRESSION="lz4"
 COMPRESSION_OPTIONS=()
 MODULES_DECOMPRESS="no"' > $mnt/etc/mkinitcpio.conf
 
-	arch-chroot $mnt mkinitcpio -l linux
+	arch-chroot $mnt mkinitcpio -p linux
 
 #	pacman --noconfirm -U /home/user/.local/bin/overlayroot*.zst
 
@@ -2183,7 +2183,6 @@ auto_install_root () {
 
 	setup_fstab
 	install_grub
-	#install_liveroot
 	
 	# Bootable snapshots will not work with mkinitcpio
 	if [[ $fstype = btrfs ]]; then
@@ -2285,7 +2284,8 @@ auto_install_kde () {
 	sed -i 's/manager=.*$/manager=kde/g' $mnt/home/$user/.bash_profile
 
 	install_config
-	overlay_root
+	#overlay_root
+	install_liveroot
 
 	backup "KDE installed"
 
