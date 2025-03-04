@@ -75,7 +75,7 @@ arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
 
 mnt=/mnt
-bootOwnPartition='true'	# make separate boot partition (true/false)?
+bootOwnPartition='true'		# make separate boot partition (true/false)?
 
 if [[ $bootOwnPartition = 'true' ]]; then
 	espPartNum=1
@@ -95,12 +95,12 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='btrfs'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(var/log)				# used for btrfs 	TODO: bcachefs
+fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+subvols=(var/log)	# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
-snapshot_dir="/.snapshots"
+snapshot_dir="/snapshots"
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
-timeshift_on=true
+timeshift_on='true'			# Works only under btrfs
 initramfs='booster'			# mkinitcpio, dracut, booster
 encrypt=false
 efi_path=/efi
@@ -136,8 +136,7 @@ timezone=Canada/Eastern
 
 offline=0
 reinstall=0
-copy_on_host='1'				# Set to '0' when installing from an arch iso in ram
-
+copy_on_host='1'	# Set to '0' when installing from an arch iso in ram
 
 wlan="wlan0"
 wifi_ssid=""
@@ -1437,7 +1436,7 @@ WantedBy=multi-user.target' > $mnt/usr/lib/systemd/system/acpid.service
 }
 
 
-setup_snapshots () {
+timeshift_setup () {
 
 	[ ! $timeshift_on = true ] || [ ! $fstype = btrfs ] && return 
 
@@ -1929,7 +1928,7 @@ clone () {
 		choose_initramfs booster 
 		setup_fstab
 		fs_packages
-		setup_snapshots
+		timeshift_setup
 
 	else
 		echo "Exiting."
@@ -2382,10 +2381,32 @@ check_online () {
 }
 
 
+backup () {
+
+	if [[ $backup_install = true ]] && [[ $timeshift_on = false ]]; then
+
+		if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
+			take_snapshot "root installed"
+		fi
+
+	fi
+	
+	if [[ $timeshift_on = true ]] && [[ $fstype = btrfs ]]; then
+		
+		if [[ $backup_install = true ]]; then
+  			arch-chroot $mnt timeshift --create --comments "System installed" --tags D
+  			arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
+		fi
+
+	fi
+
+}
+
 
 auto_install_root () {
 
 	create_partitions
+
 	install_base
 
 	if [[ $autologin = true ]]; then
@@ -2410,17 +2431,13 @@ auto_install_root () {
 	#setup_iwd
 	setup_networkmanager
 	#setup_wpa
-
 	
 	install_tweaks
 	copy_script
 	copy_pkgs
 
-	#if [[ $backup_install = true ]]; then
-	#	if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
-	#		take_snapshot "root installed"
-	#	fi
-	#fi
+	timeshift_setup
+	backup
 
 }
 
@@ -2428,6 +2445,9 @@ auto_install_root () {
 auto_install_user () {
 
 	auto_install_root
+	
+	pacstrap_install $user_install
+	
 	setup_user
 
 	pacstrap_install sudo
@@ -2444,13 +2464,8 @@ auto_install_user () {
 	#setup_acpid
 	#install_tweaks
 	copy_pkgs
+	backup
 
-	#if [[ $backup_install = true ]]; then
-	#	if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
-	#		take_snapshot "user installed"
-	#	fi
-	#fi
-	
 }
 
 
@@ -2467,6 +2482,7 @@ auto_install_cage () {
 	sed -i 's/manager=.*$/manager=cage/g' $mnt/home/$user/.bash_profile
 
 	install_config
+	backup
 
 }
 
@@ -2483,6 +2499,7 @@ auto_install_weston () {
 	sed -i 's/manager=.*$/manager=weston/g' $mnt/home/$user/.bash_profile
 
 	install_config
+	backup
 
 }
 
@@ -2501,23 +2518,8 @@ auto_install_kde () {
 
 	install_config
 
-	#if [[ $backup_install = true ]]; then
-	#	if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
-	#		take_snapshot "kde installed"
-	#	fi
-	#fi
+	backup
 
-	if [ "$fstype" = "btrfs" ]; then
-		
-		setup_snapshots
-		
-		if [[ $backup_install = true ]]; then
-         arch-chroot $mnt timeshift --create --comments "System installed" --tags D
-         arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
-      fi
-
-	fi
-	
 }
 
 
@@ -2527,19 +2529,13 @@ auto_install_gnome () {
 	
 	pacstrap_install $gnome_install
  
-	if [ "$fstype" = "btrfs" ]; then
-  		#pacstrap_install timeshift
-		setup_snapshots
-	fi
-		
 	copy_pkgs
 
 	# Auto launch
 	sed -i 's/manager=.*$/manager=gnome/g' $mnt/home/$user/.bash_profile
 
 	install_config
-
-	#aur_package_install brave-bin 'https://aur.archlinux.org/brave-bin.git'
+	backup
 
 }
 
@@ -2550,11 +2546,6 @@ auto_install_gnomekde () {
 
 	pacstrap_install $gnome_install $kde_install
 	
-	if [ "$fstype" = "btrfs" ]; then
-  		#pacstrap_install timeshift xorg-xhost
-		setup_snapshots
-	fi
-	
 	copy_pkgs
 
 	# Customize system
@@ -2562,6 +2553,7 @@ auto_install_gnomekde () {
 	sed -i 's/manager=.*$/manager=choice/g' $mnt/home/$user/.bash_profile
 
 	install_config
+	backup
 
 }
 
