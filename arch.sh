@@ -95,12 +95,12 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(var/log)	# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/snapshots"
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
-timeshift_on='true'			# Works only under btrfs
+timeshift_on='false'			# Works only under btrfs
 initramfs='booster'			# mkinitcpio, dracut, booster
 encrypt=false
 efi_path=/efi
@@ -2386,7 +2386,7 @@ backup () {
 	if [[ $backup_install = true ]] && [[ $timeshift_on = false ]]; then
 
 		if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
-			take_snapshot "root installed"
+			take_snapshot "$1"
 		fi
 
 	fi
@@ -2394,7 +2394,7 @@ backup () {
 	if [[ $timeshift_on = true ]] && [[ $fstype = btrfs ]]; then
 		
 		if [[ $backup_install = true ]]; then
-  			arch-chroot $mnt timeshift --create --comments "System installed" --tags D
+  			arch-chroot $mnt timeshift --create --comments "$1" --tags D
   			arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
 		fi
 
@@ -2437,7 +2437,7 @@ auto_install_root () {
 	copy_pkgs
 
 	timeshift_setup
-	backup
+	backup "Root installed"
 
 }
 
@@ -2459,12 +2459,11 @@ auto_install_user () {
 	# Auto-launch
 	sed -i 's/manager=.*$/manager=none/g' $mnt/home/$user/.bash_profile
 
-
 	#install_aur
 	#setup_acpid
-	#install_tweaks
+	
 	copy_pkgs
-	backup
+	backup "User installed"
 
 }
 
@@ -2482,7 +2481,8 @@ auto_install_cage () {
 	sed -i 's/manager=.*$/manager=cage/g' $mnt/home/$user/.bash_profile
 
 	install_config
-	backup
+
+	backup "Cage installed"
 
 }
 
@@ -2499,7 +2499,7 @@ auto_install_weston () {
 	sed -i 's/manager=.*$/manager=weston/g' $mnt/home/$user/.bash_profile
 
 	install_config
-	backup
+	backup "Weston installed"
 
 }
 
@@ -2518,7 +2518,7 @@ auto_install_kde () {
 
 	install_config
 
-	backup
+	backup "KDE installed"
 
 }
 
@@ -2535,7 +2535,7 @@ auto_install_gnome () {
 	sed -i 's/manager=.*$/manager=gnome/g' $mnt/home/$user/.bash_profile
 
 	install_config
-	backup
+	backup "Gnome installed"
 
 }
 
@@ -2553,7 +2553,7 @@ auto_install_gnomekde () {
 	sed -i 's/manager=.*$/manager=choice/g' $mnt/home/$user/.bash_profile
 
 	install_config
-	backup
+	backup "Gnome and KDE installed"
 
 }
 
