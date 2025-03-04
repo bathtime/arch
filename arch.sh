@@ -2224,7 +2224,6 @@ auto_install_user () {
 		auto_login $user
 	fi
 
-
 	# Auto-launch
 	sed -i 's/manager=.*$/manager=none/g' $mnt/home/$user/.bash_profile
 
@@ -2235,43 +2234,6 @@ auto_install_user () {
 	backup "User installed"
 
 }
-
-
-
-auto_install_cage () {
-
-	auto_install_user
-	
-	pacstrap_install $cage_install
-
-	copy_pkgs
-
-	# Auto launch
-	sed -i 's/manager=.*$/manager=cage/g' $mnt/home/$user/.bash_profile
-
-	install_config
-
-	backup "Cage installed"
-
-}
-
-
-
-auto_install_weston () {
-
-	auto_install_user
-
-	pacstrap_install $weston_install
-
-	copy_pkgs
-	
-	sed -i 's/manager=.*$/manager=weston/g' $mnt/home/$user/.bash_profile
-
-	install_config
-	backup "Weston installed"
-
-}
-
 
 
 auto_install_kde () {
@@ -2324,6 +2286,41 @@ auto_install_gnomekde () {
 
 	install_config
 	backup "Gnome and KDE installed"
+
+}
+
+
+auto_install_cage () {
+
+	auto_install_user
+	
+	pacstrap_install $cage_install
+
+	copy_pkgs
+
+	# Auto launch
+	sed -i 's/manager=.*$/manager=cage/g' $mnt/home/$user/.bash_profile
+
+	install_config
+
+	backup "Cage installed"
+
+}
+
+
+
+auto_install_weston () {
+
+	auto_install_user
+
+	pacstrap_install $weston_install
+
+	copy_pkgs
+	
+	sed -i 's/manager=.*$/manager=weston/g' $mnt/home/$user/.bash_profile
+
+	install_config
+	backup "Weston installed"
 
 }
 
@@ -3040,11 +3037,6 @@ disk_info
 
 check_online
 
-
-# Make font big and readable
-if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ]; then
-	setfont ter-132b
-fi
 
 while :; do
 
