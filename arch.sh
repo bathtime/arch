@@ -95,7 +95,7 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='ext4'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(var/log)	# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/snapshots"
@@ -1503,7 +1503,8 @@ Storage=none
 ProcessSizeMax=0' > $mnt/etc/systemd/coredump.conf.d/custom.conf
 
 	echo '* hard core 0' > $mnt/etc/security/limits.conf
-
+	
+	overlay_root
 }
 
 
@@ -1894,7 +1895,27 @@ download_script () {
 
 }
 
+overlay_root () {
 
+	#https://aur.archlinux.org/packages/overlayroot
+	#https://github.com/hilderingt/archlinux-overlayroot
+	
+	echo 'MODULES=(lz4 overlay)
+BINARIES=()
+FILES=()
+#HOOKS=(base udev keyboard autodetect kms modconf sd-vconsole block filesystems liveroot resume)
+#HOOKS=(base udev keyboard autodetect kms modconf block filesystems liveroot resume)
+#HOOKS=(autodetect base keyboard kms block udev filesystems fsck liveroot resume)
+HOOKS=(base udev autodetect modconf kms keyboard keymap block filesystems fsck resume overlayroot)
+COMPRESSION="lz4"
+COMPRESSION_OPTIONS=()
+MODULES_DECOMPRESS="no"' > $mnt/etc/mkinitcpio.conf
+
+	pacman --noconfirm -U /home/user/.local/bin/overlayroot*.zst
+
+	echo -e "\nAdd 'overlayroot' to kernal parameters to run\n"
+
+}
 
 clone () {
 
@@ -1920,10 +1941,8 @@ clone () {
 		rsync $2 --info=progress2 $rsync_excludes $3 $4
 		#tar -C $3 -cf - . | tar -C $4 -xf -
 
-  		#install_grub
 		arch-chroot $mnt pacman -S --noconfirm linux	
   		install_grub
-		#choose_initramfs mkinitcpio
 		choose_initramfs dracut
 		choose_initramfs booster 
 		setup_fstab
@@ -2421,7 +2440,6 @@ auto_install_root () {
 	if [[ $fstype = btrfs ]]; then
 		choose_initramfs booster
 		choose_initramfs dracut
-		#install_snapper
 	else
 		choose_initramfs $initramfs
 	fi
@@ -2455,6 +2473,7 @@ auto_install_user () {
 	if [[ $autologin = true ]]; then
 		auto_login $user
 	fi
+
 
 	# Auto-launch
 	sed -i 's/manager=.*$/manager=none/g' $mnt/home/$user/.bash_profile
@@ -2511,6 +2530,7 @@ auto_install_kde () {
  
 	pacstrap_install $kde_install
 
+	overlay_root
 	copy_pkgs
 
 	# Auto-launch
