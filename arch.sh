@@ -94,7 +94,7 @@ rootPart=$rootPartNum
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(snapshots var/log)	# used for btrfs 	TODO: bcachefs
+subvols=(var/log)	# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/snapshots"
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
@@ -1467,18 +1467,29 @@ timeshift_setup () {
 }
 EOF
 
-	pacstrap_install timeshift cronie
+	pacstrap_install timeshift cronie grub-btrfs
+systemctl daemon-reload
 
 	systemctl --root=$mnt enable cronie.service
 	systemctl --root=$mnt enable grub-btrfsd.service
+	
+	if [[ $mnt = '' ]]; then
 
-systemctl edit --stdin grub-btrfsd << EOF
+	systemctl edit --stdin grub-btrfsd << EOF
 [Service]
 ExecStart=
 ExecStart=/usr/bin/grub-btrfsd --syslog -t
 EOF
-
 	systemctl daemon-reload
+
+	else
+
+		mkdir -p $mnt/etc/systemd/system/multi-user.target.wants/grub-btrfsd.service.d
+		echo '[Service]
+ExecStart=
+ExecStart=/usr/bin/grub-btrfsd --syslog -t' > /etc/systemd/system/multi-user.target.wants/grub-btrfsd.service.d/override.conf
+	fi
+
 
 	#Causes command to freeze
 	#systemctl --root=$mnt restart grub-btrfsd.service
