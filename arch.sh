@@ -93,7 +93,7 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(snapshots var/log)	# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/snapshots"
@@ -1470,6 +1470,18 @@ EOF
 	pacstrap_install timeshift cronie
 
 	systemctl --root=$mnt enable cronie.service
+	systemctl --root=$mnt enable grub-btrfsd.service
+
+systemctl edit --stdin grub-btrfsd << EOF
+[Service]
+ExecStart=
+ExecStart=/usr/bin/grub-btrfsd --syslog -t
+EOF
+
+	systemctl daemon-reload
+
+	#Causes command to freeze
+	#systemctl --root=$mnt restart grub-btrfsd.service
 
 }
 
@@ -2969,6 +2981,7 @@ auto_install_menu () {
 
 CONFIG_FILES="
 
+
 /usr/bin/librewolf
 /usr/lib/librewolf
 
@@ -3058,6 +3071,7 @@ while :; do
 22. Connect wireless
 23. Install snapper
 24. Packages/script
+25. Timeshift
 30. Custom install
 31. Setup ~ files
 32. Snapshot/sync/wipe ->
@@ -3100,6 +3114,7 @@ echo
 		connect|iwd|22)		connect_wireless ;;
 		snapper|23)				install_snapper ;;
 		packages|24)			packages_menu ;;
+		timeshift|25)			timeshift_setup ;;
 		custom|30)				custom_install ;;
 		setup|31)				setup_menu ;;
 		copy|32)					clone_menu ;;
