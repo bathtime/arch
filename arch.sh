@@ -1,12 +1,12 @@
 #!/bin/bash
 
+
 : << DOCS
 
 To run on the fly:
 bash <(curl -sL bit.ly/a-install)
 
 DOCS
-
 
 
 ###  Set error detection  ###
@@ -47,29 +47,27 @@ error() {
 trap 'error "${BASH_SOURCE}" "${LINENO}" "$?" "${BASH_COMMAND}"' ERR
 trap 'echo;echo; read -s -r -n 1 -p "<ctrl> + c pressed. Press any key to continue... "; set +e' SIGINT
 
-# Make font big and readable
-if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ]; then
-	setfont ter-132b
-fi
-
-
 
 error_check () {
 
-	if [ $1 -eq 1 ]; then
-		set -Eeo pipefail
-	else
-		set +e 
-	fi
+	case $1 in
+		0)		set +e; echo "No error detection!" ;;
+		1)		set -Eeo pipefail ;;
+		2)		set -Eueo pipefail ;;
+		3)		echo "All commands issured will be printed."; set -Eeox pipefail ;;
+	esac
 
 }
 
-
-
-# Used to temporarily disable at certain points in script (eg., as in the mount_disk function)
 error_check 1
-
 error_bypass=0
+
+
+# Make font big and readable and make sure the hook for the font is turnted on
+if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ] && [[ ! $(cat /etc/mkinitcpio.conf | grep -e '^HOOKS|consolefont') = '' ]]; then
+	setfont ter-132b
+fi
+
 
 arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
@@ -95,8 +93,8 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(var/log)	# used for btrfs 	TODO: bcachefs
+fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+subvols=(snapshots var/log)	# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/snapshots"
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
@@ -105,7 +103,6 @@ initramfs='booster'			# mkinitcpio, dracut, booster
 encrypt=false
 efi_path=/efi
 
-# This method uses the blk-mq to implicitly set the I/O scheduler to none. 
 kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
 
 # systemd.gpt_auto=0
@@ -473,6 +470,7 @@ create_partitions () {
 
 mount_disk () {
 
+	# No need to mount if we're on the main machine
 	[ "$mnt" = "" ] && return
 
 	check_on_root
@@ -540,7 +538,6 @@ mount_disk () {
 	if [ "$fstype" = "bcachefs" ]; then
 		mkdir -p $mnt$snapshot_dir
 	fi
-
 	
 	#warning: directory permissions differ on /mnt/var/tmp/
 	#filesystem: 755  package: 1777
@@ -553,7 +550,6 @@ mount_disk () {
 
 install_base () {
 
-	#check_on_root
 	mount_disk
 
 	echo '[options]
@@ -2153,19 +2149,21 @@ check_online () {
 
 backup () {
 
-	if [[ $backup_install = true ]] && [[ $timeshift_on = false ]]; then
+	if [[ $backup_install = true ]]; then
 
-		if [[ $fstype = bcachefs ]] || [[ $fstype = btrfs ]]; then
+		if [[ $fstype = bcachefs ]]; then 
+			
 			take_snapshot "$1"
-		fi
-
-	fi
-	
-	if [[ $timeshift_on = true ]] && [[ $fstype = btrfs ]]; then
 		
-		if [[ $backup_install = true ]]; then
-  			arch-chroot $mnt timeshift --create --comments "$1" --tags D
-  			arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
+		elif [[ $fstype = btrfs ]]; then
+			
+			if [[ $timeshift_on = true ]]; then
+				arch-chroot $mnt timeshift --create --comments "$1" --tags D
+  				arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
+			else
+				take_snapshot "$1"
+			fi
+
 		fi
 
 	fi
@@ -2580,10 +2578,8 @@ wipe_disk () {
 		echo -e "\nWiping $disk using $1 method. Please be patient...\n"
 
 		error_bypass=1
-		#error_check 0
 		time dd if=/dev/$1 of=$disk bs=1M status=progress
 		error_bypass=0
-		#error_check 1
 
 	else
 		echo -e "\nNot wiping.\n"
@@ -2613,7 +2609,6 @@ wipe_freespace () {
 	echo -e "\nWiping freespace on $disk using zero method. Please be patient...\n"
 	echo -e "Run 'watch -n 1 -x df / --sync' in another terminal to see progress.\n"
 
-	#error_check 0
 	error_bypass=1
 
 	cd /
@@ -2625,7 +2620,6 @@ wipe_freespace () {
 	sync ; sleep 60 ; sync
 	rm $file $file.small
 
-	#error_check 1
 	error_bypass=0
 
 }
