@@ -1484,10 +1484,14 @@ EOF
 
 	else
 
-		mkdir -p $mnt/etc/systemd/system/multi-user.target.wants/grub-btrfsd.service.d
+		#mkdir -p $mnt/etc/systemd/system/multi-user.target.wants/grub-btrfsd.service.d
+		mkdir -p $mnt/etc/systemd/system/grub-btrfsd.service.d/override.conf.d
 		echo '[Service]
 ExecStart=
-ExecStart=/usr/bin/grub-btrfsd --syslog -t' > $mnt/etc/systemd/system/multi-user.target.wants/grub-btrfsd.service.d/override.conf
+ExecStart=/usr/bin/grub-btrfsd --syslog -t' > $mnt/etc/systemd/system/grub-btrfsd.service.d/override.conf
+
+#ExecStart=/usr/bin/grub-btrfsd --syslog -t' > $mnt/etc/systemd/system/multi-user.target.wants/grub-btrfsd.service.d/override.conf
+
 	fi
 
 	#Causes command to freeze
