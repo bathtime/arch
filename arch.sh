@@ -1487,9 +1487,8 @@ EOF
 		mkdir -p $mnt/etc/systemd/system/multi-user.target.wants/grub-btrfsd.service.d
 		echo '[Service]
 ExecStart=
-ExecStart=/usr/bin/grub-btrfsd --syslog -t' > /etc/systemd/system/multi-user.target.wants/grub-btrfsd.service.d/override.conf
+ExecStart=/usr/bin/grub-btrfsd --syslog -t' > $mnt/etc/systemd/system/multi-user.target.wants/grub-btrfsd.service.d/override.conf
 	fi
-
 
 	#Causes command to freeze
 	#systemctl --root=$mnt restart grub-btrfsd.service
