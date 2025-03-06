@@ -1468,7 +1468,7 @@ timeshift_setup () {
 EOF
 
 	pacstrap_install timeshift cronie grub-btrfs
-systemctl daemon-reload
+	#systemctl daemon-reload
 
 	systemctl --root=$mnt enable cronie.service
 	systemctl --root=$mnt enable grub-btrfsd.service
@@ -1481,6 +1481,7 @@ ExecStart=
 ExecStart=/usr/bin/grub-btrfsd --syslog -t
 EOF
 	systemctl daemon-reload
+	#systemctl --root=$mnt restart grub-btrfsd.service
 
 	else
 
@@ -1490,9 +1491,6 @@ ExecStart=
 ExecStart=/usr/bin/grub-btrfsd --syslog -t' > $mnt/etc/systemd/system/grub-btrfsd.service.d/override.conf
 
 	fi
-
-	#Causes command to freeze
-	#systemctl --root=$mnt restart grub-btrfsd.service
 
 }
 
@@ -2224,8 +2222,9 @@ auto_install_root () {
 	install_tweaks
 	copy_script
 	copy_pkgs
-
+	
 	timeshift_setup
+
 	backup "Root installed"
 
 }
