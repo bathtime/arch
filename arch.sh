@@ -2969,8 +2969,8 @@ auto_install_menu () {
 
    case $config_os in
    	quit|1)			;;
-   	root|2)			auto_install_root ;;
-   	user|3)			auto_install_user ;;
+   	root|2)			time auto_install_root ;;
+   	user|3)			time auto_install_user ;;
    	weston|4)		time auto_install_weston ;;
    	kde|5)			time auto_install_kde ;;
    	gnome|6)			time auto_install_gnome ;;
@@ -2989,11 +2989,15 @@ auto_install_menu () {
 #/etc/NetworkManager/conf.d/dhcp-client.conf
 #/etc/NetworkManager/conf.d/wifi_backend.conf
 
-CONFIG_FILES="
-
+CONFIG_FILES2="
 
 /usr/bin/librewolf
 /usr/lib/librewolf
+
+/home/$user/.librewolf"
+
+
+CONFIG_FILES="
 
 /usr/lib/initcpio/install/liveroot
 /usr/lib/initcpio/hooks/liveroot
@@ -3037,7 +3041,6 @@ CONFIG_FILES="
 /home/$user/.bashrc
 /home/$user/.config/
 /home/$user/.hushlogin
-/home/$user/.librewolf
 /home/$user/.local/
 /home/$user/.vimrc"
 
