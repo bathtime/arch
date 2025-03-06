@@ -94,10 +94,11 @@ rootPart=$rootPartNum
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(var/log)	# used for btrfs 	TODO: bcachefs
+subvols=()	# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'
 snapshot_dir="/snapshots"
-backup_install='true'		# say 'true' to do snapshots/rysncs during install
+linkedToTmp='true'			# Link /var/log and /var/tmp to /tmp?
+backup_install='false'		# say 'true' to do snapshots/rysncs during install
 timeshift_on='true'			# Works only under btrfs
 initramfs='booster'			# mkinitcpio, dracut, booster
 encrypt=false
@@ -451,13 +452,13 @@ create_partitions () {
 
 		for subvol in '' "${subvols[@]}"; do
 			btrfs su cr --parents "$mnt$subvolPrefix$subvol"
-
 		done
 
 		#btrfs su cr --parents "$mnt/.snapshots"
 		
 	fi
-	
+
+	# TODO: Find out how to create bcachefs subvolumes
 	#if [ "$fstype" = "bcachefs" ]; then
 	#	bcachefs subvolume create $mnt$snapshot_dir
 	#fi
@@ -485,11 +486,13 @@ mount_disk () {
 			mountopts="noatime,discard=async"
 
 			for subvol in '' "${subvols[@]}"; do
-			#	echo mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/"${subvol//_//}"
 				echo mount --mkdir -o "$mountopts,subvol=$subvolPrefix$subvol $disk$rootPart $mnt/$subvol"
-				mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/"${subvol//_//}"
+				mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
 			done
-				
+		
+			#chattr +C -R $mnt/var/log
+			#chattr +C -R $mnt/var/tmp
+			
 			#mount --mkdir -o "$mountopts",subvol=/.snapshots $disk$rootPart $mnt/.snapshots
 
 		else
@@ -509,7 +512,6 @@ mount_disk () {
 
 		fi
 
-
 	fi
 	
 	if [[ ! $(mount | grep -E $disk$bootPart | grep -E "on $mnt/boot") ]] && [[ $bootOwnPartition = true ]]; then
@@ -527,21 +529,13 @@ mount_disk () {
 	mkdir -p $mnt/root/.gnupg
 	chmod -R 700 $mnt/root/.gnupg
 
-	if [ "$fstype" = "btrfs" ]; then
-		:
-		#mkdir -p $mnt$snapshot_dir
-		#chattr +C -R $mnt/tmp
-		#chattr +C -R $mnt/var/tmp
-		#chattr +C -R $mnt/var/log
-	fi
-
 	if [ "$fstype" = "bcachefs" ]; then
 		mkdir -p $mnt$snapshot_dir
 	fi
 	
 	#warning: directory permissions differ on /mnt/var/tmp/
 	#filesystem: 755  package: 1777
-	
+
 	chmod -R 1777 $mnt/var/tmp
 
 }
@@ -1061,6 +1055,7 @@ setup_user () {
 		exit
 	fi
 
+
 	rm -rf $mnt/home/$user/.cache
 
 	# TODO: find a way to create symbolic link from host
@@ -1071,6 +1066,7 @@ setup_user () {
 		arch-chroot $mnt ln -s /tmp /home/$user/.cache
 		arch-chroot $mnt visudo -c
 	fi
+
 
 	chown -R $user:$user $mnt/home/$user/.cache
 
@@ -1520,7 +1516,28 @@ Storage=none
 ProcessSizeMax=0' > $mnt/etc/systemd/coredump.conf.d/custom.conf
 
 	echo '* hard core 0' > $mnt/etc/security/limits.conf
+
+	if [[ $linkedToTmp = true ]]; then
 	
+		# TODO: find out how to put all links in one variable
+		rm -rf $mnt/var/log
+   	rm -rf $mnt/var/tmp
+   
+		sync_disk
+               
+   	# TODO: find a way to create symbolic link from host
+   	if [[ $mnt = '' ]]; then
+   		ln -s $mnt/tmp $mnt/var/log
+   		ln -s $mnt/tmp $mnt/var/tmp
+   		chmod -R 1777 $mnt/var/tmp
+		else 
+      	arch-chroot $mnt ln -s /tmp /var/log
+      	arch-chroot $mnt ln -s /tmp /var/tmp
+			arch-chroot $mnt chmod -R 1777 /var/tmp
+		fi
+	
+	fi
+
 }
 
 
@@ -3008,6 +3025,7 @@ CONFIG_FILES="
 /usr/lib/initcpio/install/overlayroot
 
 /etc/booster.yaml
+/etc/default/grub-btrfs/config
 /etc/dracut.conf.d/
 /etc/hostname
 /etc/hosts
