@@ -95,7 +95,7 @@ startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216)
 fsPercent='50'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=()	# used for btrfs 	TODO: bcachefs
-subvolPrefix='/@'
+subvolPrefix='/'
 snapshot_dir="/snapshots"
 linkedToTmp='true'			# Link /var/log and /var/tmp to /tmp?
 backup_install='false'		# say 'true' to do snapshots/rysncs during install
@@ -406,8 +406,16 @@ create_partitions () {
 
 	parted -s $disk print
 
+	
+
+
 	# Won't work without a small delay
-	sleep 1
+	sync_disk
+	#sleep 1
+	
+
+
+
 	mkfs.fat -F 32 -n EFI $disk$espPart 
 	mkswap -L SWAP $disk$swapPart
 
@@ -417,7 +425,8 @@ create_partitions () {
 	case $fstype in
 
 		btrfs)		mkfs.btrfs -f -L ROOT $disk$rootPart ;;
-		ext4)			mkfs.ext4 -F -b 4096 -q -t ext4 -L ROOT $disk$rootPart 
+		ext4)			
+						mkfs.ext4 -F -b 4096 -q -t ext4 -L ROOT $disk$rootPart 
 						echo "Using tune2fs to create fast commit journal area. Please be patient..." 
 						tune2fs -O fast_commit $disk$rootPart
 						tune2fs -l $disk$rootPart | grep features ;;
@@ -430,8 +439,6 @@ create_partitions () {
 							bcachefs format -f -L ROOT --encrypted $disk$rootPart
 							bcachefs unlock -k session $disk$rootPart
 						else
-## TESTING ###
-							#bcachefs format -f -L ROOT $disk$rootPart
 							bcachefs format --block_size=4096 -f -L ROOT $disk$rootPart
 						fi
 						;;
@@ -440,13 +447,15 @@ create_partitions () {
 	parted -s $disk print
 
 	######## DO WE NEED SLEEP HERE? ?????? #####
-	sleep 2
-
+	#sleep 2
+	
+	sync_disk
+	
 	echo -e "\nMounting $mnt..."
 
 	mount -t $fstype --mkdir $disk$rootPart $mnt
 
-	cd /
+	cd $mnt
 
 	if [ "$fstype" = "btrfs" ]; then
 
@@ -458,10 +467,19 @@ create_partitions () {
 		
 	fi
 
-	# TODO: Find out how to create bcachefs subvolumes
-	#if [ "$fstype" = "bcachefs" ]; then
-	#	bcachefs subvolume create $mnt$snapshot_dir
-	#fi
+	if [ "$fstype" = "bcachefs" ]; then
+	
+		for subvol in "${subvols[@]}"; do
+
+			echo -e "Creating subvolume: $mnt$subvolPrefix$subvol..."
+			
+			mkdir -p "$(dirname $mnt$subvolPrefix$subvol)"
+		
+			bcachefs subvolume create "$mnt$subvolPrefix$subvol"
+		
+		done
+
+	fi
 
 	unmount_disk
 	mount_disk
@@ -477,7 +495,6 @@ mount_disk () {
 	check_on_root
 
 	if [[ ! $(mount | grep -E $disk$rootPart | grep -E "on $mnt") ]]; then
-
 
 		if [ "$fstype" = "btrfs" ]; then
 
@@ -495,21 +512,27 @@ mount_disk () {
 			
 			#mount --mkdir -o "$mountopts",subvol=/.snapshots $disk$rootPart $mnt/.snapshots
 
-		else
-
-			if [[ $fstype = bcachefs ]]; then
+		elif [[ $fstype = bcachefs ]]; then
 	
-				#not working
-				#mount -t bcachefs --mkdir $disk$rootPart $mnt$snapshot_dir
+			#not working
+			#mount -t bcachefs --mkdir $disk$rootPart $mnt$snapshot_dir
+			
+			mount -t $fstype --mkdir $disk$rootPart $mnt
+				
+			for subvol in "${subvols[@]}"; do
+				echo mount --bind $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
+				mount --bind $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
+			done
 
-				if [[ $encrypt = true ]] && [[ $fstype = bcachefs ]]; then
-					bcachefs unlock -k session $disk$rootPart
-				fi
-
+			if [[ $encrypt = true ]] && [[ $fstype = bcachefs ]]; then
+				bcachefs unlock -k session $disk$rootPart
 			fi
 
-			mount -t $fstype --mkdir $disk$rootPart $mnt
+		else
 
+			mount -t $fstype --mkdir $disk$rootPart $mnt
+			#mount --mkdir $disk$rootPart $mnt
+		
 		fi
 
 	fi
