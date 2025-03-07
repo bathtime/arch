@@ -94,7 +94,7 @@ rootPart=$rootPartNum
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=()	# used for btrfs 	TODO: bcachefs
+subvols=(tmp)	# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'				# TODO: will not work as simply '/'
 snapshot_dir="/snapshots"
 linkedToTmp='true'			# Link /var/log and /var/tmp to /tmp?
@@ -331,7 +331,7 @@ choose_disk () {
 	fi
 
 	echo -e "\nDisk chosen: $disk (mounted on $mnt/)"
-
+	
 	done
 }
 
