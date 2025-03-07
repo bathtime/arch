@@ -94,7 +94,7 @@ rootPart=$rootPartNum
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(silly)	# used for btrfs 	TODO: bcachefs
+subvols=()	# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'				# TODO: will not work as simply '/'
 snapshot_dir="/snapshots"
 linkedToTmp='true'			# Link /var/log and /var/tmp to /tmp?
@@ -847,8 +847,9 @@ install_grub () {
 	[[ $fstype = bcachefs ]] && extra_ops='rootfstype=bcachefs'
 	
 	# May cause grub-snapshots to not work correctly
-	#[[ $fstype = btrfs ]] && extra_ops='rootflags=subvol=@'
-
+	if [[ $fstype = btrfs ]] && [[ $subvolPrefix = '/@' ]]; then
+		extra_ops='rootflags=subvol=@'
+	fi
 
 	grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --boot-directory=$mnt/boot
 
