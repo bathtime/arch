@@ -94,11 +94,11 @@ rootPart=$rootPartNum
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=()	# used for btrfs 	TODO: bcachefs
+subvols=(silly)	# used for btrfs 	TODO: bcachefs
 subvolPrefix='/@'				# TODO: will not work as simply '/'
 snapshot_dir="/snapshots"
 linkedToTmp='true'			# Link /var/log and /var/tmp to /tmp?
-backup_install='false'		# say 'true' to do snapshots/rysncs during install
+backup_install='true'		# say 'true' to do snapshots/rysncs during install
 timeshift_on='true'			# Works only under btrfs
 initramfs='booster'			# mkinitcpio, dracut, booster
 encrypt=false
@@ -448,23 +448,26 @@ create_partitions () {
 
 	######## DO WE NEED SLEEP HERE? ?????? #####
 	sleep 2
-	
 	sync_disk
 	
+	cd /
+
 	echo -e "\nMounting $mnt..."
 
 	mount -t $fstype --mkdir $disk$rootPart $mnt
 
-	cd /
-
 	if [ "$fstype" = "btrfs" ]; then
 
-		for subvol in '' "${subvols[@]}"; do
+		if [[ ! $subvolPrefix = '/' ]] && [[ ! $subvolPrefix = '' ]]; then
+			echo btrfs su cr --parents "$mnt$subvolPrefix"
+			btrfs su cr --parents "$mnt$subvolPrefix"
+		fi
+
+		for subvol in "${subvols[@]}"; do
+			echo btrfs su cr --parents "$mnt$subvolPrefix$subvol"
 			btrfs su cr --parents "$mnt$subvolPrefix$subvol"
 		done
 
-		#btrfs su cr --parents "$mnt/.snapshots"
-		
 	fi
 
 	if [ "$fstype" = "bcachefs" ]; then
@@ -501,24 +504,33 @@ mount_disk () {
 			echo -e "\nMounting...\n"
 
 			mountopts="noatime,discard=async"
+			
+			if [[ ! $subvolPrefix = '/' ]] && [[ ! $subvolPrefix = '' ]]; then
 
-			for subvol in '' "${subvols[@]}"; do
-				echo mount --mkdir -o "$mountopts,subvol=$subvolPrefix$subvol $disk$rootPart $mnt/$subvol"
+				subvol=''
+				echo mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
 				mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
+
+			else
+			
+				mount -t $fstype --mkdir $disk$rootPart $mnt
+			
+			fi
+
+			for subvol in "${subvols[@]}"; do
+				
+				echo mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
+				mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
+
 			done
 		
 			#chattr +C -R $mnt/var/log
 			#chattr +C -R $mnt/var/tmp
 			
-			#mount --mkdir -o "$mountopts",subvol=/.snapshots $disk$rootPart $mnt/.snapshots
-
 		elif [[ $fstype = bcachefs ]]; then
 	
-			#not working
-			#mount -t bcachefs --mkdir $disk$rootPart $mnt$snapshot_dir
-			
 			mount -t $fstype --mkdir $disk$rootPart $mnt
-				
+
 			for subvol in "${subvols[@]}"; do
 				echo mount --bind $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
 				mount --bind $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
@@ -530,9 +542,8 @@ mount_disk () {
 
 		else
 
-			mount -t $fstype --mkdir $disk$rootPart $mnt
-			#mount --mkdir $disk$rootPart $mnt
-		
+			mount -t $fstype --mkdir $disk$rootPart $mnt	
+
 		fi
 
 	fi
@@ -836,7 +847,7 @@ install_grub () {
 	[[ $fstype = bcachefs ]] && extra_ops='rootfstype=bcachefs'
 	
 	# May cause grub-snapshots to not work correctly
-	[[ $fstype = btrfs ]] && extra_ops='rootflags=subvol=@'
+	#[[ $fstype = btrfs ]] && extra_ops='rootflags=subvol=@'
 
 
 	grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --boot-directory=$mnt/boot
