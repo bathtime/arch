@@ -1480,7 +1480,7 @@ install_backup () {
 	
 		4|btrfs-assistant)	if [[ $fstype = btrfs ]]; then
 										snapper_setup
-										btrfs-assistant_setup	
+										#btrfs-assistant_setup	
 									else
 										echo -e "\nNot installing snapper/btrfs-assistant as it is not compatablie with $fstype. Exiting.\n"
 									fi
@@ -1580,6 +1580,8 @@ snapper_setup () {
 
 	else
 
+		return
+
 		pacstrap_install snapper
 	
 		arch-chroot $mnt snapper -c root create-config /
@@ -1609,14 +1611,17 @@ do_backup () {
 	
 	case $backup_type in
 
-		1|rsync)					if [[ $fstype = btrfs ]] || [[ $fstype = bcachefs ]]; then
+		none|'')					echo ;;
+
+		rsync)					if [[ $fstype = btrfs ]] || [[ $fstype = bcachefs ]]; then
 										take_snapshot "$1"
 									else
 										echo "Backup not yet implimented for $fstype."
 									fi
 									;;
+		snapper)					echo "Not implimented yet." ;;
 
-		2|timeshift)			if [[ $fstype = btrfs ]]; then
+		timeshift)				if [[ $fstype = btrfs ]]; then
 										arch-chroot $mnt timeshift --create --comments "$1" --tags D
   										arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
 									else
@@ -1624,7 +1629,7 @@ do_backup () {
 									fi
 									;;
 
-		3|btrfs-assistant)	if [[ $fstype = btrfs ]]; then
+		btrfs-assistant)	if [[ $fstype = btrfs ]]; then
 										echo "TODO:Functionality not implimented yet."
 									echo
 										echo "Will not do a backup with btrfs-assistant on $fstype."
