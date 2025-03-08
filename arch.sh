@@ -1906,7 +1906,7 @@ take_snapshot () {
 	ls -1N $mnt$snapshot_dir/
 
 	if [[ $1 = '' ]]; then
-		echo -e "\n\nWhat would you like to call this snapshot?\n"
+		echo -e "\n\nWhat would you like to call this snapshot (Name must not contain any spaces!)?\n"
 		read snapshotname
 	else
 		snapshotname="$1"
@@ -2402,7 +2402,7 @@ auto_install_root () {
 	copy_pkgs
 	
 	install_backup $backup_type
-	do_backup "Root installed"
+	do_backup "Root-installed"
 
 }
 
@@ -2428,7 +2428,7 @@ auto_install_user () {
 	#setup_acpid
 	
 	copy_pkgs
-	do_backup "User installed"
+	do_backup "User-installed"
 
 }
 
@@ -2447,7 +2447,7 @@ auto_install_kde () {
 	install_config
 	install_hooks overlayroot
 
-	do_backup "KDE installed"
+	do_backup "KDE-installed"
 
 }
 
@@ -2464,7 +2464,7 @@ auto_install_gnome () {
 	sed -i 's/manager=.*$/manager=gnome/g' $mnt/home/$user/.bash_profile
 
 	install_config
-	do_backup "Gnome installed"
+	do_backup "Gnome-installed"
 
 }
 
@@ -2482,7 +2482,7 @@ auto_install_gnomekde () {
 	sed -i 's/manager=.*$/manager=choice/g' $mnt/home/$user/.bash_profile
 
 	install_config
-	do_backup "Gnome and KDE installed"
+	do_backup "Gnome-KDE-installed"
 
 }
 
@@ -2500,7 +2500,7 @@ auto_install_cage () {
 
 	install_config
 
-	do_backup "Cage installed"
+	do_backup "Cage-installed"
 
 }
 
@@ -2517,7 +2517,7 @@ auto_install_weston () {
 	sed -i 's/manager=.*$/manager=weston/g' $mnt/home/$user/.bash_profile
 
 	install_config
-	do_backup "Weston installed"
+	do_backup "Weston-installed"
 
 }
 
