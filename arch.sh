@@ -100,7 +100,7 @@ subvolPrefix='/@'				# eg., '/' or '/@'
 snapshot_dir="/.snapshots"
 linkedToTmp='true'			# Link /var/log and /var/tmp to /tmp?
 backup_install='false'		# say 'true' to do snapshots/rysncs during install
-backup_type='none'	# eg., '','rsync','timeshift', 'btrfs-assistant'
+backup_type='snapper'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
 encrypt=false
 efi_path=/efi
@@ -1576,7 +1576,7 @@ snapper_setup () {
 		systemctl daemon-reload	
 		mount -a
 
-		arch-chroot $mnt btrfs subvolume list /
+		btrfs subvolume list /
 
 	else
 
