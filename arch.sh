@@ -93,9 +93,9 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=()	# used for btrfs 	TODO: bcachefs
-subvolPrefix='/@'				# eg., '/' or '/@'
+fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+subvols=(snapshots)			# used for btrfs and bcachefs
+subvolPrefix='/'				# eg., '/' or '/@'
 snapshot_dir="/snapshots"
 linkedToTmp='true'			# Link /var/log and /var/tmp to /tmp?
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
@@ -104,9 +104,9 @@ initramfs='booster'			# mkinitcpio, dracut, booster
 encrypt=false
 efi_path=/efi
 
+
 kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
 
-# systemd.gpt_auto=0
 
 user=user
 password='123456'
@@ -406,15 +406,9 @@ create_partitions () {
 
 	parted -s $disk print
 
-	
-
-
 	# Won't work without a small delay
 	sync_disk
 	#sleep 1
-	
-
-
 
 	mkfs.fat -F 32 -n EFI $disk$espPart 
 	mkswap -L SWAP $disk$swapPart
@@ -446,9 +440,9 @@ create_partitions () {
 
 	parted -s $disk print
 
-	######## DO WE NEED SLEEP HERE? ?????? #####
-	sleep 2
 	sync_disk
+	echo -e "\nPausing for 1 second...\n"
+	sleep 1
 	
 	cd /
 
@@ -475,7 +469,6 @@ create_partitions () {
 		for subvol in "${subvols[@]}"; do
 
 			echo -e "Creating subvolume: $mnt$subvolPrefix$subvol..."
-			
 			mkdir -p "$(dirname $mnt$subvolPrefix$subvol)"
 		
 			bcachefs subvolume create "$mnt$subvolPrefix$subvol"
@@ -486,6 +479,13 @@ create_partitions () {
 
 	unmount_disk
 	mount_disk
+
+	mkdir -p $mnt/{dev,etc,proc,root,run,sys,tmp,var/cache/pacman/pkg,/var/tmp,/var/log}
+	
+	chmod -R 750 $mnt/root
+	mkdir -p $mnt/root/.gnupg
+	chmod -R 700 $mnt/root/.gnupg
+	chmod -R 1777 $mnt/var/tmp
 
 }
 
@@ -523,17 +523,16 @@ mount_disk () {
 				mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
 
 			done
-		
-			#chattr +C -R $mnt/var/log
-			#chattr +C -R $mnt/var/tmp
 			
 		elif [[ $fstype = bcachefs ]]; then
 	
 			mount -t $fstype --mkdir $disk$rootPart $mnt
 
 			for subvol in "${subvols[@]}"; do
+			
 				echo mount --bind $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
 				mount --bind $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
+			
 			done
 
 			if [[ $encrypt = true ]] && [[ $fstype = bcachefs ]]; then
@@ -555,22 +554,6 @@ mount_disk () {
 	if [[ ! $(mount | grep -E $disk$espPart | grep -E "on $mnt$efi_path") ]]; then
 		mount --mkdir $disk$espPart $mnt$efi_path
 	fi
-
-	mkdir -p $mnt/{etc,tmp,root,var/cache/pacman/pkg,/var/tmp,/var/log}
-	mkdir -p $mnt/{dev,proc,run,sys}
-	
-	chmod -R 750 $mnt/root
-	mkdir -p $mnt/root/.gnupg
-	chmod -R 700 $mnt/root/.gnupg
-
-	if [ "$fstype" = "bcachefs" ]; then
-		mkdir -p $mnt$snapshot_dir
-	fi
-	
-	#warning: directory permissions differ on /mnt/var/tmp/
-	#filesystem: 755  package: 1777
-
-	chmod -R 1777 $mnt/var/tmp
 
 }
 
@@ -3138,6 +3121,8 @@ while :; do
 23. Install snapper
 24. Packages/script
 25. Timeshift
+26. Auto-login root
+27. Auto-login user
 30. Custom install
 31. Setup ~ files
 32. Snapshot/sync/wipe ->
@@ -3181,6 +3166,8 @@ echo
 		snapper|23)				install_snapper ;;
 		packages|24)			packages_menu ;;
 		timeshift|25)			timeshift_setup ;;
+		loginroot|26)			auto_login root ;;
+		loginuser|27)			auto_login user ;;
 		custom|30)				custom_install ;;
 		setup|31)				setup_menu ;;
 		copy|32)					clone_menu ;;
