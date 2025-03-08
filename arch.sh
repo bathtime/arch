@@ -74,6 +74,7 @@ arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
 
 mnt=/mnt
+mnt2=/mnt2
 bootOwnPartition='true'		# make separate boot partition (true/false)?
 
 if [[ $bootOwnPartition = 'true' ]]; then
@@ -1977,9 +1978,9 @@ restore_snapshot () {
 	if [[ $1 = 'reverse' ]]; then
 
 			echo -e "\nRestoring from $mnt$snapshot_dir/$snapshot/ to @...\n"
-			mount -t btrfs --mkdir -o subvol=@ $disk$rootPart /mnt2
+			mount -t btrfs --mkdir -o subvol=@ $disk$rootPart $mnt2
 
-			rsync --dry-run $rsync_params -v "$mnt$snapshot_dir/$snapshot/" /mnt2 | less
+			rsync --dry-run $rsync_params -v "$mnt$snapshot_dir/$snapshot/" $mnt2 | less
 		
 		else
 			
@@ -2004,7 +2005,7 @@ restore_snapshot () {
 			
 			if [[ $1 = 'reverse' ]]; then
 
-				rsync $rsync_params --info=progress2 "$mnt$snapshot_dir/$snapshot/" /mnt2
+				rsync $rsync_params --info=progress2 "$mnt$snapshot_dir/$snapshot/" $mnt2
 		
 			else
 			
