@@ -469,7 +469,7 @@ create_partitions () {
 		for subvol in "${subvols[@]}"; do
 
 			echo -e "Creating subvolume: $mnt$subvolPrefix$subvol..."
-			mkdir -p "$(dirname $mnt$subvolPrefix$subvol)"
+			#mkdir -p "$(dirname $mnt$subvolPrefix$subvol)"
 		
 			bcachefs subvolume create "$mnt$subvolPrefix$subvol"
 		
@@ -2231,13 +2231,14 @@ auto_install_root () {
 
 	create_partitions
 
+	setup_fstab
 	install_base
 
 	if [[ $autologin = true ]]; then
 		auto_login root
 	fi
 
-	setup_fstab
+	#setup_fstab
 	install_grub
 	
 	# Bootable snapshots will not work with mkinitcpio
