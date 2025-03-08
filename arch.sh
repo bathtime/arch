@@ -93,9 +93,9 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=()			# used for btrfs and bcachefs
-subvolPrefix='/'				# eg., '/' or '/@'
+fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+subvols=(silly)			# used for btrfs and bcachefs
+subvolPrefix='/@'				# eg., '/' or '/@'
 snapshot_dir="/snapshots"
 linkedToTmp='true'			# Link /var/log and /var/tmp to /tmp?
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
@@ -469,7 +469,7 @@ create_partitions () {
 		for subvol in "${subvols[@]}"; do
 
 			echo -e "Creating subvolume: $mnt$subvolPrefix$subvol..."
-			mkdir -p "$(dirname $mnt$subvolPrefix$subvol)"
+			#mkdir -p "$(dirname $mnt$subvolPrefix$subvol)"
 		
 			bcachefs subvolume create "$mnt$subvolPrefix$subvol"
 		
@@ -1058,6 +1058,8 @@ set smartindent
 
 EOF
 
+	auto_login root
+
 }
 
 
@@ -1093,11 +1095,6 @@ setup_user () {
 
 	chown -R $user:$user $mnt/home/$user/.cache
 
-  # arch-chroot $mnt /bin/bash -e << EOF
-	#	rm -rf /home/$user/.cache
-	#	ln -s /tmp /home/$user/.cache
-	#	chown -R user:user /home/$user/.cache
-#EOF
 
 	mkdir -p -m 750 $mnt/etc/sudoers.d
 	echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/1-wheel
@@ -1105,15 +1102,8 @@ setup_user () {
 	chmod 0440 $mnt/etc/sudoers.d/{1-wheel,10-arch}
 	
 	
-	# Autologin to tty1
-	mkdir -p $mnt/etc/systemd/system/getty@tty1.service.d
-	echo "[Service]
-Type=simple
-ExecStart=
-ExecStart=-/sbin/agetty --skip-login --nonewline --noissue --autologin $user --noclear %I 38400 linux" > $mnt/etc/systemd/system/getty@tty1.service.d/autologin.conf
-
-	#sudo -u $user mkdir -p $mnt/home/$user/.local/bin
-	sudo -u $user mkdir -p $mnt/home/$user/{.local/bin,Documents,Downloads,.local/bin}
+	#sudo -u $user mkdir -p $mnt/home/$user/{.local/bin,Documents,Downloads,.local/bin}
+	sudo -u $user mkdir -p $mnt/home/$user/{.local/bin,Documents,Downloads}
 
 
 	echo '
@@ -1184,6 +1174,8 @@ PS1="$ "' > $mnt/home/$user/.bashrc
 	chown $user:$user $mnt/home/$user/{.vimrc,.hushlogin,.bash_profile,.bashrc}
 
 	ls -la $mnt/home/$user
+	
+	auto_login user
 
 }
 
@@ -1840,9 +1832,9 @@ restore_snapshot () {
 		#--info=progress2 : instead of --progress is useful for large transfers
 		# arch recommended: -aAXHv
 
-		rsync_params="-axHAXvSW --del --exclude=/etc/timeshift/timeshift.json --exclude=/run/timeshift/ --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=/snapshots/"
+		rsync_params="-axHAXSW --del --exclude=/etc/timeshift/timeshift.json --exclude=/run/timeshift/ --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=/snapshots/"
 		
-		rsync --dry-run $rsync_params "$mnt$snapshot_dir/$snapshot/" $mnt/ | less
+		rsync --dry-run $rsync_params -v "$mnt$snapshot_dir/$snapshot/" $mnt/ | less
 
 		echo -e "\nType 'y' to proceed with rsync or any other key to exit..."
 		read choice
@@ -2235,16 +2227,17 @@ backup () {
 auto_install_root () {
 
 	create_partitions
-
 	setup_fstab
 	install_base
+	install_grub
+	
 
 	if [[ $autologin = true ]]; then
 		auto_login root
 	fi
 
 	#setup_fstab
-	install_grub
+	#install_grub
 	
 	# Bootable snapshots will not work with mkinitcpio
 	if [[ $fstype = btrfs ]]; then
@@ -3107,19 +3100,18 @@ while :; do
 3. Chroot
 4. Auto-install
 5. Partition disk
-6. Install base
-7. Hypervisor setup
-8. Setup fstab
-9. Install boot manager
-10. General setup
-11. Setup user
-12. Setup network
-13. Install aur
-14. Install tweaks
-15. Install mksh
-16. Install hooks
-17. Setup acpid
-18. Choose initramfs
+6. Setup fstab
+7. Install base
+8. Install boot manager
+9. General setup
+10. Setup user
+11. Setup network
+12. Install aur
+13. Install tweaks
+14. Install mksh
+15. Install hooks
+16. Setup acpid
+17. Choose initramfs
 19. Mount $mnt
 20. Unmount $mnt
 21. Update grub
@@ -3129,6 +3121,7 @@ while :; do
 25. Timeshift
 26. Auto-login root
 27. Auto-login user
+28. Hypervisor setup
 30. Custom install
 31. Setup ~ files
 32. Snapshot/sync/wipe ->
@@ -3152,19 +3145,18 @@ echo
 		Chroot|chroot|3)		do_chroot ;;
 		auto|4)					auto_install_menu ;;
 		partition|5)			create_partitions ;;
-		base|6)					install_base ;;
-		hypervisor|7)			hypervisor_setup ;;
-		fstab|8)					setup_fstab ;;
-		boot|9)					install_bootloader ;;
-		setup|10)				general_setup ;;
-		user|11)					setup_user ;;
-      network|12)				install_network ;;
-		aur|13)					install_aur ;;
-		tweaks|14)				install_tweaks ;;
-      mksh|15)					install_mksh ;;
-		hooks|16)				install_hooks ;;
-		acpid|17)				setup_acpid ;;
-		initramfs|18)			choose_initramfs ;;
+		fstab|6)					setup_fstab ;;
+		base|7)					install_base ;;
+		boot|8)					install_bootloader ;;
+		setup|9)				general_setup ;;
+		user|10)					setup_user ;;
+      network|11)				install_network ;;
+		aur|12)					install_aur ;;
+		tweaks|13)				install_tweaks ;;
+      mksh|14)					install_mksh ;;
+		hooks|15)				install_hooks ;;
+		acpid|16)				setup_acpid ;;
+		initramfs|17)			choose_initramfs ;;
       mount|19)				mount_disk  ;;
       unmount|20)				unmount_disk  ;;
 		grub|21)					grub-mkconfig -o $mnt/boot/grub/grub.cfg ;;
@@ -3174,6 +3166,7 @@ echo
 		timeshift|25)			timeshift_setup ;;
 		loginroot|26)			auto_login root ;;
 		loginuser|27)			auto_login user ;;
+		hypervisor|28)			hypervisor_setup ;;
 		custom|30)				custom_install ;;
 		setup|31)				setup_menu ;;
 		copy|32)					clone_menu ;;
