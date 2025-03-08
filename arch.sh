@@ -1975,17 +1975,17 @@ restore_snapshot () {
 
 		rsync_params="-axHAXSW --del --exclude=/etc/timeshift/timeshift.json --exclude=/run/timeshift/ --exclude=/lost+found/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=$snapshot_dir/"
 		
-	if [[ $1 = 'reverse' ]]; then
+	if [[ $1 = 'current' ]]; then
 
+			echo -e "\nRestoring from $mnt$snapshot_dir/$snapshot/ to $mnt/...\n"
+			rsync --dry-run $rsync_params -v "$mnt$snapshot_dir/$snapshot/" $mnt/ | less
+	
+		else
+			
 			echo -e "\nRestoring from $mnt$snapshot_dir/$snapshot/ to @...\n"
 			mount -t btrfs --mkdir -o subvol=@ $disk$rootPart $mnt2
 
 			rsync --dry-run $rsync_params -v "$mnt$snapshot_dir/$snapshot/" $mnt2 | less
-		
-		else
-			
-			echo -e "\nRestoring from $mnt$snapshot_dir/$snapshot/ to $mnt/...\n"
-			rsync --dry-run $rsync_params -v "$mnt$snapshot_dir/$snapshot/" $mnt/ | less
 		
 		fi
 	
@@ -2001,15 +2001,13 @@ restore_snapshot () {
 
 			echo -e "\nRunning rsync...\n"
 			
-			#rsync $rsync_params --info=progress2 "$snapshot_dir/$snapshot/" /
-			
-			if [[ $1 = 'reverse' ]]; then
+			if [[ $1 = 'current' ]]; then
 
-				rsync $rsync_params --info=progress2 "$mnt$snapshot_dir/$snapshot/" $mnt2
+				rsync $rsync_params --info=progress2 "$mnt$snapshot_dir/$snapshot/" $mnt/
 		
 			else
 			
-				rsync $rsync_params --info=progress2 "$mnt$snapshot_dir/$snapshot/" $mnt/
+				rsync $rsync_params --info=progress2 "$mnt$snapshot_dir/$snapshot/" $mnt2
 		
 			fi
 	
@@ -2971,8 +2969,8 @@ clone_menu () {
 			shred|14)		unmount_disk; shred -n 1 -v -z $disk ;;
 			squashfs|15)	create_archive ;;
 			snapshot|16)	take_snapshot ;;
-			restore|17)		restore_snapshot ;;
-			restore|18)		restore_snapshot reverse ;;
+			restore|17)		restore_snapshot current ;;
+			restore|18)		restore_snapshot ;;
 			delete|19)		delete_snapshot ;;
 			rsync|20)		rsync_snapshot ;;
 			bork|21)			bork_system ;;
