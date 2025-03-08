@@ -100,7 +100,7 @@ subvolPrefix='/@'				# eg., '/' or '/@'
 snapshot_dir="/.snapshots"
 linkedToTmp='true'			# Link /var/log and /var/tmp to /tmp?
 backup_install='false'		# say 'true' to do snapshots/rysncs during install
-backup_type='btrfs-assistant'	# eg., '','rsync','timeshift', 'btrfs-assistant'
+backup_type='none'	# eg., '','rsync','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
 encrypt=false
 efi_path=/efi
@@ -1457,7 +1457,7 @@ install_backup () {
 		echo -e "What backup system would you like to install?\n\n1. rsync \n2. snapper\n3. timeshift\n4. btrfs-assistant\n5. none\n"
 			read -p "Choice: " -n 2 choice
 	else
-		echo "Installing $choice hook..."
+		echo "Installing $choice..."
 	fi
 
 			
@@ -1579,8 +1579,6 @@ snapper_setup () {
 		arch-chroot $mnt btrfs subvolume list /
 
 	else
-
-		return
 
 		pacstrap_install snapper
 	
