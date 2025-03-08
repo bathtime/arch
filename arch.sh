@@ -1974,8 +1974,20 @@ restore_snapshot () {
 
 		rsync_params="-axHAXSW --del --exclude=/etc/timeshift/timeshift.json --exclude=/run/timeshift/ --exclude=/lost+found/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=$snapshot_dir/"
 		
-		rsync --dry-run $rsync_params -v "$mnt$snapshot_dir/$snapshot/" $mnt/ | less
+	if [[ $1 = 'reverse' ]]; then
 
+			echo -e "\nRestoring from $mnt$snapshot_dir/$snapshot/ to @...\n"
+			mount -t btrfs --mkdir -o subvol=@ $disk$rootPart /mnt2
+
+			rsync --dry-run $rsync_params -v "$mnt$snapshot_dir/$snapshot/" /mnt2 | less
+		
+		else
+			
+			echo -e "\nRestoring from $mnt$snapshot_dir/$snapshot/ to $mnt/...\n"
+			rsync --dry-run $rsync_params -v "$mnt$snapshot_dir/$snapshot/" $mnt/ | less
+		
+		fi
+	
 		if [[ $fstype = bcachefs ]]; then
 			echo -e "\nMake sure to exclude bcachefs subvolumes!\n" 
 		fi
@@ -1987,7 +1999,18 @@ restore_snapshot () {
 		if [[ $choice = y ]]; then
 
 			echo -e "\nRunning rsync...\n"
-			rsync $rsync_params --info=progress2 "$snapshot_dir/$snapshot/" /
+			
+			#rsync $rsync_params --info=progress2 "$snapshot_dir/$snapshot/" /
+			
+			if [[ $1 = 'reverse' ]]; then
+
+				rsync $rsync_params --info=progress2 "$mnt$snapshot_dir/$snapshot/" /mnt2
+		
+			else
+			
+				rsync $rsync_params --info=progress2 "$mnt$snapshot_dir/$snapshot/" $mnt/
+		
+			fi
 	
 		else
 			echo "Exiting."
@@ -2916,7 +2939,8 @@ clone_menu () {
 18. Delete btrfs/bcachefs snapshot
 19. Rsync snapshot
 20. Bork system
-21. Delete timeshift backups")
+21. Delete timeshift backups
+22. Restore btrfs/bcachefs snapshot reverse")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -2951,6 +2975,7 @@ clone_menu () {
 			rsync|19)		rsync_snapshot ;;
 			bork|20)			bork_system ;;
 			timeshift|21)	delete_timeshift_snapshots ;;
+			restore|22)		restore_snapshot reverse ;;
       	'')				;;
       	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
