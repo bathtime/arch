@@ -1491,47 +1491,6 @@ install_backup () {
 
 
 
-do_backup () {
-
-
-	[[ ! $backup_install = true ]] && return
-	
-	case $backup_type in
-
-		1|rsync)					if [[ $fstype = btrfs ]] || [[ $fstype = bcachefs ]]; then
-										take_snapshot "$1"
-									else
-										echo "Backup not yet implimented for $fstype."
-									fi
-									;;
-
-		2|snapper)				if [[ $fstype = btrfs ]]; then
-										install_snapper
-									echo
-										echo "Not a btrfs file system. Will not do a backup with btrfs-assistant."
-									fi
-									;;
-	
-
-		3|timeshift)			if [[ $fstype = btrfs ]]; then
-										arch-chroot $mnt timeshift --create --comments "$1" --tags D
-  										arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
-									else
-										echo "Not a btrfs file system. Will not do a backup with timeshift."
-									fi
-									;;
-
-		4|btrfs-assistant)	if [[ $fstype = btrfs ]]; then
-										install_snapper
-									echo
-										echo "Not a btrfs file system. Will not do a backup with btrfs-assistant."
-									fi
-									;;
-	esac
-
-}
-
-
 timeshift_setup () {
 
 	[ ! $timeshift_on = true ] || [ ! $fstype = btrfs ] && return 
@@ -1635,6 +1594,38 @@ snapper_setup () {
 
 	fi
 	
+
+}
+
+
+do_backup () {
+
+	[[ ! $backup_install = true ]] && return
+	
+	case $backup_type in
+
+		1|rsync)					if [[ $fstype = btrfs ]] || [[ $fstype = bcachefs ]]; then
+										take_snapshot "$1"
+									else
+										echo "Backup not yet implimented for $fstype."
+									fi
+									;;
+
+		2|timeshift)			if [[ $fstype = btrfs ]]; then
+										arch-chroot $mnt timeshift --create --comments "$1" --tags D
+  										arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
+									else
+										echo "Will not do a backup with timeshift on $fstype."
+									fi
+									;;
+
+		3|btrfs-assistant)	if [[ $fstype = btrfs ]]; then
+										echo "TODO:Functionality not implimented yet."
+									echo
+										echo "Will not do a backup with btrfs-assistant on $fstype."
+									fi
+									;;
+	esac
 
 }
 
