@@ -100,8 +100,7 @@ subvolPrefix='/@'				# eg., '/' or '/@'
 snapshot_dir="/.snapshots"
 linkedToTmp='true'			# Link /var/log and /var/tmp to /tmp?
 backup_install='false'		# say 'true' to do snapshots/rysncs during install
-timeshift_on='false'			# Works only under btrfs
-backup_type='btrfs-assistant'	# eg., '','timeshift', 'btrfs-assistant'
+backup_type='btrfs-assistant'	# eg., '','rsync','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
 encrypt=false
 efi_path=/efi
@@ -216,7 +215,7 @@ unmount_disk () {
 		echo "Unmounting $mnt..."
 
 		# Shouldn't be in directory we're unmounting   
-		[[ "$(pwd | grep $mnt)" ]] && cd ..
+		[[ "$(pwd | grep $mnt)" ]] && cd /
 
 		umount -n -R $mnt
 
@@ -838,7 +837,13 @@ install_grub () {
 	
 	# May cause grub-snapshots to not work correctly
 	if [[ $fstype = btrfs ]] && [[ $subvolPrefix = '/@' ]]; then
-		extra_ops='rootflags=subvol=@'
+
+		# btrfs-assistant will NOT work with rootflags assigned!
+		# timemachine ONLY works with rootflags assigned!
+		if [[ ! $backup_type = 'btrfs-assistant' ]]; then
+			extra_ops='rootflags=subvol=@'
+		fi
+
 	fi
 
 	grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --boot-directory=$mnt/boot
@@ -1493,8 +1498,8 @@ install_backup () {
 
 timeshift_setup () {
 
-	[ ! $timeshift_on = true ] || [ ! $fstype = btrfs ] && return 
-
+	[ ! $fstype = btrfs ] && return 
+   
 	UUID=$(blkid -s UUID -o value $disk$rootPart)
 
 	mkdir -p $mnt/etc/timeshift
@@ -1571,7 +1576,7 @@ snapper_setup () {
 		systemctl daemon-reload	
 		mount -a
 
-		btrfs subvolume list /
+		arch-chroot $mnt btrfs subvolume list /
 
 	else
 
