@@ -100,7 +100,7 @@ subvolPrefix='/@'				# eg., '/' or '/@'
 snapshot_dir="/.snapshots"
 linkedToTmp='true'			# Link /var/log and /var/tmp to /tmp?
 backup_install='false'		# say 'true' to do snapshots/rysncs during install
-backup_type='snapper'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
+backup_type='btrfs-assistant'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
 encrypt=false
 efi_path=/efi
@@ -1500,6 +1500,8 @@ timeshift_setup () {
 
 	[ ! $fstype = btrfs ] && return 
    
+	mount_disk
+	
 	UUID=$(blkid -s UUID -o value $disk$rootPart)
 
 	mkdir -p $mnt/etc/timeshift
@@ -1580,17 +1582,19 @@ snapper_setup () {
 
 	else
 
-		pacstrap_install snapper
-	
-		arch-chroot $mnt snapper -c root create-config /
-		
-		cat $mnt/etc/fstab | sed 's#subvol=/@\s#subvol=/@/.snapshots #' | grep snapshots | sed 's#/.*btrfs#/.snapshots  btrfs##' >> $mnt/etc/fstab	
-		
-		cat $mnt/etc/fstab
-		systemctl daemon-reload	
-		mount -a
+		echo "Install snapper once you've rebooted."
 
-		arch-chroot $mnt btrfs subvolume list /
+		#pacstrap_install snapper
+	
+		#arch-chroot $mnt snapper -c root create-config /
+		
+		#cat $mnt/etc/fstab | sed 's#subvol=/@\s#subvol=/@/.snapshots #' | grep snapshots | sed 's#/.*btrfs#/.snapshots  btrfs##' >> $mnt/etc/fstab	
+		
+		#cat $mnt/etc/fstab
+		#systemctl daemon-reload	
+		#mount -a
+
+		#arch-chroot $mnt btrfs subvolume list /
 		
 		# Will always repopulate so no use deleting them
 		#arch-chroot $mnt btrfs su delete --subvolid $(btrfs su list / | grep var/lib/portables | sed 's/ID //; s/ gen.*//') $mnt
@@ -1607,6 +1611,8 @@ do_backup () {
 
 	[[ ! $backup_install = true ]] && return
 	
+	mount_disk
+	
 	case $backup_type in
 
 		none|'')					echo ;;
@@ -1617,6 +1623,7 @@ do_backup () {
 										echo "Backup not yet implimented for $fstype."
 									fi
 									;;
+
 		snapper)					echo "Not implimented yet." ;;
 
 		timeshift)				if [[ $fstype = btrfs ]]; then
