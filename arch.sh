@@ -94,13 +94,14 @@ swapPart=$swapPartNum
 rootPart=$rootPartNum
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(snapshots)			# used for btrfs and bcachefs
-subvolPrefix='/'				# eg., '/' or '/@'
-snapshot_dir="/snapshots"
+fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+subvols=()			# used for btrfs and bcachefs
+subvolPrefix='/@'				# eg., '/' or '/@'
+snapshot_dir="/.snapshots"
 linkedToTmp='true'			# Link /var/log and /var/tmp to /tmp?
-backup_install='true'		# say 'true' to do snapshots/rysncs during install
-timeshift_on='true'			# Works only under btrfs
+backup_install='false'		# say 'true' to do snapshots/rysncs during install
+timeshift_on='false'			# Works only under btrfs
+backup_type='btrfs-assistant'	# eg., '','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
 encrypt=false
 efi_path=/efi
@@ -1099,11 +1100,10 @@ setup_user () {
 
 	mkdir -p -m 750 $mnt/etc/sudoers.d
 	echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/1-wheel
-	echo "$user ALL = NOPASSWD: /usr/local/bin/arch.sh" > $mnt/etc/sudoers.d/10-arch
+	echo "$user ALL = NOPASSWD: /usr/local/bin/arch.sh,/usr/bin/btrfs-assistant-launcher,/usr/bin/timeshift-launcher" > $mnt/etc/sudoers.d/10-arch
 	chmod 0440 $mnt/etc/sudoers.d/{1-wheel,10-arch}
 	
 	
-	#sudo -u $user mkdir -p $mnt/home/$user/{.local/bin,Documents,Downloads,.local/bin}
 	sudo -u $user mkdir -p $mnt/home/$user/{.local/bin,Documents,Downloads}
 
 
@@ -1444,6 +1444,94 @@ WantedBy=multi-user.target' > $mnt/usr/lib/systemd/system/acpid.service
 }
 
 
+install_backup () {
+
+	choice=$1
+
+	if [[ $choice = '' ]]; then
+		echo -e "What backup system would you like to install?\n\n1. rsync \n2. snapper\n3. timeshift\n4. btrfs-assistant\n5. none\n"
+			read -p "Choice: " -n 2 choice
+	else
+		echo "Installing $choice hook..."
+	fi
+
+			
+	case $choice in
+		1|rsync)					echo "Nothing to do for rsync install." ;;
+
+		2|snapper)				if [[ $fstype = btrfs ]]; then
+										snapper_setup
+									else
+										echo -e "\nNot installing snapper as it is not compatablie with $fstype. Exiting.\n"
+									fi
+									;;
+	
+		3|timeshift)		if [[ $fstype = btrfs ]]; then
+										timeshift_setup
+									else
+										echo -e "\nNot installing timeshift as it is not compatablie with $fstype. Exiting.\n"
+									fi
+									;;
+	
+		4|btrfs-assistant)	if [[ $fstype = btrfs ]]; then
+										snapper_setup
+										btrfs-assistant_setup	
+									else
+										echo -e "\nNot installing snapper/btrfs-assistant as it is not compatablie with $fstype. Exiting.\n"
+									fi
+									;;
+
+		5|none|'')				echo "No backup installed." ;;
+
+		*)							echo "Not an option. Exiting." ;;
+	esac
+
+
+}
+
+
+
+do_backup () {
+
+
+	[[ ! $backup_install = true ]] && return
+	
+	case $backup_type in
+
+		1|rsync)					if [[ $fstype = btrfs ]] || [[ $fstype = bcachefs ]]; then
+										take_snapshot "$1"
+									else
+										echo "Backup not yet implimented for $fstype."
+									fi
+									;;
+
+		2|snapper)				if [[ $fstype = btrfs ]]; then
+										install_snapper
+									echo
+										echo "Not a btrfs file system. Will not do a backup with btrfs-assistant."
+									fi
+									;;
+	
+
+		3|timeshift)			if [[ $fstype = btrfs ]]; then
+										arch-chroot $mnt timeshift --create --comments "$1" --tags D
+  										arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
+									else
+										echo "Not a btrfs file system. Will not do a backup with timeshift."
+									fi
+									;;
+
+		4|btrfs-assistant)	if [[ $fstype = btrfs ]]; then
+										install_snapper
+									echo
+										echo "Not a btrfs file system. Will not do a backup with btrfs-assistant."
+									fi
+									;;
+	esac
+
+}
+
+
 timeshift_setup () {
 
 	[ ! $timeshift_on = true ] || [ ! $fstype = btrfs ] && return 
@@ -1503,6 +1591,50 @@ ExecStart=
 ExecStart=/usr/bin/grub-btrfsd --syslog -t' > $mnt/etc/systemd/system/grub-btrfsd.service.d/override.conf
 
 	fi
+
+}
+
+
+snapper_setup () {
+	
+	mount_disk
+
+
+   if [[ $mnt = '' ]]; then
+		
+		pacstrap_install snapper
+
+		snapper -c root create-config /
+
+		cat $mnt/etc/fstab | sed 's#subvol=/@\s#subvol=/@/.snapshots #' | grep snapshots | sed 's#/.*btrfs#/.snapshots  btrfs##' >> $mnt/etc/fstab	
+		
+		cat $mnt/etc/fstab
+		systemctl daemon-reload	
+		mount -a
+
+		arch-chroot $mnt btrfs subvolume list /
+
+	else
+
+		pacstrap_install snapper
+	
+		arch-chroot $mnt snapper -c root create-config /
+		
+		cat $mnt/etc/fstab | sed 's#subvol=/@\s#subvol=/@/.snapshots #' | grep snapshots | sed 's#/.*btrfs#/.snapshots  btrfs##' >> $mnt/etc/fstab	
+		
+		cat $mnt/etc/fstab
+		systemctl daemon-reload	
+		mount -a
+
+		arch-chroot $mnt btrfs subvolume list /
+		
+		# Will always repopulate so no use deleting them
+		#arch-chroot $mnt btrfs su delete --subvolid $(btrfs su list / | grep var/lib/portables | sed 's/ID //; s/ gen.*//') $mnt
+		#arch-chroot $mnt btrfs su delete --subvolid $(btrfs su list / | grep var/lib/machines | sed 's/ID //; s/ gen.*//') $mnt
+		#arch-chroot $mnt btrfs su delete --subvolid $(btrfs su list / | grep snapshots | sed 's/ID //; s/ gen.*//') $mnt
+
+	fi
+	
 
 }
 
@@ -1748,7 +1880,6 @@ clone () {
 		choose_initramfs booster 
 		setup_fstab
 		fs_packages
-		timeshift_setup
 
 	else
 		echo "Exiting."
@@ -2207,29 +2338,6 @@ check_online () {
 }
 
 
-backup () {
-
-	if [[ $backup_install = true ]]; then
-
-		if [[ $fstype = bcachefs ]]; then 
-			
-			take_snapshot "$1"
-		
-		elif [[ $fstype = btrfs ]]; then
-			
-			if [[ $timeshift_on = true ]]; then
-				arch-chroot $mnt timeshift --create --comments "$1" --tags D
-  				arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
-			else
-				take_snapshot "$1"
-			fi
-
-		fi
-
-	fi
-
-}
-
 
 auto_install_root () {
 
@@ -2264,9 +2372,8 @@ auto_install_root () {
 	copy_script
 	copy_pkgs
 	
-	timeshift_setup
-
-	backup "Root installed"
+	install_backup $backup_type
+	do_backup "Root installed"
 
 }
 
@@ -2292,7 +2399,7 @@ auto_install_user () {
 	#setup_acpid
 	
 	copy_pkgs
-	backup "User installed"
+	do_backup "User installed"
 
 }
 
@@ -2311,7 +2418,7 @@ auto_install_kde () {
 	install_config
 	install_hooks overlayroot
 
-	backup "KDE installed"
+	do_backup "KDE installed"
 
 }
 
@@ -2328,7 +2435,7 @@ auto_install_gnome () {
 	sed -i 's/manager=.*$/manager=gnome/g' $mnt/home/$user/.bash_profile
 
 	install_config
-	backup "Gnome installed"
+	do_backup "Gnome installed"
 
 }
 
@@ -2346,7 +2453,7 @@ auto_install_gnomekde () {
 	sed -i 's/manager=.*$/manager=choice/g' $mnt/home/$user/.bash_profile
 
 	install_config
-	backup "Gnome and KDE installed"
+	do_backup "Gnome and KDE installed"
 
 }
 
@@ -2364,7 +2471,7 @@ auto_install_cage () {
 
 	install_config
 
-	backup "Cage installed"
+	do_backup "Cage installed"
 
 }
 
@@ -2381,7 +2488,7 @@ auto_install_weston () {
 	sed -i 's/manager=.*$/manager=weston/g' $mnt/home/$user/.bash_profile
 
 	install_config
-	backup "Weston installed"
+	do_backup "Weston installed"
 
 }
 
@@ -2416,77 +2523,6 @@ auto_install_all () {
 	install_config
 }
 
-
-install_snapper () {
-	
-	mount_disk
-
-
-   if [[ $mnt = '' ]]; then
-
-		umount /.snapshots
-		rm -rf /.snapshots
-
-		snapper -c config create-config /
-
-		btrfs su delete /.snapshots
-		mkdir /.snapshots
-		mount -o subvol=@snapshots $disk$rootPart /.snapshots
-
-		genfstab -U /
-
-		mount -a
-		
-		chmod 750 /.snapshots
-
-	else
-
-		#arch-chroot $mnt btrfs su list /
-		#arch-chroot $mnt btrfs su create /.snapshots
-
-		rm -rf $mnt/.snapshots
-		
-		#pacstrap_install snapper
-		pacstrap_install snapper
-		
-#		arch-chroot $mnt btrfs su create /.snapshots
-
-		#UUID=76526f43-5af2-4bb3-a606-253c327aab62 /.snapshots          btrfs       rw,noatime,ssd,discard=async,space_cache=v2,subvol=/@/.snapshots  0 0
-	
-#		cat $mnt/etc/fstab | sed 's#subvol=/@\s#subvol=/@/.snapshots #' | grep snapshots | sed 's#/.*btrfs#/.snapshots  btrfs##' >> $mnt/etc/fstab	
-		
-#		cat $mnt/etc/fstab
-#		systemctl daemon-reload	
-#		mount -a
-
-		arch-chroot $mnt btrfs subvolume list /
-		
-#		read -p "How does it look?"
-
-		return
-
-
-		umount $mnt$snapshot_dir
-		rm -rf $mnt$snapshot_dir
-		rm -rf $mnt/.snapshots
-		
-		# Will always repopulate so no use deleting them
-		arch-chroot $mnt btrfs su delete --subvolid $(btrfs su list / | grep var/lib/portables | sed 's/ID //; s/ gen.*//') $mnt
-		arch-chroot $mnt btrfs su delete --subvolid $(btrfs su list / | grep var/lib/machines | sed 's/ID //; s/ gen.*//') $mnt
-		arch-chroot $mnt btrfs su delete --subvolid $(btrfs su list / | grep snapshots | sed 's/ID //; s/ gen.*//') $mnt
-
-		arch-chroot $mnt btrfs subvolume list /
-		read -p "Press any key to continue."
-
-		# Already covered so no need?
-		arch-chroot $mnt snapper -c root create-config /
-		
-		arch-chroot $mnt btrfs subvolume list /
-
-   fi
-	
-
-}
 
 
 clean_system () {
@@ -3123,7 +3159,7 @@ while :; do
 20. Unmount $mnt
 21. Update grub
 22. Connect wireless
-23. Install snapper
+23. Install backup
 24. Packages/script
 25. Timeshift
 26. Auto-login root
@@ -3168,7 +3204,7 @@ echo
       unmount|20)				unmount_disk  ;;
 		grub|21)					grub-mkconfig -o $mnt/boot/grub/grub.cfg ;;
 		connect|iwd|22)		connect_wireless ;;
-		snapper|23)				install_snapper ;;
+		backup|23)				install_backup ;;
 		packages|24)			packages_menu ;;
 		timeshift|25)			timeshift_setup ;;
 		loginroot|26)			auto_login root ;;
