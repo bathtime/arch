@@ -95,9 +95,9 @@ rootPart=$rootPartNum
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=()			# used for btrfs and bcachefs
+subvols=(snapshots)			# used for btrfs and bcachefs
 subvolPrefix='/@'				# eg., '/' or '/@'
-snapshot_dir="/.snapshots"
+snapshot_dir="/snapshots"
 linkedToTmp='true'			# Link /var/log and /var/tmp to /tmp?
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
 backup_type='rsync'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
@@ -108,6 +108,7 @@ efi_path=/efi
 
 kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
 
+#rd.live.overlay.overlayfs=1
 
 user=user
 password='123456'
@@ -1910,17 +1911,17 @@ take_snapshot () {
 		snapshotname="$1"
 	fi
 
-	[[ ! $snapshotname = '' ]] && snapshotname=" - $snapshotname"
+	#[[ ! $snapshotname = '' ]] && snapshotname="$filename - $snapshotname"
 
 	if [[ $fstype = bcachefs ]]; then
 		echo -e "\nMake sure to exclude bcachefs subvolumes!\n" 
-		bcachefs subvolume snapshot $mnt/ "$mnt$snapshot_dir/$filename$snapshotname"
+		bcachefs subvolume snapshot $mnt/ "$mnt$snapshot_dir/$snapshotname"
 	fi
 	if [[ $fstype = btrfs ]]; then
-		btrfs subvolume snapshot $mnt/ "$mnt$snapshot_dir/$filename$snapshotname"
+		btrfs subvolume snapshot $mnt/ "$mnt$snapshot_dir/$snapshotname"
 	fi
 
-	echo -e "\nCreated snapshot: $mnt$snapshot_dir/$filename$snapshotname\n"	
+	echo -e "\nCreated snapshot: $mnt$snapshot_dir/$snapshotname\n"	
 	
 	ls -1N $mnt$snapshot_dir/
 	echo
