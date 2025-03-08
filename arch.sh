@@ -63,12 +63,12 @@ error_check 1
 error_bypass=0
 
 
-# Make font big and readable and make sure the hook for the font is turnted on
-#if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ] && [[ ! $(cat /etc/mkinitcpio.conf | grep -e '^HOOKS|consolefont') = '' ]]; then
-#	setfont ter-132b
-#fi
+if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ] && [[ ! $(cat /etc/mkinitcpio.conf | grep -e '^HOOKS|consolefont') = '' ]]; then
+	setfont ter-132b
+else
+	setfont -d
+fi
 
-setfont -d
 
 arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
@@ -1834,7 +1834,7 @@ restore_snapshot () {
 		#--info=progress2 : instead of --progress is useful for large transfers
 		# arch recommended: -aAXHv
 
-		rsync_params="-axHAXSW --del --exclude=/etc/timeshift/timeshift.json --exclude=/run/timeshift/ --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=/snapshots/"
+		rsync_params="-axHAXSW --del --exclude=/etc/timeshift/timeshift.json --exclude=/run/timeshift/ --exclude=/lost+found/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=$snapshot_dir/"
 		
 		rsync --dry-run $rsync_params -v "$mnt$snapshot_dir/$snapshot/" $mnt/ | less
 
@@ -1926,7 +1926,7 @@ rsync_snapshot () {
 		echo -e "\nRunning dry run first..."
 		sleep 1
 
-		rsync_params="-axHAXSW --del --exclude=/run/timeshift/ --exclude=/etc/timeshift/timeshift.json --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=/snapshots/"
+		rsync_params="-axHAXSW --del --exclude=/run/timeshift/ --exclude=/etc/timeshift/timeshift.json --exclude=/lost+found/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=$snapshot_dir/"
 		
 		rsync --dry-run -v $rsync_params / "$mnt$snapshot_dir/$snapshotname" | less
 
