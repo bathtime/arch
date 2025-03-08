@@ -1776,6 +1776,7 @@ take_snapshot () {
 	[[ ! $snapshotname = '' ]] && snapshotname=" - $snapshotname"
 
 	if [[ $fstype = bcachefs ]]; then
+		echo -e "\nMake sure to exclude bcachefs subvolumes!\n" 
 		bcachefs subvolume snapshot $mnt/ "$mnt$snapshot_dir/$filename$snapshotname"
 	fi
 	if [[ $fstype = btrfs ]]; then
@@ -1837,9 +1838,14 @@ restore_snapshot () {
 		
 		rsync --dry-run $rsync_params -v "$mnt$snapshot_dir/$snapshot/" $mnt/ | less
 
-		echo -e "\nType 'y' to proceed with rsync or any other key to exit..."
-		read choice
+		if [[ $fstype = bcachefs ]]; then
+			echo -e "\nMake sure to exclude bcachefs subvolumes!\n" 
+		fi
 
+		echo -e "\nType 'y' to proceed with rsync or any other key to exit..."
+		
+		read choice
+		
 		if [[ $choice = y ]]; then
 
 			echo -e "\nRunning rsync...\n"
