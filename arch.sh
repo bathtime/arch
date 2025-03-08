@@ -1571,7 +1571,7 @@ snapper_setup () {
 		systemctl daemon-reload	
 		mount -a
 
-		arch-chroot $mnt btrfs subvolume list /
+		btrfs subvolume list /
 
 	else
 
