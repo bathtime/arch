@@ -94,7 +94,7 @@ rootPart=$rootPartNum
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
 fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(snapshots)			# used for btrfs and bcachefs
+subvols=()			# used for btrfs and bcachefs
 subvolPrefix='/'				# eg., '/' or '/@'
 snapshot_dir="/snapshots"
 linkedToTmp='true'			# Link /var/log and /var/tmp to /tmp?
@@ -469,7 +469,7 @@ create_partitions () {
 		for subvol in "${subvols[@]}"; do
 
 			echo -e "Creating subvolume: $mnt$subvolPrefix$subvol..."
-			#mkdir -p "$(dirname $mnt$subvolPrefix$subvol)"
+			mkdir -p "$(dirname $mnt$subvolPrefix$subvol)"
 		
 			bcachefs subvolume create "$mnt$subvolPrefix$subvol"
 		
@@ -482,6 +482,11 @@ create_partitions () {
 
 	mkdir -p $mnt/{dev,etc,proc,root,run,sys,tmp,var/cache/pacman/pkg,/var/tmp,/var/log}
 	
+	if [ "$fstype" = "bcachefs" ]; then
+		mkdir -p $mnt$snapshot_dir
+	fi
+
+
 	chmod -R 750 $mnt/root
 	mkdir -p $mnt/root/.gnupg
 	chmod -R 700 $mnt/root/.gnupg
