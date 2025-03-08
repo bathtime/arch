@@ -64,10 +64,11 @@ error_bypass=0
 
 
 # Make font big and readable and make sure the hook for the font is turnted on
-if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ] && [[ ! $(cat /etc/mkinitcpio.conf | grep -e '^HOOKS|consolefont') = '' ]]; then
-	setfont ter-132b
-fi
+#if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ] && [[ ! $(cat /etc/mkinitcpio.conf | grep -e '^HOOKS|consolefont') = '' ]]; then
+#	setfont ter-132b
+#fi
 
+setfont -d
 
 arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
