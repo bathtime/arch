@@ -2936,7 +2936,7 @@ clone_menu () {
 15. Create squashfs image
 16. Take btrfs/bcachefs snapshot
 17. Restore btrfs/bcachefs snapshot -> /
-19. Restore btrfs/bcachefs snapshot -> @
+18. Restore btrfs/bcachefs snapshot -> @
 19. Delete btrfs/bcachefs snapshot
 20. Rsync snapshot
 21. Bork system
