@@ -100,7 +100,7 @@ subvolPrefix='/@'				# eg., '/' or '/@'
 snapshot_dir="/.snapshots"
 linkedToTmp='true'			# Link /var/log and /var/tmp to /tmp?
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
-backup_type='timeshift'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
+backup_type='rsync'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
 encrypt=false
 efi_path=/efi
@@ -1462,7 +1462,7 @@ install_backup () {
 
 			
 	case $choice in
-		1|rsync)					echo "Nothing to do for rsync install." ;;
+		1|rsync)					pacstrap_install rsync ;;
 
 		2|snapper)				if [[ $fstype = btrfs ]]; then
 										snapper_setup
