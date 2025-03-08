@@ -2935,12 +2935,12 @@ clone_menu () {
 14. Shred $disk
 15. Create squashfs image
 16. Take btrfs/bcachefs snapshot
-17. Restore btrfs/bcachefs snapshot
-18. Delete btrfs/bcachefs snapshot
-19. Rsync snapshot
-20. Bork system
-21. Delete timeshift backups
-22. Restore btrfs/bcachefs snapshot reverse")
+17. Restore btrfs/bcachefs snapshot -> /
+19. Restore btrfs/bcachefs snapshot -> @
+19. Delete btrfs/bcachefs snapshot
+20. Rsync snapshot
+21. Bork system
+22. Delete timeshift backups")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -2971,11 +2971,11 @@ clone_menu () {
 			squashfs|15)	create_archive ;;
 			snapshot|16)	take_snapshot ;;
 			restore|17)		restore_snapshot ;;
-			delete|18)		delete_snapshot ;;
-			rsync|19)		rsync_snapshot ;;
-			bork|20)			bork_system ;;
-			timeshift|21)	delete_timeshift_snapshots ;;
-			restore|22)		restore_snapshot reverse ;;
+			restore|18)		restore_snapshot reverse ;;
+			delete|19)		delete_snapshot ;;
+			rsync|20)		rsync_snapshot ;;
+			bork|21)			bork_system ;;
+			timeshift|22)	delete_timeshift_snapshots ;;
       	'')				;;
       	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
