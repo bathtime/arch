@@ -63,6 +63,7 @@ error_check 1
 error_bypass=0
 
 
+# I could swear all developers have 20/20 vision :/
 if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ] && [[ ! $(cat /etc/mkinitcpio.conf | grep -e '^HOOKS|consolefont') = '' ]]; then
 	setfont ter-132b
 else
@@ -77,6 +78,7 @@ mnt=/mnt
 mnt2=/mnt2
 bootOwnPartition='true'		# make separate boot partition (true/false)?
 
+# Do we want a separate boot partition (which will be ext2)
 if [[ $bootOwnPartition = 'true' ]]; then
 	espPartNum=1
 	bootPartNum=2
@@ -93,23 +95,21 @@ espPart=$espPartNum
 bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
+efi_path=/efi
+encrypt=false
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(snapshots)			# used for btrfs and bcachefs
-subvolPrefix='/@'				# eg., '/' or '/@'
+subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir="/snapshots"
 linkedToTmp='true'			# Link /var/log and /var/tmp to /tmp?
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
 backup_type='rsync'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
-encrypt=false
-efi_path=/efi
 checkPartitions='true'		# Check that partitions are configured optimally?
 
 kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
-
-#rd.live.overlay.overlayfs=1
 
 user=user
 password='123456'
@@ -125,9 +125,9 @@ cage_install="cage firefox"
 
 weston_install="brightnessctl wireplumber pipewire pipewire-pulse weston firefox"
 
-gnome_install="gnome-shell polkit nautilus gnome-console xdg-user-dirs firefox dconf-editor gnome-browser-connector gnome-shell-extensions gnome-control-center gnome-weather"
-
 phosh_install="phosh phoc phosh-mobile-settings squeekboard firefox"
+
+gnome_install="gnome-shell polkit nautilus gnome-console xdg-user-dirs firefox dconf-editor gnome-browser-connector gnome-shell-extensions gnome-control-center gnome-weather"
 
 kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu"
 
@@ -137,14 +137,64 @@ timezone=Canada/Eastern
 
 offline=0
 reinstall=0
-copy_on_host='1'	# Set to '0' when installing from an arch iso in ram
+copy_on_host='1'	# Copy packages to host? Set to '0' when installing from an arch iso in ram
 
 wlan="wlan0"
 wifi_ssid=""
 wifi_pass=""
 
+# Used for a special sync percentage program
 dirty_threshold=0
 
+
+# Files that will be saved to /setup.tar as part of a backup
+CONFIG_FILES="
+
+/usr/lib/initcpio/install/liveroot
+/usr/lib/initcpio/hooks/liveroot
+
+/etc/overlayroot.conf
+/usr/bin/mount.overlayroot
+/usr/lib/initcpio/hooks/overlayroot
+/usr/lib/initcpio/install/overlayroot
+
+/etc/booster.yaml
+/etc/default/grub-btrfs/config
+/etc/dracut.conf.d/
+/etc/hostname
+/etc/hosts
+/etc/iwd/main.conf
+/etc/locale.conf
+/etc/locale.gen
+/etc/localtime
+/etc/NetworkManager/conf.d/
+/etc/NetworkManager/system-connections
+/etc/pacman.conf
+/etc/pacman-offline.conf
+/etc/pacman.d/mirrorlist
+/etc/security/limits.conf
+/etc/sudoers.d/
+/etc/sysctl.d/50-coredump.conf
+/etc/sysctl.d/99-cache-pressure.conf
+/etc/sysctl.d/99-net-keepalive.conf
+/etc/sysctl.d/99-net-timeout.conf
+/etc/sysctl.d/99-swappiness.conf
+/etc/systemd/coredump.conf.d/custom.conf
+/etc/systemd/system/getty@tty1.service.d/autologin.conf
+/etc/systemd/system/user-power.service
+/etc/udev/rules.d/powersave.rules
+/etc/vconsole.conf
+/etc/wpa_supplicant
+/var/lib/dhcpcd
+/var/lib/iwd
+/usr/lib/systemd/system-sleep/sleep.sh
+
+/home/$user/.bash_profile
+/home/$user/.bashrc
+/home/$user/.config/
+/home/$user/.hushlogin
+/home/$user/.local/
+/home/$user/.vimrc"
 
 
 check_pkg () {
@@ -359,8 +409,8 @@ delete_partitions () {
 fs_packages () {
 
 	case $fstype in
-		btrfs)		pacstrap_install btrfs-progs grub-btrfs ;;
-		bcachefs)	pacstrap_install bcachefs-tools ;;
+		btrfs)		pacstrap_install btrfs-progs grub-btrfs rsync ;;
+		bcachefs)	pacstrap_install bcachefs-tools rsync ;;
 		xfs)			pacstrap_install xfsprogs ;;
 		f2fs)			pacstrap_install f2fs-tools ;;
 		jfs)			pacstrap_install jfsutils ;;
@@ -373,7 +423,7 @@ create_partitions () {
 
 	check_on_root
 
-	delete_partitions
+	#delete_partitions
 	
 	systemctl daemon-reload
 
@@ -426,7 +476,7 @@ create_partitions () {
 						mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart 
 						
 						echo "Running tune2fs to create fast commit journal area..." 
-						tune2fs -O fast_commit $disk$rootPart
+						tune2fs -O fast_commit $disk$rootPart ;;
 
 		xfs)			mkfs.xfs -f -L ROOT $disk$rootPart ;;
 		jfs)			mkfs.jfs -f -L ROOT $disk$rootPart ;;
@@ -3132,66 +3182,6 @@ auto_install_menu () {
 
 }
 
-
-#/etc/mkinitcpio.conf
-#/etc/NetworkManager/conf.d/dhcp-client.conf
-#/etc/NetworkManager/conf.d/wifi_backend.conf
-
-CONFIG_FILES2="
-
-/usr/bin/librewolf
-/usr/lib/librewolf
-
-/home/$user/.librewolf"
-
-
-CONFIG_FILES="
-
-/usr/lib/initcpio/install/liveroot
-/usr/lib/initcpio/hooks/liveroot
-
-/etc/overlayroot.conf
-/usr/bin/mount.overlayroot
-/usr/lib/initcpio/hooks/overlayroot
-/usr/lib/initcpio/install/overlayroot
-
-/etc/booster.yaml
-/etc/default/grub-btrfs/config
-/etc/dracut.conf.d/
-/etc/hostname
-/etc/hosts
-/etc/iwd/main.conf
-/etc/locale.conf
-/etc/locale.gen
-/etc/localtime
-/etc/NetworkManager/conf.d/
-/etc/NetworkManager/system-connections
-/etc/pacman.conf
-/etc/pacman-offline.conf
-/etc/pacman.d/mirrorlist
-/etc/security/limits.conf
-/etc/sudoers.d/
-/etc/sysctl.d/50-coredump.conf
-/etc/sysctl.d/99-cache-pressure.conf
-/etc/sysctl.d/99-net-keepalive.conf
-/etc/sysctl.d/99-net-timeout.conf
-/etc/sysctl.d/99-swappiness.conf
-/etc/systemd/coredump.conf.d/custom.conf
-/etc/systemd/system/getty@tty1.service.d/autologin.conf
-/etc/systemd/system/user-power.service
-/etc/udev/rules.d/powersave.rules
-/etc/vconsole.conf
-/etc/wpa_supplicant
-/var/lib/dhcpcd
-/var/lib/iwd
-/usr/lib/systemd/system-sleep/sleep.sh
-
-/home/$user/.bash_profile
-/home/$user/.bashrc
-/home/$user/.config/
-/home/$user/.hushlogin
-/home/$user/.local/
-/home/$user/.vimrc"
 
 
 if [ "$1" ]; then
