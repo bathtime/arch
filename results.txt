@@ -1,0 +1,92 @@
+Thank you for this. I'm not the most knowledgeable in this area. How about a benchmark using FIO?
+For example, on ZFS, I ran the command:
+fio --filename=/mnt/test.fio --size=8GB --direct=1 --rw=randrw --bs=4k --ioengin
+e=libaio --iodepth=256 --runtime=120 --numjobs=4 --time_based --group_reporting --name=iops-test-job --e
+ta-newline=1
+The result was:
+ read: IOPS=1825, BW=7303KiB/s (7479kB/s)(856MiB/120005msec)
+   slat (nsec): min=1670, max=672148k, avg=1060729.82, stdev=7000507.39
+   clat (usec): min=19, max=2911.4k, avg=279329.74, stdev=353115.27
+    lat (msec): min=15, max=2911, avg=280.39, stdev=354.34
+   clat percentiles (msec):
+    |  1.00th=[   21],  5.00th=[   24], 10.00th=[   26], 20.00th=[   49],
+    | 30.00th=[   97], 40.00th=[  128], 50.00th=[  192], 60.00th=[  255],
+    | 70.00th=[  288], 80.00th=[  321], 90.00th=[  718], 95.00th=[ 1099],
+    | 99.00th=[ 1636], 99.50th=[ 2123], 99.90th=[ 2534], 99.95th=[ 2635],
+    | 99.99th=[ 2836]
+  bw (  KiB/s): min=   80, max=30312, per=100.00%, avg=7404.07, stdev=1908.22, samples=944
+  iops        : min=   20, max= 7578, avg=1850.97, stdev=477.04, samples=944
+ write: IOPS=1825, BW=7304KiB/s (7479kB/s)(856MiB/120005msec); 0 zone resets
+   slat (usec): min=2, max=672240, avg=1124.30, stdev=7348.50
+   clat (usec): min=17, max=2884.5k, avg=279157.47, stdev=353245.75
+    lat (msec): min=15, max=2884, avg=280.28, stdev=354.53
+   clat percentiles (msec):
+    |  1.00th=[   21],  5.00th=[   24], 10.00th=[   27], 20.00th=[   50],
+    | 30.00th=[   97], 40.00th=[  128], 50.00th=[  192], 60.00th=[  255],
+    | 70.00th=[  288], 80.00th=[  321], 90.00th=[  709], 95.00th=[ 1116],
+    | 99.00th=[ 1636], 99.50th=[ 2140], 99.90th=[ 2534], 99.95th=[ 2668],
+    | 99.99th=[ 2836]
+  bw (  KiB/s): min=  184, max=29908, per=100.00%, avg=7415.78, stdev=1909.20, samples=943
+  iops        : min=   46, max= 7476, avg=1853.90, stdev=477.29, samples=943
+ lat (usec)   : 20=0.01%, 50=0.01%
+ lat (msec)   : 20=0.44%, 50=19.84%, 100=10.44%, 250=28.20%, 500=29.43%
+ lat (msec)   : 750=1.80%, 1000=3.72%, 2000=5.52%, >=2000=0.59%
+ cpu          : usr=0.29%, sys=3.26%, ctx=170128, majf=9, minf=68
+ IO depths    : 1=0.1%, 2=0.1%, 4=0.1%, 8=0.1%, 16=0.1%, 32=0.1%, >=64=99.9%
+    submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+    complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.1%
+    issued rwts: total=219112,219127,0,0 short=0,0,0,0 dropped=0,0,0,0
+    latency   : target=0, window=0, percentile=100.00%, depth=256
+
+Run status group 0 (all jobs):
+  READ: bw=7303KiB/s (7479kB/s), 7303KiB/s-7303KiB/s (7479kB/s-7479kB/s), io=856MiB (897MB), run=120005-120005msec
+ WRITE: bw=7304KiB/s (7479kB/s), 7304KiB/s-7304KiB/s (7479kB/s-7479kB/s), io=856MiB (898MB), run=120005-120005msec
+
+Only issue is that I don't know what these results mean. What exact data would I use from those results to make the graph? With that info, I can do benchmarks for btrfs, bcachefs, ext4, xfs, f2fs, nilfs2, jfs, and zfs and put them all into charts.
+Thanks
+
+
+
+
+
+
+
+
+fio --filename=/mnt/test.fio --size=8GB --direct=1 --rw=randrw --bs=4k --ioengine=libaio --iodepth=256 --runtime=120 --numjobs=1 --time_based --group_reporting --name=iops-test-job --eta-newline=1
+
+
+  read: IOPS=1593, BW=6373KiB/s (6526kB/s)(747MiB/120001msec)
+    slat (nsec): min=1465, max=657269k, avg=295695.26, stdev=3287431.57
+    clat (usec): min=2, max=2305.2k, avg=79797.61, stdev=125704.24
+     lat (usec): min=15, max=2305.2k, avg=80093.31, stdev=126067.97
+    clat percentiles (msec):
+     |  1.00th=[   14],  5.00th=[   16], 10.00th=[   16], 20.00th=[   17],
+     | 30.00th=[   18], 40.00th=[   19], 50.00th=[   21], 60.00th=[   25],
+     | 70.00th=[   83], 80.00th=[  157], 90.00th=[  207], 95.00th=[  245],
+     | 99.00th=[  760], 99.50th=[  810], 99.90th=[ 1099], 99.95th=[ 1670],
+     | 99.99th=[ 2005]
+   bw (  KiB/s): min=  160, max=19616, per=100.00%, avg=6482.92, stdev=5896.09, samples=233
+   iops        : min=   40, max= 4904, avg=1620.73, stdev=1474.02, samples=233
+  write: IOPS=1590, BW=6361KiB/s (6514kB/s)(745MiB/120001msec); 0 zone resets
+    slat (usec): min=2, max=662438, avg=328.52, stdev=4905.61
+    clat (usec): min=16, max=2305.7k, avg=80362.16, stdev=127001.94
+     lat (usec): min=31, max=2305.7k, avg=80690.68, stdev=127417.97
+    clat percentiles (msec):
+     |  1.00th=[   14],  5.00th=[   16], 10.00th=[   16], 20.00th=[   17],
+     | 30.00th=[   18], 40.00th=[   19], 50.00th=[   21], 60.00th=[   26],
+     | 70.00th=[   84], 80.00th=[  157], 90.00th=[  207], 95.00th=[  247],
+     | 99.00th=[  760], 99.50th=[  810], 99.90th=[ 1099], 99.95th=[ 1703],
+     | 99.99th=[ 2072]
+   bw (  KiB/s): min=  168, max=18688, per=100.00%, avg=6473.24, stdev=5863.13, samples=233
+   iops        : min=   42, max= 4672, avg=1618.31, stdev=1465.78, samples=233
+  lat (usec)   : 4=0.01%, 20=0.01%, 50=0.01%, 100=0.01%, 250=0.01%
+  lat (usec)   : 500=0.01%, 750=0.01%, 1000=0.01%
+  lat (msec)   : 2=0.01%, 4=0.01%, 10=0.02%, 20=47.17%, 50=18.10%
+  lat (msec)   : 100=7.52%, 250=22.42%, 500=3.16%, 750=0.53%, 1000=0.92%
+  lat (msec)   : 2000=0.12%, >=2000=0.01%
+  cpu          : usr=0.66%, sys=8.49%, ctx=107268, majf=0, minf=12
+  IO depths    : 1=0.1%, 2=0.1%, 4=0.1%, 8=0.1%, 16=0.1%, 32=0.1%, >=64=100.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.1%
+
+
