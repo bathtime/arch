@@ -99,7 +99,7 @@ efi_path=/efi
 encrypt=false
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(snapshots)			# used for btrfs and bcachefs
 subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir="/snapshots"
@@ -423,7 +423,8 @@ create_partitions () {
 
 	check_on_root
 
-	#delete_partitions
+
+	delete_partitions
 	
 	systemctl daemon-reload
 
@@ -461,7 +462,8 @@ create_partitions () {
 
 	# Won't work without a small delay
 	sync_disk
-	#sleep 1
+	echo "Sleeping one second..."
+	sleep 1
 
 	mkfs.fat -F 32 -n EFI $disk$espPart 
 	mkswap -L SWAP $disk$swapPart
