@@ -105,7 +105,7 @@ backup_type='rsync'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
 encrypt=false
 efi_path=/efi
-
+checkPartitions='true'		# Check that partitions are configured optimally?
 
 kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
 
@@ -381,7 +381,7 @@ create_partitions () {
 
 	if [ $bootOwnPartition = true ]; then
 
-		parted -s $disk mklabel gpt \
+		parted --fix --align optimal -s $disk mklabel gpt \
 			mkpart ESP fat32 1Mib 512Mib \
 			mkpart BOOT ext2 512Mib 1024Mib \
 			mkpart SWAP linux-swap 1024Mib $startSwap \
@@ -392,7 +392,7 @@ create_partitions () {
 		
 	else
 
-		parted -s $disk mklabel gpt \
+		parted --fix --align optimal -s $disk mklabel gpt \
 			mkpart ESP fat32 1Mib 512Mib \
 			mkpart SWAP linux-swap 1024Mib $startSwap \
 			set $espPartNum esp on \
@@ -423,10 +423,11 @@ create_partitions () {
 
 		btrfs)		mkfs.btrfs -f -L ROOT $disk$rootPart ;;
 		ext4)			
-						mkfs.ext4 -F -b 4096 -q -t ext4 -L ROOT $disk$rootPart 
-						echo "Using tune2fs to create fast commit journal area. Please be patient..." 
+						mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart 
+						
+						echo "Running tune2fs to create fast commit journal area..." 
 						tune2fs -O fast_commit $disk$rootPart
-						tune2fs -l $disk$rootPart | grep features ;;
+
 		xfs)			mkfs.xfs -f -L ROOT $disk$rootPart ;;
 		jfs)			mkfs.jfs -f -L ROOT $disk$rootPart ;;
 		f2fs)			mkfs.f2fs -f -l ROOT $disk$rootPart ;;
@@ -436,11 +437,22 @@ create_partitions () {
 							bcachefs format -f -L ROOT --encrypted $disk$rootPart
 							bcachefs unlock -k session $disk$rootPart
 						else
-							bcachefs format --block_size=4096 -f -L ROOT $disk$rootPart
+							bcachefs format -f -L ROOT $disk$rootPart
 						fi
 						;;
 	esac
+	
+	if [[ $checkPartitions = true ]]; then
 
+		echo -e "\nRunning tests to check partitions\n"
+
+		if [[ -f /home/$user/.local/bin/checkpartitionsalignment.sh ]]; then
+			/home/user/.local/bin/./checkpartitionsalignment.sh $disk
+			sleep 1
+		fi
+
+	fi
+	
 	parted -s $disk print
 
 	sync_disk
@@ -472,8 +484,6 @@ create_partitions () {
 		for subvol in "${subvols[@]}"; do
 
 			echo -e "Creating subvolume: $mnt$subvolPrefix$subvol..."
-			#mkdir -p "$(dirname $mnt$subvolPrefix$subvol)"
-		
 			bcachefs subvolume create "$mnt$subvolPrefix$subvol"
 		
 		done
@@ -2859,6 +2869,22 @@ benchmark () {
 	mount_disk
 
 	tempfile="$mnt/bench.tmp"
+   
+	choice=("1. Quit
+2. dd
+3. iozone
+10. All")
+
+   echo
+   echo "${choice[@]}" | column
+   echo  
+
+   read -p "Which benchmark to run? " choice
+
+   case $choice in
+      quit|1)        ;;
+
+		dd|2)
 
 	cd $mnt/
 	rm -rf $tempfile
@@ -2882,6 +2908,20 @@ benchmark () {
 	echo -e "\nPress any key to continue."
 	read -s -N 1
 	echo
+
+	;;
+	iozone|3)	echo -e "\nSequential 1M read/write:\n"
+					#iozone -e -I -s 1g -r 1m -i 0 -i 1
+					iozone -e -I -s 1g -r 1m -i 0 -i 1
+
+					echo -e "\nSequential 128k read/write:\n"
+					iozone -e -I -s 1g -r 128k -i 0 -i 1
+
+					echo -e "\nRandom 4k read/write:\n"
+					iozone -e -I -s 1g -r 4k -i 0 -i 2 -i 1
+
+					;;
+	esac
 
 }
 
