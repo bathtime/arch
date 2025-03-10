@@ -486,7 +486,12 @@ create_partitions () {
 						
 						if [[ $encrypt = true ]]; then
 
-							# set 'bcachefs' flag in hooks (/etc/mkinitcpio.conf) and add module 'bcachefs'
+							# In /etc/mkinitcpio.conf
+							# - add module 'bcachefs'
+							# - add 'bcachefs' hook after fsck if it exists
+
+							read -p "You MUST add 'bcachefs' module and hook (after filesystem)!!!"
+
 							bcachefs format -f -L ROOT --encrypted $disk$rootPart
 							bcachefs unlock -k session $disk$rootPart
 						else
@@ -602,6 +607,7 @@ mount_disk () {
 		elif [[ $fstype = bcachefs ]]; then
 	
 			if [[ $encrypt = true ]]; then
+				keyctl link @u @s
 				bcachefs unlock -k session $disk$rootPart
 			fi
 
