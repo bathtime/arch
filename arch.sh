@@ -408,9 +408,10 @@ delete_partitions () {
 fs_packages () {
 
 	case $fstype in
-		btrfs)		pacstrap_install btrfs-progs grub-btrfs rsync
-						pacman -U --noconfirm /var/cache/pacman/pkg/btrfs-progs-*.tar.zst ;;
-		bcachefs)	pacstrap_install bcachefs-tools ;;
+		btrfs)		pacstrap_install "btrfs-progs grub-btrfs rsync"
+						#pacman -U --noconfirm /var/cache/pacman/pkg/btrfs-progs-*.tar.zst 
+						;;
+		bcachefs)	pacstrap_install "bcachefs-tools rsync" ;;
 		xfs)			pacstrap_install xfsprogs ;;
 		f2fs)			pacstrap_install f2fs-tools ;;
 		jfs)			pacstrap_install jfsutils ;;
