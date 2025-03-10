@@ -99,7 +99,7 @@ efi_path=/efi
 encrypt=false
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='ext4'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=()			# used for btrfs and bcachefs
 subvolPrefix='/'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir="/snapshots"
