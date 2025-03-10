@@ -596,6 +596,7 @@ mount_disk () {
 
 			else
 			
+				echo mount -t $fstype --mkdir $disk$rootPart $mnt
 				mount -t $fstype --mkdir $disk$rootPart $mnt
 			
 			fi
@@ -634,10 +635,12 @@ mount_disk () {
 	fi
 	
 	if [[ ! $(mount | grep -E $disk$bootPart | grep -E "on $mnt/boot") ]] && [[ $bootOwnPartition = true ]]; then
+		echo mount --mkdir $disk$bootPart $mnt/boot
 		mount --mkdir $disk$bootPart $mnt/boot
 	fi
 
 	if [[ ! $(mount | grep -E $disk$espPart | grep -E "on $mnt$efi_path") ]]; then
+		echo mount --mkdir $disk$espPart $mnt$efi_path
 		mount --mkdir $disk$espPart $mnt$efi_path
 	fi
 
@@ -2085,7 +2088,7 @@ restore_snapshot () {
 
 			echo -e "\nRunning rsync...\n"
 			
-			if [[ $1 = '@' ]]; then
+			if [[ $2 = @ ]]; then
 
 				rsync $rsync_params --info=progress2 "$mnt$snapshot_dir/$snapshot/" $mnt2
 		
