@@ -99,13 +99,13 @@ efi_path=/efi
 encrypt=false
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(snapshots)			# used for btrfs and bcachefs
-subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
+fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+subvols=()			# used for btrfs and bcachefs
+subvolPrefix='/'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir="/snapshots"
 linkedToTmp='true'			# Link /var/log and /var/tmp to /tmp?
-backup_install='true'		# say 'true' to do snapshots/rysncs during install
-backup_type='rsync'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
+backup_install='false'		# say 'true' to do snapshots/rysncs during install
+backup_type='none'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
 checkPartitions='true'		# Check that partitions are configured optimally?
 
@@ -129,7 +129,7 @@ phosh_install="phosh phoc phosh-mobile-settings squeekboard firefox"
 
 gnome_install="gnome-shell polkit nautilus gnome-console xdg-user-dirs firefox dconf-editor gnome-browser-connector gnome-shell-extensions gnome-control-center gnome-weather"
 
-kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu"
+kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu kdiskmark"
 
 ucode=intel-ucode
 hostname=Arch
@@ -410,7 +410,7 @@ fs_packages () {
 
 	case $fstype in
 		btrfs)		pacstrap_install btrfs-progs grub-btrfs rsync ;;
-		bcachefs)	pacstrap_install bcachefs-tools rsync ;;
+		bcachefs)	pacstrap_install bcachefs-tools ;;
 		xfs)			pacstrap_install xfsprogs ;;
 		f2fs)			pacstrap_install f2fs-tools ;;
 		jfs)			pacstrap_install jfsutils ;;
@@ -1958,6 +1958,45 @@ clone () {
 }
 
 
+rsync_snapshot () {
+
+	mount_disk	
+
+	mkdir -p $mnt$snapshot_dir
+
+	echo -e "\nList of snapshots:\n"
+	ls -1N $mnt$snapshot_dir/
+
+	if [[ $1 = '' ]]; then
+		echo -e "\n\nWhat would you like to call this rsync snapshot?\n"
+		read snapshotname
+	else
+		snapshotname="$1"
+	fi
+
+
+		echo -e "\nRunning dry run first..."
+		sleep 1
+
+		rsync_params="-axHAXSW --del --exclude=/run/timeshift/ --exclude=/etc/timeshift/timeshift.json --exclude=/lost+found/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=$snapshot_dir/"
+		
+		rsync --dry-run -v $rsync_params / "$mnt$snapshot_dir/$snapshotname" | less
+
+		echo -e "\nType 'y' to proceed with rsync or any other key to exit..."
+		read choice
+
+		if [[ $choice = y ]]; then
+
+			echo -e "\nRunning rsync...\n"
+			rsync $rsync_params --info=progress2 / "$snapshot_dir/$snapshotname"
+	
+		else
+			echo "Exiting."
+		fi
+
+}
+
+
 take_snapshot () {
 
 	mount_disk
@@ -2128,45 +2167,6 @@ delete_timeshift_snapshots () {
 }
 
 
-rsync_snapshot () {
-
-	mount_disk	
-
-	mkdir -p $mnt$snapshot_dir
-
-	echo -e "\nList of snapshots:\n"
-	ls -1N $mnt$snapshot_dir/
-
-	if [[ $1 = '' ]]; then
-		echo -e "\n\nWhat would you like to call this rsync snapshot?\n"
-		read snapshotname
-	else
-		snapshotname="$1"
-	fi
-
-
-		echo -e "\nRunning dry run first..."
-		sleep 1
-
-		rsync_params="-axHAXSW --del --exclude=/run/timeshift/ --exclude=/etc/timeshift/timeshift.json --exclude=/lost+found/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=$snapshot_dir/"
-		
-		rsync --dry-run -v $rsync_params / "$mnt$snapshot_dir/$snapshotname" | less
-
-		echo -e "\nType 'y' to proceed with rsync or any other key to exit..."
-		read choice
-
-		if [[ $choice = y ]]; then
-
-			echo -e "\nRunning rsync...\n"
-			rsync $rsync_params --info=progress2 / "$snapshot_dir/$snapshotname"
-	
-		else
-			echo "Exiting."
-		fi
-
-}
-
-
 bork_system () {
 
 	if [[ $mnt = '' ]]; then
@@ -2202,12 +2202,6 @@ create_archive () {
 
 	cd / 
 	rm -rf /root.squashfs
-	
-	#time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp/ -e /run -e /mnt -e $snapshot_dir/ -e /home/$user/.cache/ -e /setup.tar -e /var/cache/pacman/ -e /root/.cache/ -e /run/timeshift/ -e /var/tmp/ -e /var/log/ -e /etc/pacman.d/gnupg/ -e /home/$user/.local/share/Trash/ -e /usr/share/doc/ -e /usr/share/man/ -e /usr/share/wallpapers -e /usr/share/gtk-doc -e /usr/share/fonts/noto -e /usr/lib/firmware/nvidia -e /usr/lib/firmware/amdgpu -comp lz4  
-	
-	#time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e /boot/ -e /efi/ -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp/ -e /run -e /mnt -e $snapshot_dir/ -e /home/$user/.cache/ -e /setup.tar -e /var/cache/pacman/ -e /root/.cache/ -e /run/timeshift/ -e /var/tmp/ -e /var/log/ -e /etc/pacman.d/gnupg/ -e /home/$user/.local/share/Trash/ -e /usr/share/doc/ -e /usr/share/man/ -e /usr/share/wallpapers -e /usr/share/gtk-doc -e /usr/share/fonts/noto -e /usr/lib/firmware/nvidia -e /usr/lib/firmware/amdgpu -comp gzip
-	
-	#time mksquashfs / root.squashfs -mem-percent 50 -no-recovery -noappend -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp/ -e /run -e /mnt -e $snapshot_dir/ -e /home/$user/.cache/ -e /root/.cache/ -e /run/timeshift/ -e /var/tmp/ -e /var/log/ -e /home/$user/.local/share/Trash/ -comp gzip
 	
 	time mksquashfs / root.squashfs -comp lz4 -mem-percent 25 -no-recovery -noappend -e root.squashfs -e /dev/ -e /proc/ -e /sys -e /tmp/ -e /run -e /mnt -e $snapshot_dir/ -e /home/$user/.cache/ -e /root/.cache/ -e /var/tmp/ -e /var/log/ -e /home/$user/.local/share/Trash/
 
