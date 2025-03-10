@@ -103,7 +103,6 @@ fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=()			# used for btrfs and bcachefs
 subvolPrefix='/'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir="/snapshots"
-linkedToTmp='true'			# Link /var/log and /var/tmp to /tmp?
 backup_install='false'		# say 'true' to do snapshots/rysncs during install
 backup_type='none'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
@@ -536,6 +535,10 @@ create_partitions () {
 		for subvol in "${subvols[@]}"; do
 
 			echo -e "Creating subvolume: $mnt$subvolPrefix$subvol..."
+			
+			# Cannot create the subvolume without dirname path (..)
+			mkdir -p "$(dirname $mnt$subvolPrefix$subvol)"
+
 			bcachefs subvolume create "$mnt$subvolPrefix$subvol"
 		
 		done
@@ -1734,27 +1737,6 @@ Storage=none
 ProcessSizeMax=0' > $mnt/etc/systemd/coredump.conf.d/custom.conf
 
 	echo '* hard core 0' > $mnt/etc/security/limits.conf
-
-	if [[ $linkedToTmp = true ]]; then
-	
-		# TODO: find out how to put all links in one variable
-		rm -rf $mnt/var/log
-   	rm -rf $mnt/var/tmp
-   
-		sync_disk
-               
-   	# TODO: find a way to create symbolic link from host
-   	if [[ $mnt = '' ]]; then
-   		ln -s $mnt/tmp $mnt/var/log
-   		ln -s $mnt/tmp $mnt/var/tmp
-   		chmod -R 1777 $mnt/var/tmp
-		else 
-      	arch-chroot $mnt ln -s /tmp /var/log
-      	arch-chroot $mnt ln -s /tmp /var/tmp
-			arch-chroot $mnt chmod -R 1777 /var/tmp
-		fi
-	
-	fi
 
 }
 
