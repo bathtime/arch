@@ -99,12 +99,12 @@ efi_path=/efi
 encrypt=false
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='ext4'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=()			# used for btrfs and bcachefs
-subvolPrefix='/'				# eg., '/' or '/@' Used for btrfs and bcachefs only
+fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+subvols=(snapshots var/tmp)			# used for btrfs and bcachefs
+subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir="/snapshots"
 backup_install='false'		# say 'true' to do snapshots/rysncs during install
-backup_type='none'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
+backup_type='rsync'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
 checkPartitions='true'		# Check that partitions are configured optimally?
 
@@ -2056,7 +2056,7 @@ restore_snapshot () {
 		#--info=progress2 : instead of --progress is useful for large transfers
 		# arch recommended: -aAXHv
 
-		rsync_params="-axHAXSW --del --exclude=/etc/timeshift/timeshift.json --exclude=/run/timeshift/ --exclude=/lost+found/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=$snapshot_dir/"
+		rsync_params="-axHAXSW --del --exclude=/etc/timeshift/timeshift.json --exclude=/run/timeshift/ --exclude=/lost+found/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=$snapshot_dir/ --exclude=/@snapshots/ --exclude=/@var/tmp/ --exclude=$mnt2/"
 		
 		if [[ $1 = 'current' ]]; then
 
