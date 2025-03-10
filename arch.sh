@@ -1814,23 +1814,16 @@ install_hooks () {
 
 			
 	case $choice in
-		1|liveroot)		touch $mnt/etc/vconsole.conf
+		1|liveroot)		[ ! "$fstype" = "btrfs" ] && echo "Not a btrfs file system." && return
+
+							touch $mnt/etc/vconsole.conf
 							pacstrap_install rsync squashfs-tools
 
-							if [ "$fstype" = "btrfs" ]; then
-								[ "$(cat $mnt/usr/lib/initcpio/install/liveroot | grep 'add_binary btrfs')" ] || sed -i 's/build() {/& \n        add_binary btrfs/g' $mnt/usr/lib/initcpio/install/liveroot
-							fi
+							[ "$(cat $mnt/usr/lib/initcpio/install/liveroot | grep 'add_binary btrfs')" ] || sed -i 's/build() {/& \n        add_binary btrfs/g' $mnt/usr/lib/initcpio/install/liveroot
 
-							echo 'MODULES=(lz4)
-BINARIES=()
-FILES=()
-#HOOKS=(base udev keyboard autodetect kms modconf sd-vconsole block filesystems liveroot resume)
-#HOOKS=(base udev keyboard autodetect kms modconf block filesystems liveroot resume)
-#HOOKS=(autodetect base keyboard kms block udev filesystems fsck liveroot resume)
-HOOKS=(base udev autodetect modconf kms consolefont keyboard keymap block filesystems fsck liveroot resume)
-COMPRESSION="lz4"
-COMPRESSION_OPTIONS=()
-MODULES_DECOMPRESS="no"' > $mnt/etc/mkinitcpio.conf
+							#cat $mnt/etc/mkinitcpio.conf | grep ^MODULES= | grep -v liveroot && sed -i 's/lz4)/lz4 liveroot)/' $mnt/etc/mkinitcpio.conf
+							
+							cat $mnt/etc/mkinitcpio.conf | grep ^HOOKS | grep -v liveroot && sed -i 's/resume)/liveroot resume)/' $mnt/etc/mkinitcpio.conf
 
 							# So systemd won't remount as 'rw'
 							#systemctl --root=$mnt mask systemd-remount-fs.service
@@ -1842,16 +1835,9 @@ MODULES_DECOMPRESS="no"' > $mnt/etc/mkinitcpio.conf
 							#https://aur.archlinux.org/packages/overlayroot
 							#https://github.com/hilderingt/archlinux-overlayroot
 	
-							echo 'MODULES=(lz4 overlay)
-BINARIES=()
-FILES=()
-#HOOKS=(base udev keyboard autodetect kms modconf sd-vconsole block filesystems liveroot resume)
-#HOOKS=(base udev keyboard autodetect kms modconf block filesystems liveroot resume)
-#HOOKS=(autodetect base keyboard kms block udev filesystems fsck liveroot resume)
-HOOKS=(base udev autodetect modconf kms keyboard consolefont keymap block filesystems fsck resume overlayroot)
-COMPRESSION="lz4"
-COMPRESSION_OPTIONS=()
-MODULES_DECOMPRESS="no"' > $mnt/etc/mkinitcpio.conf
+							cat $mnt/etc/mkinitcpio.conf | grep ^MODULES= | grep -v overlay && sed -i 's/lz4)/lz4 overlay)/' $mnt/etc/mkinitcpio.conf
+
+							cat $mnt/etc/mkinitcpio.conf | grep ^HOOKS | grep -v overlayroot && sed -i 's/resume)/resume overlayroot)/' $mnt/etc/mkinitcpio.conf
 
 							#	pacman --noconfirm -U /home/user/.local/bin/overlayroot*.zst
 
