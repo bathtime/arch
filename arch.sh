@@ -99,9 +99,9 @@ efi_path=/efi
 encrypt=true
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(snapshots var/tmp)			# used for btrfs and bcachefs
-subvolPrefix='/'				# eg., '/' or '/@' Used for btrfs and bcachefs only
+subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir="/snapshots"
 backup_install='false'		# say 'true' to do snapshots/rysncs during install
 backup_type='rsync'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
@@ -395,6 +395,7 @@ delete_partitions () {
 
 	echo -e "\nWiping disk...\n"
 
+
 	wipefs -af $disk
 
 	check_pkg gptfdisk
@@ -407,7 +408,8 @@ delete_partitions () {
 fs_packages () {
 
 	case $fstype in
-		btrfs)		pacstrap_install btrfs-progs grub-btrfs rsync ;;
+		btrfs)		pacstrap_install btrfs-progs grub-btrfs rsync
+						pacman -U --noconfirm /var/cache/pacman/pkg/btrfs-progs-*.tar.zst ;;
 		bcachefs)	pacstrap_install bcachefs-tools ;;
 		xfs)			pacstrap_install xfsprogs ;;
 		f2fs)			pacstrap_install f2fs-tools ;;
@@ -489,11 +491,12 @@ create_partitions () {
 							# In /etc/mkinitcpio.conf
 							# - add module 'bcachefs'
 							# - add 'bcachefs' hook after fsck if it exists
-
-							read -p "You MUST add 'bcachefs' module and hook (after filesystem)!!!"
-
+							
+							read -p "You MUST add 'bcachefs' module and hook (after 'filesystem')!"
+							
 							bcachefs format -f -L ROOT --encrypted $disk$rootPart
 							bcachefs unlock -k session $disk$rootPart
+
 						else
 							bcachefs format -f -L ROOT $disk$rootPart
 						fi
@@ -688,12 +691,12 @@ Server = file:///var/cache/pacman/pkg/
 
 	packages="$base_install"
 
-	[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs grub-btrfs rsync"
-	[ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
-	[ "$fstype" = "jfs" ] && packages="$packages jfsutils"
-	[ "$fstype" = "f2fs" ] && packages="$packages f2fs-tools"
-	[ "$fstype" = "nilfs2" ] && packages="$packages nilfs-utils"
-	[ "$fstype" = "bcachefs" ] && packages="$packages bcachefs-tools rsync"
+	#[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs grub-btrfs rsync"
+	#[ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
+	#[ "$fstype" = "jfs" ] && packages="$packages jfsutils"
+	#[ "$fstype" = "f2fs" ] && packages="$packages f2fs-tools"
+	#[ "$fstype" = "nilfs2" ] && packages="$packages nilfs-utils"
+	#[ "$fstype" = "bcachefs" ] && packages="$packages bcachefs-tools rsync"
 
 	pacstrap_install $packages
 
