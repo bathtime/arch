@@ -2028,6 +2028,9 @@ restore_snapshot () {
 
 	mount_disk	
 
+	# Cannot restore to @ if we'er already on /. This function is for when your not on @
+	[[ $2 = @ ]] && check_on_root
+	
 	echo -e "\nWhich snapshot would you like to recover?\n"
 
 	cd $mnt$snapshot_dir
@@ -2058,18 +2061,17 @@ restore_snapshot () {
 
 		rsync_params="-axHAXSW --del --exclude=/etc/timeshift/timeshift.json --exclude=/run/timeshift/ --exclude=/lost+found/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=$snapshot_dir/ --exclude=/@snapshots/ --exclude=/@var/tmp/ --exclude=$mnt2/"
 		
-		if [[ $1 = 'current' ]]; then
+		echo -e "\nRestoring from $mnt$snapshot_dir/$snapshot/ to $2...\n"
+		if [[ $2 = @ ]]; then
 
-			echo -e "\nRestoring from $mnt$snapshot_dir/$snapshot/ to $mnt/...\n"
-			rsync --dry-run $rsync_params -v "$mnt$snapshot_dir/$snapshot/" $mnt/ | less
-	
-		else
-			
-			echo -e "\nRestoring from $mnt$snapshot_dir/$snapshot/ to @...\n"
 			mount -t btrfs --mkdir -o subvol=@ $disk$rootPart $mnt2
-
+			
 			rsync --dry-run $rsync_params -v "$mnt$snapshot_dir/$snapshot/" $mnt2 | less
 		
+		else
+			
+			rsync --dry-run $rsync_params -v "$mnt$snapshot_dir/$snapshot/" $mnt/ | less
+	
 		fi
 	
 		if [[ $fstype = bcachefs ]]; then
@@ -2084,13 +2086,13 @@ restore_snapshot () {
 
 			echo -e "\nRunning rsync...\n"
 			
-			if [[ $1 = 'current' ]]; then
+			if [[ $1 = '@' ]]; then
 
-				rsync $rsync_params --info=progress2 "$mnt$snapshot_dir/$snapshot/" $mnt/
+				rsync $rsync_params --info=progress2 "$mnt$snapshot_dir/$snapshot/" $mnt2
 		
 			else
 			
-				rsync $rsync_params --info=progress2 "$mnt$snapshot_dir/$snapshot/" $mnt2
+				rsync $rsync_params --info=progress2 "$mnt$snapshot_dir/$snapshot/" $mnt/
 		
 			fi
 	
@@ -3002,8 +3004,8 @@ clone_menu () {
 14. Shred $disk
 15. Create squashfs image
 16. Take btrfs/bcachefs snapshot
-17. Restore btrfs/bcachefs snapshot -> /
-18. Restore btrfs/bcachefs snapshot -> @
+17. Restore btrfs/bcachefs $mnt$snapshot_dir/ -> $mnt/
+18. Restore btrfs/bcachefs $mnt$snapshot_dir/ -> @
 19. Delete btrfs/bcachefs snapshot
 20. Rsync snapshot
 21. Bork system
@@ -3037,8 +3039,8 @@ clone_menu () {
 			shred|14)		unmount_disk; shred -n 1 -v -z $disk ;;
 			squashfs|15)	create_archive ;;
 			snapshot|16)	take_snapshot ;;
-			restore|17)		restore_snapshot current ;;
-			restore|18)		restore_snapshot ;;
+			restore|17)		restore_snapshot $mnt$snapshot_dir/ $mnt/ ;;
+			restore|18)		restore_snapshot $mnt$snapshot_dir/ @ ;;
 			delete|19)		delete_snapshot ;;
 			rsync|20)		rsync_snapshot ;;
 			bork|21)			bork_system ;;
