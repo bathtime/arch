@@ -63,7 +63,7 @@ error_check 1
 error_bypass=0
 
 
-# I could swear all developers have 20/20 vision :/
+# fml, I could swear all developers have 20/20 vision :/
 if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ] && [[ ! $(cat /etc/mkinitcpio.conf | grep -e '^HOOKS|consolefont') = '' ]]; then
 	setfont ter-132b
 else
@@ -96,12 +96,12 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 efi_path=/efi
-encrypt=false
+encrypt=true
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
 fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(snapshots var/tmp)			# used for btrfs and bcachefs
-subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
+subvolPrefix='/'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir="/snapshots"
 backup_install='false'		# say 'true' to do snapshots/rysncs during install
 backup_type='rsync'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
@@ -142,8 +142,6 @@ wlan="wlan0"
 wifi_ssid=""
 wifi_pass=""
 
-# Used for a special sync percentage program
-dirty_threshold=0
 
 
 # Files that will be saved to /setup.tar as part of a backup
@@ -246,7 +244,6 @@ unmount_disk () {
 
 	[ "$mnt" = '' ] && return
 
-
 	if [[ $(mount | grep -E $disk$espPart | grep -E "on $mnt$efi_path") ]]; then
 		echo "Unmounting $mnt$efi_path..."
 		umount -n -R $mnt$efi_path
@@ -269,6 +266,8 @@ unmount_disk () {
 		[[ "$(pwd | grep $mnt)" ]] && cd /
 
 		umount -n -R $mnt
+		
+		sleep .1
 
 		# Time to get rugged and tough!
 		if [[ "$(mount | grep /mnt)" ]]; then
@@ -282,7 +281,7 @@ unmount_disk () {
 				cd /
 
 				if [[ "$(mount | grep /mnt)" ]]; then
-					sleep 2
+					sleep .1
 					umount -l $mnt
 				else
 					mounted=0
@@ -484,7 +483,10 @@ create_partitions () {
 		f2fs)			mkfs.f2fs -f -l ROOT $disk$rootPart ;;
 		nilfs2)		mkfs.nilfs2 -f -L ROOT $disk$rootPart ;;
 		bcachefs)		
+						
 						if [[ $encrypt = true ]]; then
+
+							# set 'bcachefs' flag in hooks (/etc/mkinitcpio.conf) and add module 'bcachefs'
 							bcachefs format -f -L ROOT --encrypted $disk$rootPart
 							bcachefs unlock -k session $disk$rootPart
 						else
@@ -599,6 +601,11 @@ mount_disk () {
 			
 		elif [[ $fstype = bcachefs ]]; then
 	
+			if [[ $encrypt = true ]]; then
+				bcachefs unlock -k session $disk$rootPart
+			fi
+
+			echo mount -t $fstype --mkdir $disk$rootPart $mnt
 			mount -t $fstype --mkdir $disk$rootPart $mnt
 
 			for subvol in "${subvols[@]}"; do
@@ -608,12 +615,9 @@ mount_disk () {
 			
 			done
 
-			if [[ $encrypt = true ]] && [[ $fstype = bcachefs ]]; then
-				bcachefs unlock -k session $disk$rootPart
-			fi
-
 		else
 
+			echo mount -t $fstype --mkdir $disk$rootPart $mnt	
 			mount -t $fstype --mkdir $disk$rootPart $mnt	
 
 		fi
@@ -2818,6 +2822,8 @@ sync_disk () {
 	sync
 
 	return
+
+	dirty_threshold=0
 
 	dirty=$(cat /proc/meminfo | awk '/Dirty:/ { print $2 }')
 	initial_dirty=$dirty
