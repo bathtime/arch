@@ -2054,7 +2054,8 @@ restore_snapshot () {
 	mount_disk	
 
 	echo -e "\nChoose a host:\n"
-	select host in $mnt$snapshot_dir/* @ / /mnt quit; do
+
+	select host in $mnt$snapshot_dir/* @ 'subvolid=256' / /mnt quit; do
       case host in
         	*) 		echo -e "\nYou chose: $host\n"; break ;;
      	esac
@@ -2063,7 +2064,8 @@ restore_snapshot () {
 	[ $host = quit ] && return
 	
 	echo -e "\nChoose a target:\n"
-	select target in $mnt$snapshot_dir/* @ / /mnt quit; do
+
+	select target in $mnt$snapshot_dir/* @ 'subvolid=256' / /mnt quit; do
       case target in
         	*)			echo -e "\nYou chose: $target\n"; break ;;
      	esac
@@ -2075,7 +2077,7 @@ restore_snapshot () {
 	echo -e "\nRestoring $host to $target...\n"
 	sleep 1
 
-	rsync_params="-axHAXSW --del --exclude=/var/lib/machines/ --exclude=/var/lib/portables/ --exclude=/etc/timeshift/timeshift.json --exclude=/run/timeshift/ --exclude=/lost+found/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=$snapshot_dir/ --exclude=/@snapshots/ --exclude=/@var/tmp/ --exclude=$mnt2/"
+	rsync_params="-axHAXSW --del --exclude=/var/lib/machines/ --exclude=/var/lib/portables/ --exclude=/etc/timeshift/timeshift.json --exclude=/run/timeshift/ --exclude=/lost+found/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=$snapshot_dir/ --exclude=/@snapshots/ --exclude=/@var/tmp/ --exclude=$mnt2/ --exclude=$mnt3"
 		
 			
 	if [[ $(echo $host | grep $snapshot_dir) ]]; then
@@ -2086,11 +2088,19 @@ restore_snapshot () {
 			
 		host=$mnt2
 			
+		btrfs su list /
+			
+		mount -t btrfs --mkdir -o subvol=@ $disk$rootPart $host
+	
+	elif [[ $host = 'subvolid=256' ]]; then
+			
+		host=$mnt2
+			
 		subvolid=$(btrfs su list / | grep 'path @$' | awk '{print $2}')
 		btrfs su list /
 			
 		mount -t btrfs --mkdir -o subvolid=$subvolid $disk$rootPart $host
-		
+			
 	fi
 
 
@@ -2102,6 +2112,14 @@ restore_snapshot () {
 			
 		target=$mnt3
 			
+		btrfs su list /
+			
+		mount -t btrfs --mkdir -o subvol=@ $disk$rootPart $target
+	
+	elif [[ $target = 'subvolid=256' ]]; then
+			
+		target=$mnt3
+			
 		subvolid=$(btrfs su list / | grep 'path @$' | awk '{print $2}')
 		btrfs su list /
 			
@@ -2110,14 +2128,14 @@ restore_snapshot () {
 	fi
 
 	
-	rsync --dry-run $rsync_params -v $host $target | less
+	rsync --dry-run -v $rsync_params $host $target | less
 
 	
 	read -p "Type 'y' to proceed with rsync or any other key to exit..." choice
 		
 	if [[ $choice = y ]]; then
 
-		rsync $rsync_params --info=progress2 $host $target
+		rsync --info=progress2 $rsync_params $host $target
 
 	else
 		echo "Exiting."
