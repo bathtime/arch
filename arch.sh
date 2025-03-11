@@ -408,14 +408,12 @@ delete_partitions () {
 fs_packages () {
 
 	case $fstype in
-		btrfs)		pacstrap_install "btrfs-progs grub-btrfs rsync"
-						#pacman -U --noconfirm /var/cache/pacman/pkg/btrfs-progs-*.tar.zst 
-						;;
-		bcachefs)	pacstrap_install "bcachefs-tools rsync" ;;
-		xfs)			pacstrap_install xfsprogs ;;
-		f2fs)			pacstrap_install f2fs-tools ;;
-		jfs)			pacstrap_install jfsutils ;;
-		nilfs2)		pacstrap_install nilfs-utils ;;
+		btrfs)		pacman -S --noconfirm btrfs-progs grub-btrfs rsync ;;
+		bcachefs)	pacman -S --noconfirm bcachefs-tools rsync ;;
+		xfs)			pacman -S --noconfirm xfsprogs ;;
+		f2fs)			pacman -S --noconfirm f2fs-tools ;;
+		jfs)			pacman -S --noconfirm jfsutils ;;
+		nilfs2)		pacman -S --noconfirm nilfs-utils ;;
 	esac
 }
 
@@ -695,12 +693,12 @@ Server = file:///var/cache/pacman/pkg/
 
 	packages="$base_install"
 
-	#[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs grub-btrfs rsync"
-	#[ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
-	#[ "$fstype" = "jfs" ] && packages="$packages jfsutils"
-	#[ "$fstype" = "f2fs" ] && packages="$packages f2fs-tools"
-	#[ "$fstype" = "nilfs2" ] && packages="$packages nilfs-utils"
-	#[ "$fstype" = "bcachefs" ] && packages="$packages bcachefs-tools rsync"
+	[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs grub-btrfs rsync"
+	[ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
+	[ "$fstype" = "jfs" ] && packages="$packages jfsutils"
+	[ "$fstype" = "f2fs" ] && packages="$packages f2fs-tools"
+	[ "$fstype" = "nilfs2" ] && packages="$packages nilfs-utils"
+	[ "$fstype" = "bcachefs" ] && packages="$packages bcachefs-tools rsync"
 
 	pacstrap_install $packages
 
