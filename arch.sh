@@ -76,6 +76,7 @@ arch_path=$(dirname "$0")
 
 mnt=/mnt
 mnt2=/mnt2
+mnt3=/mnt3
 bootOwnPartition='true'		# make separate boot partition (true/false)?
 
 # Do we want a separate boot partition (which will be ext2)
@@ -2052,92 +2053,74 @@ restore_snapshot () {
 
 	mount_disk	
 
-	# Cannot restore to @ if we'er already on /. This function is for when your not on @
-	#[[ $2 = @ ]] && check_on_root
+	echo -e "\nChoose a host:\n"
+	select host in $mnt$snapshot_dir/* @ / /mnt quit; do
+      case host in
+        	*) 		echo -e "\nYou chose: $host\n"; break ;;
+     	esac
+  	done
 
-	if [[ ! $1 = / ]]; then
-
-		echo -e "\nWhich snapshot would you like to recover?\n"
-
-		cd $mnt$snapshot_dir
+	[ $host = quit ] && return
 	
-		select snapshot in *
-      	do
-         case snapshot in
-         	*) echo -e "\nYou chose: $snapshot\n"; break ;;
-      	esac
-   	done
+	echo -e "\nChoose a target:\n"
+	select target in $mnt$snapshot_dir/* @ / /mnt quit; do
+      case target in
+        	*)			echo -e "\nYou chose: $target\n"; break ;;
+     	esac
+  	done
+	
+	[ $target = quit ] && return
 
+
+	echo -e "\nRestoring $host to $target...\n"
+	sleep 1
+
+	rsync_params="-axHAXSW --del --exclude=/var/lib/machines/ --exclude=/var/lib/portables/ --exclude=/etc/timeshift/timeshift.json --exclude=/run/timeshift/ --exclude=/lost+found/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=$snapshot_dir/ --exclude=/@snapshots/ --exclude=/@var/tmp/ --exclude=$mnt2/"
+		
+			
+	if [[ $(echo $host | grep $snapshot_dir) ]]; then
+			
+		host=$host/
+
+	elif [[ $host = @ ]]; then
+			
+		host=$mnt2
+			
+		subvolid=$(btrfs su list / | grep 'path @$' | awk '{print $2}')
+		btrfs su list /
+			
+		mount -t btrfs --mkdir -o subvolid=$subvolid $disk$rootPart $host
+		
 	fi
 
-	if [ -d "$mnt$snapshot_dir/$snapshot" ] && [ ! "$snapshot" = '' ] || [ $1 = / ]; then
 
-		echo -e "\nRunning dry run first..."
-		sleep 1
-
-		#-a  : all files, with permissions, etc..
-		#-v  : verbose, mention files
-		#-x  : stay on one file system
-		#-H  : preserve hard links (not included with -a)
-		#-A  : preserve ACLs/permissions (not included with -a)
-		#-X  : preserve extended attributes (not included with -a)
-		#-S  : handle sparse files efficiently
-		#-W  : improve the copy speed by not calculating deltas/diffs of the files
-		#---numeric-ids : avoid mapping uid/gid values by user/group name
-		#--info=progress2 : instead of --progress is useful for large transfers
-		# arch recommended: -aAXHv
-
-		rsync_params="-axHAXSW --del --exclude=/var/lib/machines/ --exclude=/var/lib/portables/ --exclude=/etc/timeshift/timeshift.json --exclude=/run/timeshift/ --exclude=/lost+found/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=$snapshot_dir/ --exclude=/@snapshots/ --exclude=/@var/tmp/ --exclude=$mnt2/"
-		
+	if [[ $(echo $target | grep $snapshot_dir) ]]; then
 			
-		if [[ $1 = / ]]; then
-			from='/'
-		else
-			from="$mnt$snapshot_dir/$snapshot/"
-		fi
-		
-		if [[ $2 = @ ]]; then
+		target=$target/
 
-			#mount -t btrfs --mkdir -o subvol=@ $disk$rootPart $mnt2
+	elif [[ $target = @ ]]; then
 			
-			subvolid=$(btrfs su list / | grep 'path @$' | awk '{print $2}')
-			btrfs su list /
+		target=$mnt3
 			
-			mount -t btrfs --mkdir -o subvolid=$subvolid $disk$rootPart $mnt2
+		subvolid=$(btrfs su list / | grep 'path @$' | awk '{print $2}')
+		btrfs su list /
+			
+		mount -t btrfs --mkdir -o subvolid=$subvolid $disk$rootPart $target
 		
-			to=$mnt2
+	fi
 
-		else
-			to=$mnt/
-		fi
-
-
-		echo -e "\nRestoring $from to $to..."
 	
-		rsync --dry-run $rsync_params -v $from $to | less
+	rsync --dry-run $rsync_params -v $host $target | less
+
 	
-
-
-		if [[ $fstype = bcachefs ]]; then
-			echo -e "\nMake sure to exclude bcachefs subvolumes!\n" 
-		fi
-
-		echo -e "\nType 'y' to proceed with rsync or any other key to exit..."
+	read -p "Type 'y' to proceed with rsync or any other key to exit..." choice
 		
-		read choice
-		
-		if [[ $choice = y ]]; then
+	if [[ $choice = y ]]; then
 
-			echo -e "\nRunning rsync...\n"
-
-			rsync $rsync_params --info=progress2 $from $to
-			
-		else
-			echo "Exiting."
-		fi
+		rsync $rsync_params --info=progress2 $host $target
 
 	else
-		echo "Snapshot directory does not exist. Exiting."
+		echo "Exiting."
 	fi
 
 }
@@ -3043,9 +3026,7 @@ clone_menu () {
 15. Create squashfs image
 16. Rsync snapshot
 17. Take btrfs/bcachefs snapshot
-18. Restore bcachefs $mnt$snapshot_dir/ -> $mnt/
-19. Restore btrfs $mnt$snapshot_dir/ -> @
-20. Restore btrfs / -> @
+18. Restore btrfs/bcachefs snapshot
 21. Delete btrfs/bcachefs snapshot
 22. Delete timeshift backups
 23. Bork system")
@@ -3079,9 +3060,7 @@ clone_menu () {
 			squashfs|15)	create_archive ;;
 			rsync|16)		rsync_snapshot ;;
 			snapshot|17)	take_snapshot ;;
-			restore|18)		restore_snapshot $mnt$snapshot_dir/ $mnt/ ;;
-			restore|19)		restore_snapshot $mnt$snapshot_dir/ @ ;;
-			restore|20)		restore_snapshot / @ ;;
+			restore|18)		restore_snapshot ;;
 			delete|21)		delete_snapshot ;;
 			timeshift|22)	delete_timeshift_snapshots ;;
 			bork|23)			bork_system ;;
