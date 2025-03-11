@@ -2031,19 +2031,23 @@ restore_snapshot () {
 
 	# Cannot restore to @ if we'er already on /. This function is for when your not on @
 	#[[ $2 = @ ]] && check_on_root
-	
-	echo -e "\nWhich snapshot would you like to recover?\n"
 
-	cd $mnt$snapshot_dir
+	if [[ ! $1 = / ]]; then
+
+		echo -e "\nWhich snapshot would you like to recover?\n"
+
+		cd $mnt$snapshot_dir
 	
-   select snapshot in *
-      do
+		select snapshot in *
+      	do
          case snapshot in
-         *) echo -e "\nYou chose: $snapshot\n"; break ;;
-      esac
-   done
+         	*) echo -e "\nYou chose: $snapshot\n"; break ;;
+      	esac
+   	done
 
-	if [ -d "$mnt$snapshot_dir/$snapshot" ] && [ ! "$snapshot" = '' ]; then
+	fi
+
+	if [ -d "$mnt$snapshot_dir/$snapshot" ] && [ ! "$snapshot" = '' ] || [ $1 = / ]; then
 
 		echo -e "\nRunning dry run first..."
 		sleep 1
@@ -2062,34 +2066,35 @@ restore_snapshot () {
 
 		rsync_params="-axHAXSW --del --exclude=/var/lib/machines/ --exclude=/var/lib/portables/ --exclude=/etc/timeshift/timeshift.json --exclude=/run/timeshift/ --exclude=/lost+found/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=$snapshot_dir/ --exclude=/@snapshots/ --exclude=/@var/tmp/ --exclude=$mnt2/"
 		
+			
+		if [[ $1 = / ]]; then
+			from='/'
+		else
+			from="$mnt$snapshot_dir/$snapshot/"
+		fi
+		
 		if [[ $2 = @ ]]; then
 
-			#echo -e "\nRestoring $mnt$snapshot_dir/$snapshot/ to @..."
 			#mount -t btrfs --mkdir -o subvol=@ $disk$rootPart $mnt2
-
+			
 			subvolid=$(btrfs su list / | grep 'path @$' | awk '{print $2}')
 			btrfs su list /
-
-			echo -e "\nRestoring $mnt$snapshot_dir/$snapshot/ to subvolid $subvolid..."
+			
 			mount -t btrfs --mkdir -o subvolid=$subvolid $disk$rootPart $mnt2
-			
-			rsync --dry-run $rsync_params -v "$mnt$snapshot_dir/$snapshot/" $mnt2 | less
 		
-		elif [[ $2 = / ]]; then
-
-			echo -e "\nRestoring / to @..."
-			mount -t btrfs --mkdir -o subvol=@ $disk$rootPart $mnt2
-			
-			rsync --dry-run $rsync_params -v / $mnt2 | less
+			to=$mnt2
 
 		else
-			
-			echo -e "\nRestoring from $mnt$snapshot_dir/$snapshot/ to $2...\n"
-
-			rsync --dry-run $rsync_params -v "$mnt$snapshot_dir/$snapshot/" $mnt/ | less
-	
+			to=$mnt/
 		fi
+
+
+		echo -e "\nRestoring $from to $to..."
 	
+		rsync --dry-run $rsync_params -v $from $to | less
+	
+
+
 		if [[ $fstype = bcachefs ]]; then
 			echo -e "\nMake sure to exclude bcachefs subvolumes!\n" 
 		fi
@@ -2101,21 +2106,9 @@ restore_snapshot () {
 		if [[ $choice = y ]]; then
 
 			echo -e "\nRunning rsync...\n"
-			
-			if [[ $2 = @ ]]; then
 
-				rsync $rsync_params --info=progress2 "$mnt$snapshot_dir/$snapshot/" $mnt2
-		
-			elif [[ $2 = / ]]; then
-
-				rsync $rsync_params --info=progress2 / $mnt2/
+			rsync $rsync_params --info=progress2 $from $to
 			
-			else
-			
-				rsync $rsync_params --info=progress2 "$mnt$snapshot_dir/$snapshot/" $mnt/
-		
-			fi
-	
 		else
 			echo "Exiting."
 		fi
