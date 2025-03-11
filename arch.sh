@@ -2077,9 +2077,10 @@ restore_snapshot () {
 	echo -e "\nRestoring $host to $target...\n"
 	sleep 1
 
+
 	rsync_params="-axHAXSW --del --exclude=/var/lib/machines/ --exclude=/var/lib/portables/ --exclude=/etc/timeshift/timeshift.json --exclude=/run/timeshift/ --exclude=/lost+found/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$mnt/ --exclude=$snapshot_dir/ --exclude=/@snapshots/ --exclude=/@var/tmp/ --exclude=$mnt2/ --exclude=$mnt3"
-		
-			
+
+	
 	if [[ $(echo $host | grep $snapshot_dir) ]]; then
 			
 		host=$host/
@@ -3045,9 +3046,9 @@ clone_menu () {
 16. Rsync snapshot
 17. Take btrfs/bcachefs snapshot
 18. Restore btrfs/bcachefs snapshot
-21. Delete btrfs/bcachefs snapshot
-22. Delete timeshift backups
-23. Bork system")
+19. Delete btrfs/bcachefs snapshot
+20. Delete timeshift backups
+21. Bork system")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3079,9 +3080,9 @@ clone_menu () {
 			rsync|16)		rsync_snapshot ;;
 			snapshot|17)	take_snapshot ;;
 			restore|18)		restore_snapshot ;;
-			delete|21)		delete_snapshot ;;
-			timeshift|22)	delete_timeshift_snapshots ;;
-			bork|23)			bork_system ;;
+			delete|19)		delete_snapshot ;;
+			timeshift|20)	delete_timeshift_snapshots ;;
+			bork|21)			bork_system ;;
       	'')				;;
       	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
