@@ -1810,6 +1810,8 @@ EOF
 
 	fi
 
+	cp $mnt/home/$user/.bash_profile $mnt/home/$user/.profile
+
 }
 
 
