@@ -2065,7 +2065,10 @@ restore_snapshot () {
 		echo -e "\nRestoring from $mnt$snapshot_dir/$snapshot/ to $2...\n"
 		if [[ $2 = @ ]]; then
 
-			mount -t btrfs --mkdir -o subvol=@ $disk$rootPart $mnt2
+			#mount -t btrfs --mkdir -o subvol=@ $disk$rootPart $mnt2
+
+			subvolid=$(btrfs su list / | grep 'path @$' | awk '{print $2}')
+			mount -t btrfs --mkdir -o subvolid=$subvolid $disk$rootPart $mnt2
 			
 			rsync --dry-run $rsync_params -v "$mnt$snapshot_dir/$snapshot/" $mnt2 | less
 		
@@ -3007,8 +3010,8 @@ clone_menu () {
 14. Shred $disk
 15. Create squashfs image
 16. Take btrfs/bcachefs snapshot
-17. Restore btrfs/bcachefs $mnt$snapshot_dir/ -> $mnt/
-18. Restore btrfs/bcachefs $mnt$snapshot_dir/ -> @
+17. Restore bcachefs $mnt$snapshot_dir/ -> $mnt/
+18. Restore btrfs $mnt$snapshot_dir/ -> @
 19. Delete btrfs/bcachefs snapshot
 20. Rsync snapshot
 21. Bork system
