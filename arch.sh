@@ -2030,7 +2030,7 @@ restore_snapshot () {
 	mount_disk	
 
 	# Cannot restore to @ if we'er already on /. This function is for when your not on @
-	[[ $2 = @ ]] && check_on_root
+	#[[ $2 = @ ]] && check_on_root
 	
 	echo -e "\nWhich snapshot would you like to recover?\n"
 
