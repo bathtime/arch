@@ -103,7 +103,7 @@ fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(snapshots var/tmp)			# used for btrfs and bcachefs
 subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir="/snapshots"
-backup_install='false'		# say 'true' to do snapshots/rysncs during install
+backup_install='true'		# say 'true' to do snapshots/rysncs during install
 backup_type='rsync'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
 checkPartitions='true'		# Check that partitions are configured optimally?
@@ -407,14 +407,26 @@ delete_partitions () {
 
 fs_packages () {
 
+#	case $fstype in
+#		btrfs)		pacstrap_install btrfs-progs grub-btrfs rsync ;;
+#		bcachefs)	pacstrap_install bcachefs-tools rsync ;;
+#		xfs)			pacstrap_install xfsprogs ;;
+#		f2fs)			pacstrap_install f2fs-tools ;;
+#		jfs)			pacstrap_install jfsutils ;;
+#		nilfs2)		pacstrap_install nilfs-utils ;;
+#	esac
+
 	case $fstype in
-		btrfs)		pacman -S --noconfirm btrfs-progs grub-btrfs rsync ;;
-		bcachefs)	pacman -S --noconfirm bcachefs-tools rsync ;;
-		xfs)			pacman -S --noconfirm xfsprogs ;;
-		f2fs)			pacman -S --noconfirm f2fs-tools ;;
-		jfs)			pacman -S --noconfirm jfsutils ;;
-		nilfs2)		pacman -S --noconfirm nilfs-utils ;;
+		btrfs)		pkg="btrfs-progs grub-btrfs rsync" ;;
+		bcachefs)	pkg="bcachefs-tools rsync" ;;
+		xfs)			pkg=xfsprogs ;;
+		f2fs)			pkg=f2fs-tools ;;
+		jfs)			pkg=jfsutils ;;
+		nilfs2)		pkg="pacstrap_install nilfs-utils" ;;
 	esac
+
+	echo "$pkg"
+
 }
 
 
@@ -467,23 +479,27 @@ create_partitions () {
 	mkfs.fat -F 32 -n EFI $disk$espPart 
 	mkswap -L SWAP $disk$swapPart
 
-	# Install packages required for filesystem
-	fs_packages
+	pacman -S --needed --noconfirm $(fs_packages)
 
 	case $fstype in
 
-		btrfs)		mkfs.btrfs -f -L ROOT $disk$rootPart ;;
+		btrfs)		#pacman -S --needed --noconfirm btrfs-progs
+						mkfs.btrfs -f -L ROOT $disk$rootPart ;;
 		ext4)			
 						mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart 
 						
 						echo "Running tune2fs to create fast commit journal area..." 
 						tune2fs -O fast_commit $disk$rootPart ;;
 
-		xfs)			mkfs.xfs -f -L ROOT $disk$rootPart ;;
-		jfs)			mkfs.jfs -f -L ROOT $disk$rootPart ;;
-		f2fs)			mkfs.f2fs -f -l ROOT $disk$rootPart ;;
-		nilfs2)		mkfs.nilfs2 -f -L ROOT $disk$rootPart ;;
-		bcachefs)		
+		xfs)			pacman -S --needed --noconfirm xfsprogs 
+						mkfs.xfs -f -L ROOT $disk$rootPart ;;
+		jfs)			pacman -S --needed --noconfirm jfsutils
+						mkfs.jfs -f -L ROOT $disk$rootPart ;;
+		f2fs)			pacman -S --needed --noconfirm f2fs-tools
+						mkfs.f2fs -f -l ROOT $disk$rootPart ;;
+		nilfs2)		pacman -S --needed --noconfirm nilfs-utils
+						mkfs.nilfs2 -f -L ROOT $disk$rootPart ;;
+		bcachefs)	pacman -S --needed --noconfirm bcachefs-tools rsync
 						
 						if [[ $encrypt = true ]]; then
 
@@ -508,7 +524,6 @@ create_partitions () {
 
 		if [[ -f /home/$user/.local/bin/checkpartitionsalignment.sh ]]; then
 			/home/user/.local/bin/./checkpartitionsalignment.sh $disk
-			sleep 1
 		fi
 
 	fi
@@ -691,16 +706,19 @@ Server = file:///var/cache/pacman/pkg/
 	mkdir -p $mnt/etc/pacman.d
 	[ ! $mnt = '' ] && cp /etc/pacman.d/mirrorlist $mnt/etc/pacman.d/mirrorlist
 
-	packages="$base_install"
+	#packages="$base_install"
 
-	[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs grub-btrfs rsync"
-	[ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
-	[ "$fstype" = "jfs" ] && packages="$packages jfsutils"
-	[ "$fstype" = "f2fs" ] && packages="$packages f2fs-tools"
-	[ "$fstype" = "nilfs2" ] && packages="$packages nilfs-utils"
-	[ "$fstype" = "bcachefs" ] && packages="$packages bcachefs-tools rsync"
+	#[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs grub-btrfs rsync"
+	#[ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
+	#[ "$fstype" = "jfs" ] && packages="$packages jfsutils"
+	#[ "$fstype" = "f2fs" ] && packages="$packages f2fs-tools"
+	#[ "$fstype" = "nilfs2" ] && packages="$packages nilfs-utils"
+	#[ "$fstype" = "bcachefs" ] && packages="$packages bcachefs-tools rsync"
 
-	pacstrap_install $packages
+	#pacstrap_install $packages
+	#fs_packages
+	
+	pacstrap_install "$(fs_packages) $base_install"
 
 	cp $mnt/etc/pacman.conf $mnt/etc/pacman.conf.pacnew
 
@@ -1119,6 +1137,7 @@ alias ls="ls --color=auto"
 alias grep="grep --color=auto"
 alias vi="vim"
 alias arch="sudo /usr/local/bin/arch.sh"
+setfont -d
 PS1="# "' > $mnt/root/.bashrc
 
 	if [[ $mnt = '' ]]; then
@@ -1932,7 +1951,11 @@ clone () {
 		choose_initramfs dracut
 		choose_initramfs booster 
 		setup_fstab
-		fs_packages
+		#fs_packages
+		
+		pacstrap_install $(fs_packages)
+
+		read -p "You must check that file system packages have been installed!"
 
 	else
 		echo "Exiting."
