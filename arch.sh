@@ -3009,13 +3009,13 @@ clone_menu () {
 13. Wipe freespace     
 14. Shred $disk
 15. Create squashfs image
-16. Take btrfs/bcachefs snapshot
-17. Restore bcachefs $mnt$snapshot_dir/ -> $mnt/
-18. Restore btrfs $mnt$snapshot_dir/ -> @
-19. Delete btrfs/bcachefs snapshot
-20. Rsync snapshot
-21. Bork system
-22. Delete timeshift backups")
+16. Rsync snapshot
+17. Take btrfs/bcachefs snapshot
+18. Restore bcachefs $mnt$snapshot_dir/ -> $mnt/
+19. Restore btrfs $mnt$snapshot_dir/ -> @
+20. Delete btrfs/bcachefs snapshot
+21. Delete timeshift backups
+22. Bork system")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3044,13 +3044,13 @@ clone_menu () {
 			wipe-free|13)	wipe_freespace ;;
 			shred|14)		unmount_disk; shred -n 1 -v -z $disk ;;
 			squashfs|15)	create_archive ;;
-			snapshot|16)	take_snapshot ;;
-			restore|17)		restore_snapshot $mnt$snapshot_dir/ $mnt/ ;;
-			restore|18)		restore_snapshot $mnt$snapshot_dir/ @ ;;
-			delete|19)		delete_snapshot ;;
-			rsync|20)		rsync_snapshot ;;
-			bork|21)			bork_system ;;
-			timeshift|22)	delete_timeshift_snapshots ;;
+			rsync|16)		rsync_snapshot ;;
+			snapshot|17)	take_snapshot ;;
+			restore|18)		restore_snapshot $mnt$snapshot_dir/ $mnt/ ;;
+			restore|19)		restore_snapshot $mnt$snapshot_dir/ @ ;;
+			delete|20)		delete_snapshot ;;
+			timeshift|21)	delete_timeshift_snapshots ;;
+			bork|22)			bork_system ;;
       	'')				;;
       	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
