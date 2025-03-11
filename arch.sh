@@ -564,11 +564,11 @@ create_partitions () {
 	unmount_disk
 	mount_disk
 
-	mkdir -p $mnt/{dev,etc,proc,root,run,sys,tmp,var/cache/pacman/pkg,/var/tmp,/var/log}
+	mkdir -p $mnt/{dev,etc,proc,root,run,sys,tmp,var/cache/pacman/pkg,/var/log,/var/tmp}
 	
 	if [ "$fstype" = "btrfs" ]; then
-		rm -rf /var/tmp/*
-		chattr +C /var/tmp
+		rm -rf /var/{log,tmp}/*
+		chattr +C /var/{log,tmp}
 		lsattr /var
 	fi
 
