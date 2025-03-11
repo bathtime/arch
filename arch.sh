@@ -77,6 +77,7 @@ arch_path=$(dirname "$0")
 mnt=/mnt
 mnt2=/mnt2
 mnt3=/mnt3
+
 bootOwnPartition='true'		# make separate boot partition (true/false)?
 
 # Do we want a separate boot partition (which will be ext2)
@@ -96,6 +97,7 @@ espPart=$espPartNum
 bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
+
 efi_path=/efi
 encrypt=true
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
@@ -143,7 +145,10 @@ wlan="wlan0"
 wifi_ssid=""
 wifi_pass=""
 
-
+# /etc/vconsole.conf = KEYMAP=us
+#/etc/systemd/system/user-power.service
+#/etc/udev/rules.d/powersave.rules
+#/usr/lib/systemd/system-sleep/sleep.sh
 
 # Files that will be saved to /setup.tar as part of a backup
 CONFIG_FILES="
@@ -179,13 +184,9 @@ CONFIG_FILES="
 /etc/sysctl.d/99-swappiness.conf
 /etc/systemd/coredump.conf.d/custom.conf
 /etc/systemd/system/getty@tty1.service.d/autologin.conf
-/etc/systemd/system/user-power.service
-/etc/udev/rules.d/powersave.rules
-/etc/vconsole.conf
 /etc/wpa_supplicant
 /var/lib/dhcpcd
 /var/lib/iwd
-/usr/lib/systemd/system-sleep/sleep.sh
 
 /home/$user/.bash_profile
 /home/$user/.bashrc
@@ -707,18 +708,6 @@ Server = file:///var/cache/pacman/pkg/
 	mkdir -p $mnt/etc/pacman.d
 	[ ! $mnt = '' ] && cp /etc/pacman.d/mirrorlist $mnt/etc/pacman.d/mirrorlist
 
-	#packages="$base_install"
-
-	#[ "$fstype" = "btrfs" ] && packages="$packages btrfs-progs grub-btrfs rsync"
-	#[ "$fstype" = "xfs" ] && packages="$packages xfsprogs"
-	#[ "$fstype" = "jfs" ] && packages="$packages jfsutils"
-	#[ "$fstype" = "f2fs" ] && packages="$packages f2fs-tools"
-	#[ "$fstype" = "nilfs2" ] && packages="$packages nilfs-utils"
-	#[ "$fstype" = "bcachefs" ] && packages="$packages bcachefs-tools rsync"
-
-	#pacstrap_install $packages
-	#fs_packages
-	
 	pacstrap_install "$(fs_packages) $base_install"
 
 	cp $mnt/etc/pacman.conf $mnt/etc/pacman.conf.pacnew
@@ -1126,7 +1115,6 @@ general_setup () {
 	echo 'LANG=en_US.UTF-8' > $mnt/etc/locale.conf
 	echo 'Arch-Linux' > $mnt/etc/hostname
 	echo 'KEYMAP=us' > $mnt/etc/vconsole.conf
-	#arch-chroot $mnt ln -sf /usr/share/zoneinfo/$timezone /etc/localtime
 	ln -sf $mnt/usr/share/zoneinfo/$timezone $mnt/etc/localtime
 
 	echo "127.0.0.1   localhost
@@ -1753,9 +1741,6 @@ install_tweaks () {
 	
 	pacstrap_install terminus-font ncdu
 
-	[ ! $(cat $mnt/etc/vconsole.conf | grep 'FONT=ter-132b') ] && echo 'FONT=ter-132b' >> $mnt/etc/vconsole.conf
-
-
 	echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
 	echo 'vm.vfs_cache_pressure=50' > $mnt/etc/sysctl.d/99-cache-pressure.conf
 	echo 'net.ipv4.tcp_fin_timeout = 30' > $mnt/etc/sysctl.d/99-net-timeout.conf
@@ -1773,35 +1758,28 @@ ProcessSizeMax=0' > $mnt/etc/systemd/coredump.conf.d/custom.conf
 
 	echo '* hard core 0' > $mnt/etc/security/limits.conf
 
+
 }
 
 
 
 install_mksh () {
 
-	[ ! -f $mnt/usr/bin/$aur_app ] && install_aur
-
-	# TODO: fix issue of having to change directory permissions
-	arch-chroot $mnt chown -R $user:$user /home/$user/
-
-	if [ ! -f $mnt/usr/bin/mksh ] || [ "$reinstall" = 1 ] ; then
-		arch-chroot $mnt /bin/bash << EOF
-		sudo -u $user $aur_app --noconfirm -S mksh
-EOF
-	fi
-
+	mount_disk
+	
 	echo "HISTFILE=/root/.mksh_history
 HISTSIZE=5000
 export VISUAL=emacs
 export EDITOR=/usr/bin/vim
-set -o emacs" > $mnt/root/.mkshrc
+set -o emacs" > $mnt/root/.mkshrc2
 
    echo "HISTFILE=/home/$user/.mksh_history
 HISTSIZE=5000
 export VISUAL=emacs
 export EDITOR=/usr/bin/vim
-set -o emacs" > $mnt/home/$user/.mkshrc
-	arch-chroot $mnt chown $user:$user /home/$user/.mkshrc
+set -o emacs" > $mnt/home/$user/.mkshrc2
+	
+	chown $user:$user $mnt/home/$user/.mkshrc2
 
 	echo -e 'PATH="$HOME/.local/bin:$PATH"
 export EDITOR=/usr/bin/vim
@@ -1814,13 +1792,23 @@ export XDG_RUNTIME_DIR=/run/$USER/1000
 export RUNLEVEL=3
 export QT_LOGGING_RULES="*=false"
 
-' > $mnt/home/$user/.profile
-	arch-chroot $mnt chown $user:$user /home/$user/.profile 
+' > $mnt/home/$user/.profile2
 
-	arch-chroot $mnt /bin/bash << EOF
-chsh -s /usr/bin/mksh                          # root shell
-echo $password | sudo -u $user chsh -s /bin/mksh  # user shell
+	chown $user:$user $mnt/home/$user/.profile2 
+
+	if [[ $mnt = '' ]]; then
+
+		chsh -s /usr/bin/mksh
+		echo $password | sudo -u $user chsh -s /bin/mksh
+
+	else
+
+		arch-chroot $mnt /bin/bash << EOF
+chsh -s /usr/bin/mksh
+echo $password | sudo -u $user chsh -s /bin/mksh
 EOF
+
+	fi
 
 }
 
@@ -2524,6 +2512,7 @@ auto_install_kde () {
 
 	install_config
 	install_hooks overlayroot
+	install_mksh
 
 	do_backup "KDE-installed"
 
