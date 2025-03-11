@@ -408,15 +408,6 @@ delete_partitions () {
 
 fs_packages () {
 
-#	case $fstype in
-#		btrfs)		pacstrap_install btrfs-progs grub-btrfs rsync ;;
-#		bcachefs)	pacstrap_install bcachefs-tools rsync ;;
-#		xfs)			pacstrap_install xfsprogs ;;
-#		f2fs)			pacstrap_install f2fs-tools ;;
-#		jfs)			pacstrap_install jfsutils ;;
-#		nilfs2)		pacstrap_install nilfs-utils ;;
-#	esac
-
 	case $fstype in
 		btrfs)		pkg="btrfs-progs grub-btrfs rsync" ;;
 		bcachefs)	pkg="bcachefs-tools rsync" ;;
@@ -575,11 +566,17 @@ create_partitions () {
 
 	mkdir -p $mnt/{dev,etc,proc,root,run,sys,tmp,var/cache/pacman/pkg,/var/tmp,/var/log}
 	
+	if [ "$fstype" = "btrfs" ]; then
+		rm -rf /var/tmp/*
+		chattr +C /var/tmp
+		lsattr /var
+	fi
+
 	if [ "$fstype" = "bcachefs" ]; then
 		mkdir -p $mnt$snapshot_dir
 	fi
 
-
+	
 	chmod -R 750 $mnt/root
 	mkdir -p $mnt/root/.gnupg
 	chmod -R 700 $mnt/root/.gnupg
