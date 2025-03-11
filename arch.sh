@@ -145,10 +145,6 @@ wlan="wlan0"
 wifi_ssid=""
 wifi_pass=""
 
-# /etc/vconsole.conf = KEYMAP=us
-#/etc/systemd/system/user-power.service
-#/etc/udev/rules.d/powersave.rules
-#/usr/lib/systemd/system-sleep/sleep.sh
 
 # Files that will be saved to /setup.tar as part of a backup
 CONFIG_FILES="
@@ -185,6 +181,7 @@ CONFIG_FILES="
 /etc/systemd/coredump.conf.d/custom.conf
 /etc/systemd/system/getty@tty1.service.d/autologin.conf
 /etc/wpa_supplicant
+/root/.mkshrc
 /var/lib/dhcpcd
 /var/lib/iwd
 
@@ -193,6 +190,8 @@ CONFIG_FILES="
 /home/$user/.config/
 /home/$user/.hushlogin
 /home/$user/.local/
+/home/$user/.mkshrc
+/home/$user/.profile
 /home/$user/.vimrc"
 
 
@@ -1771,30 +1770,18 @@ install_mksh () {
 HISTSIZE=5000
 export VISUAL=emacs
 export EDITOR=/usr/bin/vim
-set -o emacs" > $mnt/root/.mkshrc2
+set -o emacs" > $mnt/root/.mkshrc
 
    echo "HISTFILE=/home/$user/.mksh_history
 HISTSIZE=5000
 export VISUAL=emacs
 export EDITOR=/usr/bin/vim
-set -o emacs" > $mnt/home/$user/.mkshrc2
+set -o emacs" > $mnt/home/$user/.mkshrc
 	
-	chown $user:$user $mnt/home/$user/.mkshrc2
+	chown $user:$user $mnt/home/$user/.mkshrc
 
-	echo -e 'PATH="$HOME/.local/bin:$PATH"
-export EDITOR=/usr/bin/vim
-export ENV="/home/$USER/.mkshrc"
-export QT_QPA_PLATFORM=wayland
-export QT_IM_MODULE=Maliit
-export MOZ_ENABLE_WAYLAND=1
-export XDG_RUNTIME_DIR=/tmp/runtime-user
-export XDG_RUNTIME_DIR=/run/$USER/1000
-export RUNLEVEL=3
-export QT_LOGGING_RULES="*=false"
-
-' > $mnt/home/$user/.profile2
-
-	chown $user:$user $mnt/home/$user/.profile2 
+	#echo -e 'export ENV="/home/$USER/.mkshrc"' >> $mnt/home/$user/.profile
+	#chown $user:$user $mnt/home/$user/.profile 
 
 	if [[ $mnt = '' ]]; then
 
