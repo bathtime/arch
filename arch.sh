@@ -3133,7 +3133,8 @@ clone_menu () {
 18. Restore btrfs/bcachefs snapshot
 19. Delete btrfs/bcachefs snapshot
 20. Delete timeshift backups
-21. Bork system")
+21. Bork system
+22. Snapper snapshot")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3168,6 +3169,12 @@ clone_menu () {
 			delete|19)		delete_snapshot ;;
 			timeshift|20)	delete_timeshift_snapshots ;;
 			bork|21)			bork_system ;;
+			snapper|22)		snapper list
+								read -p "What would you like to name this snapshot?" snapshot
+								touch /home/$user/snap-$snapshot
+								snapper -c root create --read-write --description "$snapshot"
+								rm -rf /home/$user/snap-$snapshot
+								snapper list ;;
       	'')				;;
       	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
