@@ -1896,12 +1896,13 @@ addThis="$1"
       addT[t[i]]=t[i+1]
   }
   $1 in addT {
-    sub(/(\([^)]+)/, "& " addT[$1])
+	 sub( /\([^)]*/, ("& " addT[$1]) )
   }
   1
   ' "$2" > "/temp.txt"
-  cp /temp.txt "$2"
-  rm -rf /temp.txt
+  cat /temp.txt
+  #cp /temp.txt "$2"
+  #rm -rf /temp.txt
 
 }
 
@@ -1944,6 +1945,7 @@ install_hooks () {
 							cat $mnt/etc/mkinitcpio.conf | grep ^MODULES= | grep -v overlay && sed -i 's/(lz4/(lz4 overlay/' $mnt/etc/mkinitcpio.conf
 
 							cat $mnt/etc/mkinitcpio.conf | grep ^HOOKS | grep -v overlayroot && sed -i 's/resume/resume overlayroot/' $mnt/etc/mkinitcpio.conf
+
 
 							#add_hooks 'MODULES=overlay|HOOKS=overlayroot' $mnt/etc/mkinitcpio.conf
 
