@@ -550,7 +550,6 @@ create_partitions () {
 		done
 	
 		btrfs su list $mnt
-		read -p "Press"
 
 	fi
 
@@ -1614,7 +1613,6 @@ grub-btrfsd_setup () {
 	mount_disk
 
    pacstrap_install timeshift cronie grub-btrfs
-   #systemctl daemon-reload
 
    systemctl --root=$mnt enable cronie.service
    systemctl --root=$mnt enable grub-btrfsd.service
@@ -1631,7 +1629,7 @@ EOF
 
    else
 
-      mkdir -p $mnt/etc/systemd/system/grub-btrfsd.service.d/override.conf.d
+      mkdir -p $mnt/etc/systemd/system/grub-btrfsd.service.d/
       echo '[Service]
 ExecStart=
 ExecStart=/usr/bin/grub-btrfsd --syslog -t' > $mnt/etc/systemd/system/grub-btrfsd.service.d/override.conf
@@ -1706,12 +1704,16 @@ snapper_setup () {
 		rm -rf $mnt$snapshot_dir
 
 		pacstrap_install snapper
-		
-		arch-chroot $mnt snapper -c root create-config /
+
+		#arch-chroot $mnt snapper delete-config
+		#arch-chroot $mnt snapper -c root create-config /
 	
 	fi
 
 	grub-btrfsd_setup
+
+	# Bypass must be erased or won't work
+	rm -rf $mnt/etc/systemd/system/grub-btrfsd.service.d/
 
 }
 
@@ -3267,7 +3269,6 @@ while :; do
 22. Connect wireless
 23. Install backup
 24. Packages/script
-25. Timeshift
 26. Auto-login root
 27. Auto-login user
 28. Hypervisor setup
@@ -3313,7 +3314,6 @@ echo
 		connect|iwd|22)		connect_wireless ;;
 		backup|23)				install_backup ;;
 		packages|24)			packages_menu ;;
-		timeshift|25)			timeshift_setup ;;
 		loginroot|26)			auto_login root ;;
 		loginuser|27)			auto_login user ;;
 		hypervisor|28)			hypervisor_setup ;;
