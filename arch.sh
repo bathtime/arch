@@ -103,10 +103,18 @@ encrypt=true
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(var/log var/tmp)			# used for btrfs and bcachefs
-subvol5='root'
-subvolPrefix='/root/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
-snapshot_dir='/root/@/.snapshots'
+
+#subvols=(var/log var/tmp)			# used for btrfs and bcachefs
+#subvol5='root'
+#subvolPrefix='/root/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
+#snapshot_dir='/root/@/.snapshots'
+
+subvols=(/var/log /var/tmp)			# used for btrfs and bcachefs
+subvol5=''
+subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
+snapshot_dir='/@/.snapshots'
+
+
 backup_install='false'		# say 'true' to do snapshots/rysncs during install
 backup_type='btrfs-assistant'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
@@ -538,7 +546,7 @@ create_partitions () {
 
 		cd $mnt
 
-		btrfs su create $subvol5
+		[ ! $subvol5 = '' ] && btrfs su create $subvol5
 
 		if [[ ! $subvolPrefix = '/' ]] && [[ ! $subvolPrefix = '' ]]; then
 			echo btrfs su cr --parents "$mnt$subvolPrefix"
@@ -553,8 +561,6 @@ create_partitions () {
 			btrfs su cr --parents "$mnt$subvolPrefix$subvol"
 		done
 	
-		btrfs su list $mnt
-
 	fi
 
 	if [ "$fstype" = "bcachefs" ]; then
@@ -592,6 +598,12 @@ create_partitions () {
 	mkdir -p $mnt/root/.gnupg
 	chmod -R 700 $mnt/root/.gnupg
 	chmod -R 1777 $mnt/var/tmp
+
+	btrfs su list $mnt
+	genfstab -U $mnt
+
+	read -p "Press enter to continue."
+
 
 }
 
