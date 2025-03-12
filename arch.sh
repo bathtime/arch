@@ -1726,7 +1726,7 @@ do_backup () {
 									;;
 
 		snapper)					if [[ $fstype = btrfs ]]; then
-										snapper -c root create --read-write --description "$1"
+										arch-chroot $mnt snapper -c root create --read-write --description "$1"
 									echo
 										echo "Will not do a backup with btrfs-assistant on $fstype."
 									fi
@@ -1741,7 +1741,7 @@ do_backup () {
 									;;
 
 		btrfs-assistant)		if [[ $fstype = btrfs ]]; then
-										snapper -c root create --read-write --description "$1"
+										arch-chroot $mnt snapper -c root create --read-write --description "$1"
 									echo
 										echo "Will not do a backup with btrfs-assistant on $fstype."
 									fi
