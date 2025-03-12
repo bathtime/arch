@@ -1731,7 +1731,7 @@ EOF
 	# Bypass must be erased or won't work
 	rm -rf $mnt/etc/systemd/system/grub-btrfsd.service.d/
 
-	pacstrap_install timeshift cronie grub-btrfs
+	pacstrap_install cronie grub-btrfs
 
    systemctl --root=$mnt enable cronie.service
    systemctl --root=$mnt enable grub-btrfsd.service
@@ -1799,7 +1799,7 @@ EOF
 	# Bypass must be erased or won't work
 	rm -rf $mnt/etc/systemd/system/grub-btrfsd.service.d/
 
-	pacstrap_install timeshift cronie grub-btrfs
+	pacstrap_install cronie grub-btrfs
 
    systemctl --root=$mnt enable cronie.service
    systemctl --root=$mnt enable grub-btrfsd.service
