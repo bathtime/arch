@@ -2327,7 +2327,7 @@ bork_system () {
 }
 
 
-snapper-rollback () {
+do_snapper-rollback () {
 
 	snapper list
 
@@ -3232,7 +3232,7 @@ clone_menu () {
 								snapper -c root create --read-write --description "$snapshot"
 								rm -rf /home/$user/snap-$snapshot
 								snapper list ;;
-			rollback|23)	snapper-rollback ;;
+			rollback|23)	do_snapper-rollback ;;
       	'')				;;
       	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
