@@ -1766,35 +1766,28 @@ EOF
 
 	if [[ $mnt = '' ]]; then
 		
-		pacman -S --noconfirm snapper
+		pacman -S --noconfirm --needed snapper snap-pac
 
 		if [ -d /.snapshots/ ]; then
 			umount /.snapshots/
 			rm -rf /.snapshots/
 		fi
-	
 
 		snapper -c root create-config /	
 		mount -a
 		
-		pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
-		pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/btrfs-assistant-*.zst
+		#pacman -U --noconfirm --needed /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
+		#pacman -U --noconfirm --needed /home/user/.local/bin/backup-pkgs/btrfs-assistant-*.zst
 
 	else
 
-		pacstrap_install snapper snap-pac
-		
-		if [ -d $mnt/.snapshots/ ]; then
-			umount $mnt/.snapshots/
-			rm -rf $mnt/.snapshots/
-		fi
-
-		read -p "Check if snapper config exists. Press any key to continue."
+		#read -p "Check if snapper config exists. Press any key to continue."
 	
 		#arch-chroot $mnt /bin/bash << EOF
 
-		snapper --root=/mnt -c root create-config /	
-		arch-chroot $mnt mount -a
+		#snapper --root=/mnt --no-dbus -c root create-config /	
+		#arch-chroot $mnt snapper -c root create-config /	
+		#arch-chroot $mnt mount -a
 
 #EOF
 
