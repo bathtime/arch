@@ -579,11 +579,11 @@ create_partitions () {
 
 	mkdir -p $mnt/{dev,etc,proc,root,run,sys,tmp,var/cache/pacman/pkg,/var/log,/var/tmp}
 	
-	if [ "$fstype" = "btrfs" ]; then
+	#if [ "$fstype" = "btrfs" ]; then
 		#rm -rf /var/{log,tmp}/*
-		chattr -R +C /var/{log,tmp}
+		#chattr -R +C /var/{log,tmp}
 		lsattr /var
-	fi
+	#fi
 
 	if [ "$fstype" = "bcachefs" ]; then
 		mkdir -p $mnt$snapshot_dir
@@ -1791,12 +1791,12 @@ EOF
 
 		read -p "Check if snapper config exists. Press any key to continue."
 	
-		arch-chroot $mnt /bin/bash << EOF
+		#arch-chroot $mnt /bin/bash << EOF
 
-		snapper -c root create-config /	
-		mount -a
+		snapper --root=/mnt -c root create-config /	
+		arch-chroot $mnt mount -a
 
-EOF
+#EOF
 
 		arch-chroot $mnt pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
 		arch-chroot $mnt pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/btrfs-assistant-*.zst
