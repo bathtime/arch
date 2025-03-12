@@ -1788,12 +1788,12 @@ EOF
 			rm -rf $mnt/.snapshots/
 		fi
 
-		arch-chroot $mnt /bin/bash << EOF
+		#arch-chroot $mnt /bin/bash << EOF
 
-		snapper -c root create-config /	
-		mount -a
+		arch-chroot $mnt snapper -c root create-config /
+		arch-chroot $mnt mount -a
 
-EOF
+#EOF
 
 		arch-chroot $mnt pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
 
