@@ -102,9 +102,9 @@ efi_path=/efi
 encrypt=true
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(snapshots var/log var/tmp)			# used for btrfs and bcachefs
-subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
+subvolPrefix='/'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir="/snapshots"
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
 backup_type='rsync'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
@@ -495,11 +495,7 @@ create_partitions () {
 						
 						if [[ $encrypt = true ]]; then
 
-							# In /etc/mkinitcpio.conf
-							# - add module 'bcachefs'
-							# - add 'bcachefs' hook after fsck if it exists
-							
-							read -p "You MUST add 'bcachefs' module and hook (after 'filesystem')!"
+							#You MUST add 'bcachefs' module and hook (after 'filesystem')
 							
 							bcachefs format -f -L ROOT --encrypted $disk$rootPart
 							bcachefs unlock -k session $disk$rootPart
@@ -807,13 +803,17 @@ choose_initramfs () {
 
 	mount_disk
 
+	if [ $encrypt = true ] && [ $fstype = bcachefs ]; then
+		extra_module=bcachefs
+		extra_hook=bcachefs
+	fi
 
-	echo 'MODULES=(lz4)
+	echo 'MODULES=(lz4 $extra_module)
 BINARIES=()
 FILES=()
 
 #HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block filesystems fsck)
-HOOKS=(base udev autodetect microcode modconf block filesystems resume)
+HOOKS=(base udev autodetect microcode modconf block filesystems resume $extra_hook)
 
 COMPRESSION="lz4"
 
@@ -1223,6 +1223,7 @@ if [ -n "$BASH_VERSION" ]; then
    fi
 fi
 
+export PATH="$HOME/.local/bin:$PATH"
 export EDITOR=/usr/bin/vim
 #export QT_QPA_PLATFORM=wayland
 export QT_IM_MODULE=Maliit
