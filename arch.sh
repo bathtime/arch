@@ -1595,7 +1595,6 @@ install_backup () {
 	
 		4|btrfs-assistant)	if [[ $fstype = btrfs ]]; then
 										snapper_setup
-										#btrfs-assistant_setup	
 									else
 										echo -e "\nNot installing snapper/btrfs-assistant as it is not compatablie with $fstype. Exiting.\n"
 									fi
@@ -1609,6 +1608,37 @@ install_backup () {
 
 }
 
+
+grub-btrfsd_setup () {
+
+	mount_disk
+
+   pacstrap_install timeshift cronie grub-btrfs
+   #systemctl daemon-reload
+
+   systemctl --root=$mnt enable cronie.service
+   systemctl --root=$mnt enable grub-btrfsd.service
+
+   if [[ $mnt = '' ]]; then
+
+   systemctl edit --stdin grub-btrfsd << EOF
+[Service]
+ExecStart=
+ExecStart=/usr/bin/grub-btrfsd --syslog -t
+EOF
+   systemctl daemon-reload
+   #systemctl --root=$mnt restart grub-btrfsd.service
+
+   else
+
+      mkdir -p $mnt/etc/systemd/system/grub-btrfsd.service.d/override.conf.d
+      echo '[Service]
+ExecStart=
+ExecStart=/usr/bin/grub-btrfsd --syslog -t' > $mnt/etc/systemd/system/grub-btrfsd.service.d/override.conf
+
+   fi
+
+}
 
 
 timeshift_setup () {
@@ -1648,30 +1678,7 @@ timeshift_setup () {
 }
 EOF
 
-	pacstrap_install timeshift cronie grub-btrfs
-	#systemctl daemon-reload
-
-	systemctl --root=$mnt enable cronie.service
-	systemctl --root=$mnt enable grub-btrfsd.service
-	
-	if [[ $mnt = '' ]]; then
-
-	systemctl edit --stdin grub-btrfsd << EOF
-[Service]
-ExecStart=
-ExecStart=/usr/bin/grub-btrfsd --syslog -t
-EOF
-	systemctl daemon-reload
-	#systemctl --root=$mnt restart grub-btrfsd.service
-
-	else
-
-		mkdir -p $mnt/etc/systemd/system/grub-btrfsd.service.d/override.conf.d
-		echo '[Service]
-ExecStart=
-ExecStart=/usr/bin/grub-btrfsd --syslog -t' > $mnt/etc/systemd/system/grub-btrfsd.service.d/override.conf
-
-	fi
+	grub-btrfsd_setup
 
 }
 
@@ -1679,7 +1686,6 @@ ExecStart=/usr/bin/grub-btrfsd --syslog -t' > $mnt/etc/systemd/system/grub-btrfs
 snapper_setup () {
 	
 	mount_disk
-
 
    if [[ $mnt = '' ]]; then
 		
@@ -1704,9 +1710,11 @@ snapper_setup () {
 		arch-chroot $mnt snapper -c root create-config /
 	
 	fi
-	
+
+	grub-btrfsd_setup
 
 }
+
 
 
 do_backup () {
