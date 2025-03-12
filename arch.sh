@@ -1568,7 +1568,7 @@ install_backup () {
 	choice=$1
 
 	if [[ $choice = '' ]]; then
-		echo -e "What backup system would you like to install?\n\n1. rsync \n2. snapper\n3. timeshift\n4. btrfs-assistant\n5. none\n"
+		echo -e "What backup system would you like to install?\n\n1. rsync \n2. snapper\n3. timeshift\n4. btrfs-assistanti\n5. grub-btrfsd\n6. none\n"
 			read -p "Choice: " -n 2 choice
 	else
 		echo "Installing $choice..."
@@ -1598,43 +1598,14 @@ install_backup () {
 										echo -e "\nNot installing snapper/btrfs-assistant as it is not compatablie with $fstype. Exiting.\n"
 									fi
 									;;
+		
+		5|grub-btrfsd)			echo "Not implimented." ;;
 
-		5|none|'')				echo "No backup installed." ;;
+		6|none|'')				echo "No backup installed." ;;
 
 		*)							echo "Not an option. Exiting." ;;
 	esac
 
-
-}
-
-
-grub-btrfsd_setup () {
-
-	mount_disk
-
-   pacstrap_install timeshift cronie grub-btrfs
-
-   systemctl --root=$mnt enable cronie.service
-   systemctl --root=$mnt enable grub-btrfsd.service
-
-   if [[ $mnt = '' ]]; then
-
-   systemctl edit --stdin grub-btrfsd << EOF
-[Service]
-ExecStart=
-ExecStart=/usr/bin/grub-btrfsd --syslog -t
-EOF
-   systemctl daemon-reload
-   #systemctl --root=$mnt restart grub-btrfsd.service
-
-   else
-
-      mkdir -p $mnt/etc/systemd/system/grub-btrfsd.service.d/
-      echo '[Service]
-ExecStart=
-ExecStart=/usr/bin/grub-btrfsd --syslog -t' > $mnt/etc/systemd/system/grub-btrfsd.service.d/override.conf
-
-   fi
 
 }
 
@@ -1676,7 +1647,29 @@ timeshift_setup () {
 }
 EOF
 
-	grub-btrfsd_setup
+   pacstrap_install timeshift cronie grub-btrfs
+
+   systemctl --root=$mnt enable cronie.service
+   systemctl --root=$mnt enable grub-btrfsd.service
+
+   if [[ $mnt = '' ]]; then
+
+   systemctl edit --stdin grub-btrfsd << EOF
+[Service]
+ExecStart=
+ExecStart=/usr/bin/grub-btrfsd --syslog -t
+EOF
+   systemctl daemon-reload
+   #systemctl --root=$mnt restart grub-btrfsd.service
+
+   else
+
+      mkdir -p $mnt/etc/systemd/system/grub-btrfsd.service.d/
+      echo '[Service]
+ExecStart=
+ExecStart=/usr/bin/grub-btrfsd --syslog -t' > $mnt/etc/systemd/system/grub-btrfsd.service.d/override.conf
+
+   fi
 
 }
 
@@ -1710,10 +1703,13 @@ snapper_setup () {
 	
 	fi
 
-	grub-btrfsd_setup
-
 	# Bypass must be erased or won't work
 	rm -rf $mnt/etc/systemd/system/grub-btrfsd.service.d/
+
+	pacstrap_install timeshift cronie grub-btrfs
+
+   systemctl --root=$mnt enable cronie.service
+   systemctl --root=$mnt enable grub-btrfsd.service
 
 }
 
