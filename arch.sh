@@ -319,6 +319,8 @@ choose_disk () {
 		
 		rootfs=$(mount | grep ' / ' | sed 's/(.*//; s/\/dev.* type //; s/ //')
 
+		[ "$(mount | grep ' on / type overlay' | awk '{print $5}')" ] && echo -e "\n       *** Running in overlay mode! ***\n"
+
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#&  $rootfs#g" | sed "s#$host.*#& (host)#g"
 
 		choices='quit sync edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / script logout reboot suspend hibernate poweroff stats benchmark'
@@ -1900,9 +1902,9 @@ addThis="$1"
   }
   1
   ' "$2" > "/temp.txt"
-  cat /temp.txt
-  #cp /temp.txt "$2"
-  #rm -rf /temp.txt
+  #cat /temp.txt
+  cp /temp.txt "$2"
+  rm -rf /temp.txt
 
 }
 
@@ -1942,12 +1944,13 @@ install_hooks () {
 							#https://aur.archlinux.org/packages/overlayroot
 							#https://github.com/hilderingt/archlinux-overlayroot
 	
-							cat $mnt/etc/mkinitcpio.conf | grep ^MODULES= | grep -v overlay && sed -i 's/(lz4/(lz4 overlay/' $mnt/etc/mkinitcpio.conf
+							#cat $mnt/etc/mkinitcpio.conf | grep ^MODULES= | grep -v overlay && sed -i 's/(lz4/(lz4 overlay/' $mnt/etc/mkinitcpio.conf
 
-							cat $mnt/etc/mkinitcpio.conf | grep ^HOOKS | grep -v overlayroot && sed -i 's/resume/resume overlayroot/' $mnt/etc/mkinitcpio.conf
+							#cat $mnt/etc/mkinitcpio.conf | grep ^HOOKS | grep -v overlayroot && sed -i 's/resume/resume overlayroot/' $mnt/etc/mkinitcpio.conf
 
 
-							#add_hooks 'MODULES=overlay|HOOKS=overlayroot' $mnt/etc/mkinitcpio.conf
+							cat $mnt/etc/mkinitcpio.conf | grep ^MODULES= | grep -v overlay && add_hooks 'MODULES=overlay' $mnt/etc/mkinitcpio.conf
+							cat $mnt/etc/mkinitcpio.conf | grep ^HOOKS= | grep -v overlayroot && add_hooks 'HOOKS=overlayroot' $mnt/etc/mkinitcpio.conf
 
 							#	pacman --noconfirm -U /home/user/.local/bin/overlayroot*.zst
 
