@@ -102,12 +102,13 @@ efi_path=/efi
 encrypt=true
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(snapshots var/log var/tmp)			# used for btrfs and bcachefs
-subvolPrefix='/'				# eg., '/' or '/@' Used for btrfs and bcachefs only
-snapshot_dir="/snapshots"
-backup_install='true'		# say 'true' to do snapshots/rysncs during install
-backup_type='rsync'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
+fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+subvols=(var/log var/tmp)			# used for btrfs and bcachefs
+subvol5='root'
+subvolPrefix='/root/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
+snapshot_dir='/root/@/.snapshots'
+backup_install='false'		# say 'true' to do snapshots/rysncs during install
+backup_type='btrfs-assistant'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
 checkPartitions='true'		# Check that partitions are configured optimally?
 
@@ -528,17 +529,28 @@ create_partitions () {
 
 	mount -t $fstype --mkdir $disk$rootPart $mnt
 
+	
 	if [ "$fstype" = "btrfs" ]; then
+
+		cd $mnt
+
+		btrfs su create $subvol5
 
 		if [[ ! $subvolPrefix = '/' ]] && [[ ! $subvolPrefix = '' ]]; then
 			echo btrfs su cr --parents "$mnt$subvolPrefix"
 			btrfs su cr --parents "$mnt$subvolPrefix"
 		fi
+		
+		# Strip leading '/'
+		#btrfs su cr --parents $(echo $snapshot_dir | sed 's#^/##')
 
 		for subvol in "${subvols[@]}"; do
 			echo btrfs su cr --parents "$mnt$subvolPrefix$subvol"
 			btrfs su cr --parents "$mnt$subvolPrefix$subvol"
 		done
+	
+		btrfs su list $mnt
+		read -p "Press"
 
 	fi
 
@@ -1675,35 +1687,22 @@ snapper_setup () {
 
 		snapper -c root create-config /
 
-		cat $mnt/etc/fstab | sed 's#subvol=/@\s#subvol=/@/.snapshots #' | grep snapshots | sed 's#/.*btrfs#/.snapshots  btrfs##' >> $mnt/etc/fstab	
-		
-		cat $mnt/etc/fstab
-		systemctl daemon-reload	
-		mount -a
-
-		btrfs subvolume list /
-
-	else
-
-		echo "Install snapper once you've rebooted."
-
-		#pacstrap_install snapper
-	
-		#arch-chroot $mnt snapper -c root create-config /
-		
 		#cat $mnt/etc/fstab | sed 's#subvol=/@\s#subvol=/@/.snapshots #' | grep snapshots | sed 's#/.*btrfs#/.snapshots  btrfs##' >> $mnt/etc/fstab	
 		
 		#cat $mnt/etc/fstab
 		#systemctl daemon-reload	
 		#mount -a
 
-		#arch-chroot $mnt btrfs subvolume list /
-		
-		# Will always repopulate so no use deleting them
-		#arch-chroot $mnt btrfs su delete --subvolid $(btrfs su list / | grep var/lib/portables | sed 's/ID //; s/ gen.*//') $mnt
-		#arch-chroot $mnt btrfs su delete --subvolid $(btrfs su list / | grep var/lib/machines | sed 's/ID //; s/ gen.*//') $mnt
-		#arch-chroot $mnt btrfs su delete --subvolid $(btrfs su list / | grep snapshots | sed 's/ID //; s/ gen.*//') $mnt
+		#btrfs subvolume list /
 
+	else
+
+		rm -rf $mnt$snapshot_dir
+
+		pacstrap_install snapper
+		
+		arch-chroot $mnt snapper -c root create-config /
+	
 	fi
 	
 
@@ -2540,6 +2539,10 @@ auto_install_kde () {
 	install_config
 	install_hooks overlayroot
 	install_mksh
+
+	if [ $backup_type = 'btrfs-assistant' ] && [ $fstype = btrfs ]; then
+		arch-chroot $mnt pacman -U --noconfirm /home/$user/.local/bin/backup-pkgs/btrfs-assistant-*.zst
+	fi
 
 	do_backup "KDE-installed"
 
