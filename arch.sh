@@ -482,10 +482,9 @@ create_partitions () {
 
 	case $fstype in
 
-		btrfs)		#pacman -S --needed --noconfirm btrfs-progs
+		btrfs)		pacman -S --needed --noconfirm btrfs-progs
 						mkfs.btrfs -f -L ROOT $disk$rootPart ;;
-		ext4)			
-						mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart 
+		ext4)			mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart 
 						
 						echo "Running tune2fs to create fast commit journal area..." 
 						tune2fs -O fast_commit $disk$rootPart ;;
@@ -540,6 +539,8 @@ create_partitions () {
 
 		btrfs subvolume create /mnt/@
 		btrfs subvolume create /mnt/@snapshots
+		btrfs subvolume create --parents /mnt/@var/log
+		btrfs subvolume create --parents /mnt/@var/tmp
 
 		btrfs subvolume list /mnt
 
@@ -579,10 +580,9 @@ create_partitions () {
 	mkdir -p $mnt/{dev,etc,proc,root,run,sys,tmp,var/cache/pacman/pkg,/var/log,/var/tmp}
 	
 	if [ "$fstype" = "btrfs" ]; then
-		echo
 		#rm -rf /var/{log,tmp}/*
-		#chattr +C /var/{log,tmp}
-		#lsattr /var
+		chattr +C /var/{log,tmp}
+		lsattr /var
 	fi
 
 	if [ "$fstype" = "bcachefs" ]; then
@@ -616,11 +616,15 @@ mount_disk () {
 
 			mount $disk$rootPart -o subvolid=256 /mnt
 			
-			mkdir -p /mnt/.snapshots
-			mkdir -p /mnt/.btrfsroot
+			#mkdir -p /mnt/.snapshots
+			#mkdir -p /mnt/var/log
+			#mkdir -p /mnt/var/tmp
+			#mkdir -p /mnt/.btrfsroot
 			
-			mount $disk$rootPart -o subvolid=257 /mnt/.snapshots
-			mount $disk$rootPart -o subvolid=5 /mnt/.btrfsroot
+			mount $disk$rootPart --mkdir -o subvolid=257 /mnt/.snapshots
+			mount $disk$rootPart --mkdir -o subvolid=258 /mnt/var/log
+			mount $disk$rootPart --mkdir -o subvolid=259 /mnt/var/tmp
+			mount $disk$rootPart --mkdir -o subvolid=5 /mnt/.btrfsroot
 
 
 
@@ -1764,11 +1768,11 @@ EOF
 		
 		pacman -S --noconfirm snapper
 
-		if [ -d /.snapshots/ ]; then
+	if [ -d /.snapshots/ ]; then
 			umount /.snapshots/
 			rm -rf /.snapshots/
 		fi
-
+	
 
 		snapper -c root create-config /	
 		mount -a
@@ -1779,12 +1783,12 @@ EOF
 
 		pacstrap_install snapper snap-pac
 		
-		arch-chroot $mnt /bin/bash << EOF
-
-		if [ -d /.snapshots/ ]; then
-			umount /.snapshots/
-			rm -rf /.snapshots/
+		if [ -d $mnt/.snapshots/ ]; then
+			umount $mnt/.snapshots/
+			rm -rf $mnt/.snapshots/
 		fi
+
+		arch-chroot $mnt /bin/bash << EOF
 
 		snapper -c root create-config /	
 		mount -a
