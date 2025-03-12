@@ -3228,7 +3228,8 @@ clone_menu () {
 			timeshift|20)	delete_timeshift_snapshots ;;
 			bork|21)			bork_system ;;
 			snapper|22)		snapper list
-								read -p "What would you like to name this snapshot?" snapshot
+								echo -e "\nWhat would you like to name this snapshot?\n"
+								read snapshot
 								touch "/home/$user/snap-$snapshot"
 								snapper -c root create --read-write --description "$snapshot"
 								rm -rf "/home/$user/snap-$snapshot"
