@@ -1228,6 +1228,7 @@ export EDITOR=/usr/bin/vim
 export QT_IM_MODULE=Maliit
 export QT_AUTO_SCREEN_SCALE_FACTOR=1
 export KWIN_IM_SHOW_ALWAYS=1
+export PATH="$HOME/.local/bin:$PATH"
 
 manager=''
 default_manager=kde-dbus
@@ -1784,7 +1785,7 @@ export VISUAL=emacs
 export EDITOR=/usr/bin/vim
 set -o emacs" > $mnt/root/.mkshrc
 
-   echo "HISTFILE=/home/$user/.mksh_history
+   echo "HISTFILE=/home/$USER/.mksh_history
 HISTSIZE=5000
 export VISUAL=emacs
 export EDITOR=/usr/bin/vim
