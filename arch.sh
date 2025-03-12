@@ -1874,7 +1874,7 @@ install_hooks () {
 							#https://aur.archlinux.org/packages/overlayroot
 							#https://github.com/hilderingt/archlinux-overlayroot
 	
-							cat $mnt/etc/mkinitcpio.conf | grep ^MODULES= | grep -v overlay && sed -i 's/lz4)/lz4 overlay)/' $mnt/etc/mkinitcpio.conf
+							cat $mnt/etc/mkinitcpio.conf | grep ^MODULES= | grep -v overlay && sed -i 's/(lz4/(lz4 overlay/' $mnt/etc/mkinitcpio.conf
 
 							cat $mnt/etc/mkinitcpio.conf | grep ^HOOKS | grep -v overlayroot && sed -i 's/resume/resume overlayroot/' $mnt/etc/mkinitcpio.conf
 
