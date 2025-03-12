@@ -1570,7 +1570,7 @@ install_backup () {
 	choice=$1
 
 	if [[ $choice = '' ]]; then
-		echo -e "What backup system would you like to install?\n\n1. rsync \n2. snapper\n3. timeshift\n4. btrfs-assistanti\n5. grub-btrfsd\n6. none\n"
+		echo -e "What backup system would you like to install?\n\n1. rsync \n2. snapper\n3. timeshift\n4. btrfs-assistanti\n5. grub-btrfsd\n6. snapper rollback\n7. none\n"
 			read -p "Choice: " -n 2 choice
 	else
 		echo "Installing $choice..."
@@ -1603,7 +1603,11 @@ install_backup () {
 		
 		5|grub-btrfsd)			echo "Not implimented." ;;
 
-		6|none|'')				echo "No backup installed." ;;
+		6|rollback)				snapper-rollback_setup
+									
+									;;
+
+		7|none|'')				echo "No backup installed." ;;
 
 		*)							echo "Not an option. Exiting." ;;
 	esac
@@ -1727,6 +1731,62 @@ EOF
 
 }
 
+
+
+snapper-rollback_setup () {
+	
+	mount_disk
+
+  	cat > $mnt/etc/snapper-rollback.conf <<EOF
+# config for btrfs root
+[root]
+# Name of your linux root subvolume
+subvol_main = @
+# Name of your snapper snapshot subvolume
+subvol_snapshots = /.snapshots
+# Directory to which your btrfs root is mounted.
+mountpoint = /
+# Device file for btrfs root.
+# If your btrfs root isn't mounted to mountpoint directory, then automatically
+# mount this device there before rolling back. This parameter is optional, but
+# if unset, you'll have to mount your btrfs root manually.
+#dev = /dev/sda4
+EOF
+
+	if [[ $mnt = '' ]]; then
+		
+		#pacstrap_install snapper
+
+		rm -rf $mnt$snapshot_dir
+		snapper delete-config
+		snapper -c root create-config /
+		
+		pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
+
+	else
+
+		rm -rf $mnt$snapshot_dir
+
+		pacstrap_install snapper
+
+		arch-chroot $mnt pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
+
+		arch-chroot $mnt snapper delete-config
+		arch-chroot $mnt snapper -c root create-config 	
+	fi
+
+
+	# Bypass must be erased or won't work
+	rm -rf $mnt/etc/systemd/system/grub-btrfsd.service.d/
+
+	pacstrap_install timeshift cronie grub-btrfs
+
+   systemctl --root=$mnt enable cronie.service
+   systemctl --root=$mnt enable grub-btrfsd.service
+	
+	echo -e "\nType 'snapper-rollback <SNAPID>' to rollback\n"
+
+}
 
 
 do_backup () {
