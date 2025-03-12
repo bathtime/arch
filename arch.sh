@@ -103,7 +103,7 @@ encrypt=true
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-subvols=(snapshots var/tmp)			# used for btrfs and bcachefs
+subvols=(snapshots var/log var/tmp)			# used for btrfs and bcachefs
 subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir="/snapshots"
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
@@ -806,6 +806,21 @@ setup_fstab () {
 choose_initramfs () {
 
 	mount_disk
+
+
+	echo 'MODULES=(lz4)
+BINARIES=()
+FILES=()
+
+#HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block filesystems fsck)
+HOOKS=(base udev autodetect microcode modconf block filesystems resume)
+
+COMPRESSION="lz4"
+
+#COMPRESSION_OPTIONS=()
+
+MODULES_DECOMPRESS="no"' > $mnt/etc/mkinitcpio.conf
+
 
 	if [ "$1" ]; then
 		choice=$1
@@ -1799,6 +1814,31 @@ EOF
 }
 
 
+add_hooks () {
+
+mount_disk
+
+#addThis='MODULES=liveroot|HOOKS=liveroot'
+
+addThis="$1"
+
+	awk -F'[=()]' -v add="${addThis}" '
+  BEGIN {
+    split(add, t, "[|=]")
+    for(i=1; i in t;i+=2)
+      addT[t[i]]=t[i+1]
+  }
+  $1 in addT {
+    sub(/(\([^)]+)/, "& " addT[$1])
+  }
+  1
+  ' "$2" > "/temp.txt"
+  cp /temp.txt "$2"
+  rm -rf /temp.txt
+
+}
+
+
 install_hooks () {
 
 	mount_disk
@@ -1819,10 +1859,10 @@ install_hooks () {
 							pacstrap_install rsync squashfs-tools
 
 							[ "$(cat $mnt/usr/lib/initcpio/install/liveroot | grep 'add_binary btrfs')" ] || sed -i 's/build() {/& \n        add_binary btrfs/g' $mnt/usr/lib/initcpio/install/liveroot
-
-							#cat $mnt/etc/mkinitcpio.conf | grep ^MODULES= | grep -v liveroot && sed -i 's/lz4)/lz4 liveroot)/' $mnt/etc/mkinitcpio.conf
 							
-							cat $mnt/etc/mkinitcpio.conf | grep ^HOOKS | grep -v liveroot && sed -i 's/resume)/liveroot resume)/' $mnt/etc/mkinitcpio.conf
+							cat $mnt/etc/mkinitcpio.conf | grep ^HOOKS | grep -v liveroot && sed -i 's/resume/liveroot resume/' $mnt/etc/mkinitcpio.conf
+
+							#add_hooks 'HOOKS=liveroot' $mnt/etc/mkinitcpio.conf
 
 							# So systemd won't remount as 'rw'
 							#systemctl --root=$mnt mask systemd-remount-fs.service
@@ -1836,7 +1876,9 @@ install_hooks () {
 	
 							cat $mnt/etc/mkinitcpio.conf | grep ^MODULES= | grep -v overlay && sed -i 's/lz4)/lz4 overlay)/' $mnt/etc/mkinitcpio.conf
 
-							cat $mnt/etc/mkinitcpio.conf | grep ^HOOKS | grep -v overlayroot && sed -i 's/resume)/resume overlayroot)/' $mnt/etc/mkinitcpio.conf
+							cat $mnt/etc/mkinitcpio.conf | grep ^HOOKS | grep -v overlayroot && sed -i 's/resume/resume overlayroot/' $mnt/etc/mkinitcpio.conf
+
+							#add_hooks 'MODULES=overlay|HOOKS=overlayroot' $mnt/etc/mkinitcpio.conf
 
 							#	pacman --noconfirm -U /home/user/.local/bin/overlayroot*.zst
 
@@ -2432,9 +2474,6 @@ auto_install_root () {
 		auto_login root
 	fi
 
-	#setup_fstab
-	#install_grub
-	
 	# Bootable snapshots will not work with mkinitcpio
 	if [[ $fstype = btrfs ]]; then
 		choose_initramfs booster
@@ -3219,6 +3258,7 @@ while :; do
 26. Auto-login root
 27. Auto-login user
 28. Hypervisor setup
+29. Test
 30. Custom install
 31. Setup ~ files
 32. Snapshot/sync/wipe ->
@@ -3245,7 +3285,7 @@ echo
 		fstab|6)					setup_fstab ;;
 		base|7)					install_base ;;
 		boot|8)					install_bootloader ;;
-		setup|9)				general_setup ;;
+		setup|9)					general_setup ;;
 		user|10)					setup_user ;;
       network|11)				install_network ;;
 		aur|12)					install_aur ;;
@@ -3264,6 +3304,11 @@ echo
 		loginroot|26)			auto_login root ;;
 		loginuser|27)			auto_login user ;;
 		hypervisor|28)			hypervisor_setup ;;
+
+		test|29)					
+									add_hooks 'MODULES=overlay|HOOKS=overlayroot' $mnt/etc/mkinitcpio.conf
+
+									;;
 		custom|30)				custom_install ;;
 		setup|31)				setup_menu ;;
 		copy|32)					clone_menu ;;
