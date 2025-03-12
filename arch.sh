@@ -104,19 +104,13 @@ startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216)
 fsPercent='50'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 
-#subvols=(var/log var/tmp)			# used for btrfs and bcachefs
-#subvol5='root'
-#subvolPrefix='/root/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
-#snapshot_dir='/root/@/.snapshots'
-
-subvols=(/var/log /var/tmp)			# used for btrfs and bcachefs
-subvol5=''
-subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
-snapshot_dir='/@/.snapshots'
+subvols=(var/log var/tmp)			# used for btrfs and bcachefs
+subvolPrefix='@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
+snapshot_dir='/.snapshots'
 
 
 backup_install='false'		# say 'true' to do snapshots/rysncs during install
-backup_type='btrfs-assistant'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
+backup_type='snapper-rollback'		# eg., '','rsync','snapper','snapper-rollback','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
 checkPartitions='true'		# Check that partitions are configured optimally?
 
@@ -544,22 +538,23 @@ create_partitions () {
 	
 	if [ "$fstype" = "btrfs" ]; then
 
-		cd $mnt
+		btrfs subvolume create /mnt/@
+		btrfs subvolume create /mnt/@snapshots
 
-		[ ! $subvol5 = '' ] && btrfs su create $subvol5
+		btrfs subvolume list /mnt
 
-		if [[ ! $subvolPrefix = '/' ]] && [[ ! $subvolPrefix = '' ]]; then
-			echo btrfs su cr --parents "$mnt$subvolPrefix"
-			btrfs su cr --parents "$mnt$subvolPrefix"
-		fi
+		#if [[ ! $subvolPrefix = '/' ]] && [[ ! $subvolPrefix = '' ]]; then
+		#	echo btrfs su cr --parents "$mnt$subvolPrefix"
+		#	btrfs su cr --parents "$mnt$subvolPrefix"
+		#fi
 		
 		# Strip leading '/'
 		#btrfs su cr --parents $(echo $snapshot_dir | sed 's#^/##')
 
-		for subvol in "${subvols[@]}"; do
-			echo btrfs su cr --parents "$mnt$subvolPrefix$subvol"
-			btrfs su cr --parents "$mnt$subvolPrefix$subvol"
-		done
+		#for subvol in "${subvols[@]}"; do
+		#	echo btrfs su cr --parents "$mnt$subvolPrefix$subvol"
+		#	btrfs su cr --parents "$mnt$subvolPrefix$subvol"
+		#done
 	
 	fi
 
@@ -584,9 +579,10 @@ create_partitions () {
 	mkdir -p $mnt/{dev,etc,proc,root,run,sys,tmp,var/cache/pacman/pkg,/var/log,/var/tmp}
 	
 	if [ "$fstype" = "btrfs" ]; then
-		rm -rf /var/{log,tmp}/*
-		chattr +C /var/{log,tmp}
-		lsattr /var
+		echo
+		#rm -rf /var/{log,tmp}/*
+		#chattr +C /var/{log,tmp}
+		#lsattr /var
 	fi
 
 	if [ "$fstype" = "bcachefs" ]; then
@@ -601,9 +597,6 @@ create_partitions () {
 
 	btrfs su list $mnt
 	genfstab -U $mnt
-
-	read -p "Press enter to continue."
-
 
 }
 
@@ -621,27 +614,37 @@ mount_disk () {
 
 			echo -e "\nMounting...\n"
 
-			mountopts="noatime,discard=async"
+			mount $disk$rootPart -o subvolid=256 /mnt
 			
-			if [[ ! $subvolPrefix = '/' ]] && [[ ! $subvolPrefix = '' ]]; then
-
-				subvol=''
-				echo mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
-				mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
-
-			else
+			mkdir -p /mnt/.snapshots
+			mkdir -p /mnt/.btrfsroot
 			
-				echo mount -t $fstype --mkdir $disk$rootPart $mnt
-				mount -t $fstype --mkdir $disk$rootPart $mnt
-			
-			fi
+			mount $disk$rootPart -o subvolid=257 /mnt/.snapshots
+			mount $disk$rootPart -o subvolid=5 /mnt/.btrfsroot
 
-			for subvol in "${subvols[@]}"; do
+
+
+			#mountopts="noatime,discard=async"
+			
+			#if [[ ! $subvolPrefix = '/' ]] && [[ ! $subvolPrefix = '' ]]; then
+
+			#	subvol=''
+			#	echo mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
+			#	mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
+
+			#else
+			
+			#	echo mount -t $fstype --mkdir $disk$rootPart $mnt
+			#	mount -t $fstype --mkdir $disk$rootPart $mnt
+			
+			#fi
+
+			#for subvol in "${subvols[@]}"; do
 				
-				echo mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
-				mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
+			#	echo mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
+			#	mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
 
-			done
+			#done
 			
 		elif [[ $fstype = bcachefs ]]; then
 	
@@ -1584,7 +1587,7 @@ install_backup () {
 	choice=$1
 
 	if [[ $choice = '' ]]; then
-		echo -e "What backup system would you like to install?\n\n1. rsync \n2. snapper\n3. timeshift\n4. btrfs-assistanti\n5. grub-btrfsd\n6. snapper rollback\n7. none\n"
+		echo -e "What backup system would you like to install?\n\n1. rsync \n2. snapper\n3. timeshift\n4. btrfs-assistanti\n5. grub-btrfsd\n6. snapper-rollback\n7. none\n"
 			read -p "Choice: " -n 2 choice
 	else
 		echo "Installing $choice..."
@@ -1617,7 +1620,7 @@ install_backup () {
 		
 		5|grub-btrfsd)			echo "Not implimented." ;;
 
-		6|rollback)				snapper-rollback_setup
+		6|snapper-rollback)	snapper-rollback_setup
 									
 									;;
 
@@ -1707,12 +1710,21 @@ snapper_setup () {
 
 	else
 
-		rm -rf $mnt$snapshot_dir
+		pacstrap_install snapper snap-pac
 
-		pacstrap_install snapper
+		
+		arch-chroot $mnt /bin/bash << EOF
 
-		#arch-chroot $mnt snapper delete-config
-		#arch-chroot $mnt snapper -c root create-config 	
+		umount /.snapshots/
+		rm -rf /.snapshots/
+
+		snapper -c root create-config 	
+		mount -a
+
+EOF
+
+
+
 	fi
 
 
@@ -1738,9 +1750,9 @@ snapper-rollback_setup () {
 # Name of your linux root subvolume
 subvol_main = @
 # Name of your snapper snapshot subvolume
-subvol_snapshots = /.snapshots
+subvol_snapshots = @snapshots
 # Directory to which your btrfs root is mounted.
-mountpoint = /
+mountpoint = /.btrfsroot
 # Device file for btrfs root.
 # If your btrfs root isn't mounted to mountpoint directory, then automatically
 # mount this device there before rolling back. This parameter is optional, but
@@ -1750,24 +1762,37 @@ EOF
 
 	if [[ $mnt = '' ]]; then
 		
-		#pacstrap_install snapper
+		pacman -S --noconfirm snapper
 
-		rm -rf $mnt$snapshot_dir
-		snapper delete-config
-		snapper -c root create-config /
+		if [ -d /.snapshots/ ]; then
+			umount /.snapshots/
+			rm -rf /.snapshots/
+		fi
+
+
+		snapper -c root create-config /	
+		mount -a
 		
 		pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
 
 	else
 
-		rm -rf $mnt$snapshot_dir
+		pacstrap_install snapper snap-pac
+		
+		arch-chroot $mnt /bin/bash << EOF
 
-		pacstrap_install snapper
+		if [ -d /.snapshots/ ]; then
+			umount /.snapshots/
+			rm -rf /.snapshots/
+		fi
+
+		snapper -c root create-config /	
+		mount -a
+
+EOF
 
 		arch-chroot $mnt pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
 
-		arch-chroot $mnt snapper delete-config
-		arch-chroot $mnt snapper -c root create-config 	
 	fi
 
 
@@ -2602,6 +2627,7 @@ auto_install_user () {
 	#setup_acpid
 	
 	copy_pkgs
+
 	do_backup "User-installed"
 
 }
@@ -2627,6 +2653,7 @@ auto_install_kde () {
 	fi
 
 	install_backup $backup_type
+
 	do_backup "KDE-installed"
 
 }
