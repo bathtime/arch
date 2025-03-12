@@ -581,7 +581,7 @@ create_partitions () {
 	
 	if [ "$fstype" = "btrfs" ]; then
 		#rm -rf /var/{log,tmp}/*
-		chattr +C /var/{log,tmp}
+		chattr -R +C /var/{log,tmp}
 		lsattr /var
 	fi
 
