@@ -107,7 +107,7 @@ subvols=(var/log var/tmp)			# used for btrfs and bcachefs
 subvol5='root'
 subvolPrefix='/root/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir='/root/@/.snapshots'
-backup_install='false'		# say 'true' to do snapshots/rysncs during install
+backup_install='true'		# say 'true' to do snapshots/rysncs during install
 backup_type='btrfs-assistant'		# eg., '','rsync','snapper','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
 checkPartitions='true'		# Check that partitions are configured optimally?
@@ -1682,15 +1682,8 @@ snapper_setup () {
 		
 		pacstrap_install snapper
 
+		rm -rf $mnt$snapshot_dir
 		snapper -c root create-config /
-
-		#cat $mnt/etc/fstab | sed 's#subvol=/@\s#subvol=/@/.snapshots #' | grep snapshots | sed 's#/.*btrfs#/.snapshots  btrfs##' >> $mnt/etc/fstab	
-		
-		#cat $mnt/etc/fstab
-		#systemctl daemon-reload	
-		#mount -a
-
-		#btrfs subvolume list /
 
 	else
 
@@ -1732,7 +1725,12 @@ do_backup () {
 									fi
 									;;
 
-		snapper)					echo "Not implimented yet." ;;
+		snapper)					if [[ $fstype = btrfs ]]; then
+										snapper -c root create --read-write --description "$1"
+									echo
+										echo "Will not do a backup with btrfs-assistant on $fstype."
+									fi
+									;;
 
 		timeshift)				if [[ $fstype = btrfs ]]; then
 										arch-chroot $mnt timeshift --create --comments "$1" --tags D
@@ -1742,8 +1740,8 @@ do_backup () {
 									fi
 									;;
 
-		btrfs-assistant)	if [[ $fstype = btrfs ]]; then
-										echo "TODO:Functionality not implimented yet."
+		btrfs-assistant)		if [[ $fstype = btrfs ]]; then
+										snapper -c root create --read-write --description "$1"
 									echo
 										echo "Will not do a backup with btrfs-assistant on $fstype."
 									fi
