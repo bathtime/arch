@@ -1697,29 +1697,10 @@ snapper_setup () {
 
 		pacstrap_install snapper
 
-		arch-chroot $mnt pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
-
-		cat > $mnt/snapper-rollback.conf << EOF
-# config for btrfs root
-[root]
-# Name of your linux root subvolume
-subvol_main = @
-# Name of your snapper snapshot subvolume
-subvol_snapshots = /.snapshots
-# Directory to which your btrfs root is mounted.
-mountpoint = /
-# Device file for btrfs root.
-# If your btrfs root isn't mounted to `mountpoint` directory, then automatically
-# mount this device there before rolling back. This parameter is optional, but
-# if unset, you'll have to mount your btrfs root manually.
-#dev = /dev/sda4
-EOF
-
 		#arch-chroot $mnt snapper delete-config
 		#arch-chroot $mnt snapper -c root create-config 	
 	fi
 
-	echo -e "\nType 'snapper-rollback <SNAPID>' to rollback\n"
 
 	# Bypass must be erased or won't work
 	rm -rf $mnt/etc/systemd/system/grub-btrfsd.service.d/
