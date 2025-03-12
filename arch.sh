@@ -3228,9 +3228,9 @@ clone_menu () {
 			bork|21)			bork_system ;;
 			snapper|22)		snapper list
 								read -p "What would you like to name this snapshot?" snapshot
-								touch /home/$user/snap-$snapshot
+								touch "/home/$user/snap-$snapshot"
 								snapper -c root create --read-write --description "$snapshot"
-								rm -rf /home/$user/snap-$snapshot
+								rm -rf "/home/$user/snap-$snapshot"
 								snapper list ;;
 			rollback|23)	do_snapper-rollback ;;
       	'')				;;
