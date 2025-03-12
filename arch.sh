@@ -1768,7 +1768,7 @@ EOF
 		
 		pacman -S --noconfirm snapper
 
-	if [ -d /.snapshots/ ]; then
+		if [ -d /.snapshots/ ]; then
 			umount /.snapshots/
 			rm -rf /.snapshots/
 		fi
@@ -1778,6 +1778,7 @@ EOF
 		mount -a
 		
 		pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
+		pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/btrfs-assistant-*.zst
 
 	else
 
@@ -1788,15 +1789,17 @@ EOF
 			rm -rf $mnt/.snapshots/
 		fi
 
-		#arch-chroot $mnt /bin/bash << EOF
+		read -p "Check if snapper config exists. Press any key to continue."
+	
+		arch-chroot $mnt /bin/bash << EOF
 
-		arch-chroot $mnt snapper -c root create-config /
-		arch-chroot $mnt mount -a
+		snapper -c root create-config /	
+		mount -a
 
-#EOF
+EOF
 
 		arch-chroot $mnt pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
-
+		arch-chroot $mnt pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/btrfs-assistant-*.zst
 	fi
 
 
