@@ -2374,12 +2374,19 @@ snapper_delete () {
 
 snapper_delete_recovery () {
 
-	recovery=$(btrfs su list / | grep 'level 5 path @2025' | awk '{print $2}')
+	# First check if there are any files to delete (else an error)
+	if [ "$(ls  /.btrfsroot/ | grep @202*.*:)" ]; then
 
-	for ID in ${recovery[@]}; do
-		echo -e "\nDeleting ID: $ID..."
-		btrfs su delete -i $ID /
-	done
+		recovery=$(btrfs su list / | grep 'level 5 path @2025' | awk '{print $2}')
+
+		for ID in ${recovery[@]}; do
+      	echo -e "\nDeleting ID (recovery snapshot): $ID..."
+      	btrfs su delete -i $ID /
+   	done
+
+	else
+		echo -e "\nNo recovery snapshots to delete."
+	fi
 
 }
 
@@ -2424,7 +2431,7 @@ snapper_delete_all () {
 	if [ "$(ls /.snapshots)" ]; then
 
 		# Delete remaing info.xml files
-		echo -e "\nStray .xml files found. Running: rm -rfv /.snapshots/* to delete...\n"
+		echo -e "\nStray .xml files found.\nRunning: rm -rfv /.snapshots/* to delete...\n"
 		rm -rfv /.snapshots/*
 	else
 		echo -e "\nNo stray .xml files to delete."
