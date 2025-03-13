@@ -2378,6 +2378,7 @@ snapper_delete_all () {
 
 	rm -rf /.snapshots
 	rm -rf /.btrfsroot/@2025*
+	rm -rf  /.btrfsroot/\@snapshots/*
 
 	sleep 1
 	sync_disk
