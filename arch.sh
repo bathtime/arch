@@ -103,7 +103,7 @@ checkPartitions='true'		# Check that partitions are configured optimally?
 efi_path=/efi
 encrypt=true
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
-fsPercent='100'					# What percentage of space should the root drive take?
+fsPercent='50'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 
 subvols=(var/log var/tmp)			# TODO: used for btrfs and bcachefs
@@ -1706,13 +1706,15 @@ snapper_setup () {
 		fi
 
 		rm -rf $mnt$snapshot_dir
-		mkdir -p $mnt$snapshot_dir
-
-		mount -a
 		
-		if [[ ! -f $mnt/etc/snapper/configs/root ]]; then
+		#mkdir -p $mnt$snapshot_dir
+		
+		if [[ ! "$(ls $mnt/etc/snapper/configs/ | grep root)" ]]; then
 			snapper -c root create-config /
 		fi
+		
+		# must mount after snapper creates configs and snapshots dir
+		mount -a
 
 	else
 
