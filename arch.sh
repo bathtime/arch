@@ -2341,6 +2341,22 @@ do_snapper-rollback () {
 }
 
 
+snapper_delete () {
+
+	snapper list
+	btrfs su list /
+
+	echo -e "\nWhich snapshot would you like to delete?\n"
+
+	read choice
+
+	btrfs su delete -i $choice /
+	
+	btrfs su list /
+
+}
+
+
 extract_archive () {
 
 	check_on_root
@@ -3192,7 +3208,8 @@ clone_menu () {
 20. Delete timeshift backups
 21. Bork system
 22. Snapper snapshot
-23. Snapper rollback")
+23. Snapper rollback
+24. Snapper delete")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3235,6 +3252,7 @@ clone_menu () {
 								rm -rf "/home/$user/snap-$snapshot"
 								snapper list ;;
 			rollback|23)	do_snapper-rollback ;;
+			delete|24)		snapper_delete ;;
       	'')				;;
       	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
