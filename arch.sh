@@ -1706,18 +1706,19 @@ snapper_setup () {
 
 	else
 
-		pacstrap_install snapper snap-pac
+		#pacstrap_install snapper snap-pac
+		pacstrap_install snapper
 
 		
-		arch-chroot $mnt /bin/bash << EOF
-
-		umount /.snapshots/
-		rm -rf /.snapshots/
-
-		snapper -c root create-config 	
-		mount -a
-
-EOF
+		#arch-chroot $mnt /bin/bash << EOF
+#
+#		umount /.snapshots/
+#		rm -rf /.snapshots/
+#
+#		snapper -c root create-config 	
+#		mount -a
+#
+#EOF
 
 	fi
 
@@ -1763,7 +1764,7 @@ EOF
 		snapper -c root create-config /	
 		mount -a
 		
-		#pacman -U --noconfirm --needed /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
+		pacman -U --noconfirm --needed /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
 		#pacman -U --noconfirm --needed /home/user/.local/bin/backup-pkgs/btrfs-assistant-*.zst
 
 	else
@@ -1777,8 +1778,13 @@ EOF
 		#arch-chroot $mnt mount -a
 
 #EOF
+		
+		cp /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst $mnt/var/cache/pacman/pkg/
+		
+		arch-chroot $mnt /bin/bash -e << EOF
+pacman -U --noconfirm /var/cache/pacman/pkg/snapper-rollback-*.zst
+EOF
 
-		pacman -U --noconfirm --sysroot $mnt /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
 		#arch-chroot $mnt pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
 		#arch-chroot $mnt pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/btrfs-assistant-*.zst
 
