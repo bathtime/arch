@@ -2370,7 +2370,12 @@ snapper_delete_all () {
 
 	btrfs su list /
 
-	umount /.snapshots
+	cd /
+
+	if [ "$(mount | grep /.snapshots)" ]; then
+		umount /.snapshots
+	fi
+
 	rm -r /.snapshots
 
 	sleep 1
