@@ -2379,32 +2379,43 @@ snapper_delete_recovery () {
 
 snapper_delete_all () {
 
-	btrfs su list /
-
 	cd /
 
 	#if [ "$(mount | grep /.snapshots)" ]; then
 	#	umount /.snapshots
 	#fi
 
-	recovery=$(btrfs su list / | grep 'level 5 path @2025' | awk '{print $2}')
+	# First check if there are any files to delete (else an error)
+	if [ $(ls  /.btrfsroot/ | grep @202*.*:) ]; then
 
-	 for ID in ${recovery[@]}; do
-      echo -e "\nDeleting ID (recovery snapshot): $ID..."
-      btrfs su delete -i $ID /
-   done
+		recovery=$(btrfs su list / | grep 'level 5 path @2025' | awk '{print $2}')
 
+		for ID in ${recovery[@]}; do
+      	echo -e "\nDeleting ID (recovery snapshot): $ID..."
+      	btrfs su delete -i $ID /
+   	done
+
+	else
+		echo -e "\nNo recovery snapshots to delete."
+	fi
+	
+
+	if [ $(btrfs su list / | grep '257 path @snapshots') ]; then
+		echo HELLO
 	snapshots=$(btrfs su list / | grep '257 path @snapshots/' | awk '{print $2}')
 
    for ID in ${snapshots[@]}; do
       echo -e "\nDeleting ID: $ID..."
       btrfs su delete -i $ID /
    done
+	
+	else
+		echo -e "\nNo snapshots to delete."
+	fi
 
-
-
-	#echo -e "\n*NOT* Running: rm -rf /.snapshots/*..."
-	#rm -rf /.snapshots/*
+	# Delete remaing info.xml files
+	echo -e "\nRunning: rm -rfv /.snapshots/*...\n"
+	rm -rfv /.snapshots/*
 
 	#echo -e "\nRunning: rm -rf /.btrfsroot/@2025*.../n"
 	#rm -rf /.btrfsroot/@202*
