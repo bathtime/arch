@@ -2400,19 +2400,7 @@ snapper_delete_all () {
 	#	umount /.snapshots
 	#fi
 
-	# First check if there are any files to delete (else an error)
-	if [ "$(ls  /.btrfsroot/ | grep @202*.*:)" ]; then
-
-		recovery=$(btrfs su list / | grep 'level 5 path @2025' | awk '{print $2}')
-
-		for ID in ${recovery[@]}; do
-      	echo -e "\nDeleting ID (recovery snapshot): $ID..."
-      	btrfs su delete -i $ID /
-   	done
-
-	else
-		echo -e "\nNo recovery snapshots to delete."
-	fi
+	snapper_delete_recovery
 	
 
 	if [ "$(btrfs su list / | grep '257 path @snapshots')" ]; then
@@ -2439,7 +2427,7 @@ snapper_delete_all () {
 
 
 	#echo -e "\nRunning: rm -rf /.btrfsroot/@2025*.../n"
-	#rm -rf /.btrfsroot/@202*
+	rm -rfv /.btrfsroot/@202*
 
 	sleep .1
 	sync_disk
