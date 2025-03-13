@@ -3360,7 +3360,8 @@ setup_menu () {
 5. Cleanup system
 6. Last modified
 7. Copy config
-8. Copy packages")			config_choice=0
+8. Copy packages
+9. Copy arch.sh")			config_choice=0
 
 	while [ ! "$config_choice" = "1" ]; do
 
@@ -3380,6 +3381,11 @@ setup_menu () {
 			copy|7)		echo "Copying packages from /setup.tar to $mnt/..."
 							cp /setup.tar $mnt/ ;;
 			pkgs|8)		copy_pkgs ;;
+			arch|9)		#mount_disk	
+							echo -e "\nCopying $arch_path/$arch_file -> $mnt$arch_path/$arch_file...\n"
+							cp $arch_path/$arch_file $mnt$arch_path/$arch_file
+
+							;;
          '')			last_modified ;;
          *)				echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
