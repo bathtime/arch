@@ -1709,8 +1709,10 @@ snapper_setup () {
 		mkdir -p $mnt$snapshot_dir
 
 		mount -a
-
-		snapper -c root create-config /
+		
+		if [[ ! -f $mnt/etc/snapper/configs/root ]]; then
+			snapper -c root create-config /
+		fi
 
 	else
 
