@@ -2366,9 +2366,9 @@ snapper_delete () {
 
 snapper_delete_recovery () {
 
-	snapshotsToDelete=$(btrfs su list / | grep 'level 5 path @2025' | awk '{print $2}')
+	recovery=$(btrfs su list / | grep 'level 5 path @2025' | awk '{print $2}')
 
-	for ID in ${snapshotsToDelete[@]}; do
+	for ID in ${recovery[@]}; do
 		echo -e "\nDeleting ID: $ID..."
 		btrfs su delete -i $ID /
 	done
@@ -2387,18 +2387,27 @@ snapper_delete_all () {
 	#	umount /.snapshots
 	#fi
 
-	snapshotsToDelete=$(btrfs su list / | grep '257 path @snapshots/' | awk '{print $2}')
+	recovery=$(btrfs su list / | grep 'level 5 path @2025' | awk '{print $2}')
 
-	for ID in ${snapshotsToDelete[@]}; do
-		echo -e "\nDeleting ID: $ID..."
-		btrfs su delete -i $ID /
-	done
+	 for ID in ${recovery[@]}; do
+      echo -e "\nDeleting ID (recovery snapshot): $ID..."
+      btrfs su delete -i $ID /
+   done
 
-	echo -e "\n*NOT* Running: rm -rf /.snapshots/*..."
+	snapshots=$(btrfs su list / | grep '257 path @snapshots/' | awk '{print $2}')
+
+   for ID in ${snapshots[@]}; do
+      echo -e "\nDeleting ID: $ID..."
+      btrfs su delete -i $ID /
+   done
+
+
+
+	#echo -e "\n*NOT* Running: rm -rf /.snapshots/*..."
 	#rm -rf /.snapshots/*
 
-	echo -e "\nRunning: rm -rf /.btrfsroot/@2025*.../n"
-	rm -rf /.btrfsroot/@202*
+	#echo -e "\nRunning: rm -rf /.btrfsroot/@2025*.../n"
+	#rm -rf /.btrfsroot/@202*
 
 	sleep .1
 	sync_disk
@@ -3269,7 +3278,7 @@ clone_menu () {
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
 
-		[ $fstype = btrfs ] && btrfs su list /
+		[ $fstype = btrfs ] && echo; btrfs su list /
 
 		echo
 		echo "${config_choices[@]}" | column
