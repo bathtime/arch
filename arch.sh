@@ -104,10 +104,10 @@ efi_path=/efi
 encrypt=true
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 
 subvols=(var/log var/tmp)			# TODO: used for btrfs and bcachefs
-subvolPrefix='/'				# eg., '/' or '/@' Used for btrfs and bcachefs only
+subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir='/.snapshots'
 
 btrfsroot='/.btrfsroot'
@@ -116,7 +116,7 @@ bcachefs_mountopts="noatime"
 boot_mountopts="noatime"
 efi_mountopts="noatime"
 
-backup_install='false'		# say 'true' to do snapshots/rysncs during install
+backup_install='true'		# say 'true' to do snapshots/rysncs during install
 backup_type='snapper-rollback'	# eg., '','rsync','snapper','snapper-rollback','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
 
@@ -1587,7 +1587,7 @@ install_backup () {
 									fi
 									;;
 	
-		3|timeshift)		if [[ $fstype = btrfs ]]; then
+		3|timeshift)			if [[ $fstype = btrfs ]]; then
 										timeshift_setup
 									else
 										echo -e "\nNot installing timeshift as it is not compatablie with $fstype. Exiting.\n"
@@ -1596,14 +1596,20 @@ install_backup () {
 	
 		4|btrfs-assistant)	if [[ $fstype = btrfs ]]; then
 										snapper_setup
+										install_grub-btrfsd
 									else
 										echo -e "\nNot installing snapper/btrfs-assistant as it is not compatablie with $fstype. Exiting.\n"
 									fi
 									;;
 		
-		5|grub-btrfsd)			install_grub-btrfsd ;;
+		5|grub-btrfsd)			[ $fstype = btrfs ] && install_grub-btrfsd 
+									;;
 
-		6|snapper-rollback)	snapper-rollback_setup
+		6|snapper-rollback)	if [ $fstype = btrfs ]; then
+										snapper_setup
+										snapper-rollback_setup
+										install_grub-btrfsd
+									fi
 									
 									;;
 
@@ -1694,7 +1700,7 @@ snapper_setup () {
    if [[ $mnt = '' ]]; then
 		
 		pacstrap_install snapper
-
+		umount $mnt$snapshot_dir
 		rm -rf $mnt$snapshot_dir
 		snapper -c root create-config /
 
@@ -1713,18 +1719,7 @@ snapper_setup () {
 
 EOF
 
-
-
 	fi
-
-
-	# Bypass must be erased or won't work
-	rm -rf $mnt/etc/systemd/system/grub-btrfsd.service.d/
-
-	pacstrap_install cronie grub-btrfs
-
-   systemctl --root=$mnt enable cronie.service
-   systemctl --root=$mnt enable grub-btrfsd.service
 
 }
 
@@ -1737,16 +1732,21 @@ snapper-rollback_setup () {
   	cat > $mnt/etc/snapper-rollback.conf <<EOF
 # config for btrfs root
 [root]
+
 # Name of your linux root subvolume
 subvol_main = @
+
 # Name of your snapper snapshot subvolume
 subvol_snapshots = @snapshots
+
 # Directory to which your btrfs root is mounted.
 mountpoint = $btrfsroot
+
 # Device file for btrfs root.
-# If your btrfs root isn't mounted to mountpoint directory, then automatically
+# If your btrfs root isnt mounted to mountpoint directory, then automatically
 # mount this device there before rolling back. This parameter is optional, but
-# if unset, you'll have to mount your btrfs root manually.
+# if unset, youll have to mount your btrfs root manually.
+
 #dev = /dev/sda4
 EOF
 
@@ -1778,20 +1778,11 @@ EOF
 
 #EOF
 
-		arch-chroot $mnt pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
+		pacman -U --noconfirm --sysroot $mnt /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
+		#arch-chroot $mnt pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
 		#arch-chroot $mnt pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/btrfs-assistant-*.zst
 
-		# Bypass must be erased or won't work
-		rm -rf $mnt/etc/systemd/system/grub-btrfsd.service.d/
-
-		#pacstrap_install cronie grub-btrfs
-		pacstrap_install grub-btrfs
-
-   	#systemctl --root=$mnt enable cronie.service
-   	systemctl --root=$mnt enable grub-btrfsd.service
-	
-		echo -e "\nSnapshot: snapper -c root create --read-write --description <NAME>\n
-Rollback: snapper-rollback <SNAPID>\n"
+		echo -e "\nSnapshot: snapper -c root create --read-write --description <NAME>\n"
 
 	fi
 
@@ -1815,7 +1806,7 @@ do_backup () {
 									fi
 									;;
 
-		snapper)					if [[ $fstype = btrfs ]]; then
+		snapper|snapper-rollback)	if [[ $fstype = btrfs ]]; then
 										arch-chroot $mnt snapper -c root create --read-write --description "$1"
 									echo
 										echo "Will not do a backup with btrfs-assistant on $fstype."
@@ -2413,7 +2404,7 @@ snapper_delete_all () {
 
 
 	#echo -e "\nRunning: rm -rf $btrfsroot/@2025*.../n"
-	rm -rfv $btrfsroot/@202*
+	#rm -rf $btrfsroot/@202*
 
 	sleep 1
 	sync_disk
@@ -2684,7 +2675,7 @@ auto_install_root () {
 
 		choose_initramfs dracut 
 
-		[ ! $backup_type = '' ] && install_grub-btrfsd
+		[ ! $backup_type = '' ] && [ ! $fstype = bcachefs ] && install_grub-btrfsd
 
 		# booster doesn't work with bcachefs encryption
 		if [[ $fstype = btrfs ]] || [[ $fstype = bcachefs ]] && [[ $encrypt = false ]]; then
@@ -2709,6 +2700,7 @@ auto_install_root () {
 	copy_script
 	copy_pkgs
 	
+	install_backup $backup_type
 	do_backup "Root-installed"
 
 }
@@ -2756,11 +2748,10 @@ auto_install_kde () {
 	install_hooks overlayroot
 	install_mksh
 
-	if [ $backup_type = 'btrfs-assistant' ] && [ $fstype = btrfs ]; then
-		arch-chroot $mnt pacman -U --noconfirm /home/$user/.local/bin/backup-pkgs/btrfs-assistant-*.zst
-	fi
+	#if [ $backup_type = 'btrfs-assistant' ] && [ $fstype = btrfs ]; then
+	#	arch-chroot $mnt pacman -U --noconfirm /home/$user/.local/bin/backup-pkgs/btrfs-assistant-*.zst
+	#fi
 
-	install_backup $backup_type
 
 	do_backup "KDE-installed"
 
@@ -3334,9 +3325,9 @@ clone_menu () {
 			snapper|22)		snapper list
 								echo -e "\nWhat would you like to name this snapshot?\n"
 								read snapshot
-								touch "/home/$user/snap-$snapshot"
+								touch "/root/snapper-$snapshot"
 								snapper -c root create --read-write --description "$snapshot"
-								rm -rf "/home/$user/snap-$snapshot"
+								rm -rf "/root/snapper-$snapshot"
 								snapper list ;;
 			rollback|23)	do_snapper-rollback ;;
 			delete|24)		snapper_delete ;;
