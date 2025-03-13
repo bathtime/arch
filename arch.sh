@@ -2361,6 +2361,28 @@ snapper_delete () {
 
 	done
 
+}
+
+
+snapper_delete_all () {
+
+	mount_disk
+
+	btrfs su list /
+
+	umount /.snapshots
+	rm -r /.snapshots
+
+	sleep 1
+	sync_disk
+	mkdir /.snapshots
+
+	echo
+
+	mount -o subvol=@snapshots $disk$rootPart /.snapshots
+	mount -a
+
+	btrfs su list /
 
 }
 
@@ -3217,7 +3239,8 @@ clone_menu () {
 21. Bork system
 22. Snapper snapshot
 23. Snapper rollback
-24. Snapper delete")
+24. Snapper delete
+25. Snapper delete all")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3261,6 +3284,7 @@ clone_menu () {
 								snapper list ;;
 			rollback|23)	do_snapper-rollback ;;
 			delete|24)		snapper_delete ;;
+			delete-all|25)	snapper_delete_all ;;
       	'')				;;
       	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
