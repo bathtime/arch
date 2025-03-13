@@ -1706,14 +1706,12 @@ snapper_setup () {
 		fi
 
 		rm -rf $mnt$snapshot_dir
-		
 		#mkdir -p $mnt$snapshot_dir
+
 		
 		if [[ ! "$(ls $mnt/etc/snapper/configs/ | grep root)" ]]; then
 			snapper -c root create-config /
 		fi
-		
-		# must mount after snapper creates configs and snapshots dir
 		mount -a
 
 	else
@@ -2380,10 +2378,6 @@ snapper_delete_all () {
 
 	cd /
 
-	#if [ "$(mount | grep /.snapshots)" ]; then
-	#	umount /.snapshots
-	#fi
-
 	snapper_delete_recovery
 	
 
@@ -2416,10 +2410,6 @@ snapper_delete_all () {
 	sleep 1
 	sync_disk
 	
-	#mkdir /.snapshots
-	#mount -o subvol=@snapshots $disk$rootPart /.snapshots
-	#mount -a
-
 }
 
 
