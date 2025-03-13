@@ -103,7 +103,7 @@ checkPartitions='true'		# Check that partitions are configured optimally?
 efi_path=/efi
 encrypt=true
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
-fsPercent='50'					# What percentage of space should the root drive take?
+fsPercent='100'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 
 subvols=(var/log var/tmp)			# TODO: used for btrfs and bcachefs
@@ -1700,8 +1700,16 @@ snapper_setup () {
    if [[ $mnt = '' ]]; then
 		
 		pacstrap_install snapper
-		umount $mnt$snapshot_dir
+		
+		if [[ "$(mount | grep $mnt$snapshot_dir)" ]]; then
+			umount $mnt$snapshot_dir
+		fi
+
 		rm -rf $mnt$snapshot_dir
+		mkdir -p $mnt$snapshot_dir
+
+		mount -a
+
 		snapper -c root create-config /
 
 	else
@@ -1752,17 +1760,6 @@ mountpoint = $btrfsroot
 EOF
 
 	if [[ $mnt = '' ]]; then
-		
-		#pacman -S --noconfirm --needed snapper snap-pac
-		pacman -S --noconfirm --needed snapper
-
-		if [ -d /.snapshots/ ]; then
-			umount /.snapshots/
-			rm -rf /.snapshots/
-		fi
-
-		snapper -c root create-config /	
-		mount -a
 		
 		pacman -U --noconfirm --needed /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
 		#pacman -U --noconfirm --needed /home/user/.local/bin/backup-pkgs/btrfs-assistant-*.zst
@@ -2409,8 +2406,8 @@ snapper_delete_all () {
 	fi
 
 
-	#echo -e "\nRunning: rm -rf $btrfsroot/@2025*.../n"
-	#rm -rf $btrfsroot/@202*
+	echo -e "\nRunning: rm -rf $btrfsroot/@2025*...\n"
+	rm -rf $btrfsroot/@202*
 
 	sleep 1
 	sync_disk
@@ -2683,11 +2680,13 @@ auto_install_root () {
 
 		[ ! $backup_type = '' ] && [ ! $fstype = bcachefs ] && install_grub-btrfsd
 
-		# booster doesn't work with bcachefs encryption
-		if [[ $fstype = btrfs ]] || [[ $fstype = bcachefs ]] && [[ $encrypt = false ]]; then
-
+		if [[ $fstype = btrfs ]]; then
 			choose_initramfs booster
+		fi
 
+		# booster doesn't work with bcachefs encryption
+		if [[ $fstype = bcachefs ]] && [[ $encrypt = false ]]; then
+			choose_initramfs booster
 		fi
 
 	else
@@ -3333,6 +3332,8 @@ clone_menu () {
 								read snapshot
 								touch "/root/snapper-$snapshot"
 								snapper -c root create --read-write --description "$snapshot"
+								sync_disk
+								sleep .1
 								rm -rf "/root/snapper-$snapshot"
 								snapper list ;;
 			rollback|23)	do_snapper-rollback ;;
@@ -3546,8 +3547,6 @@ echo
 		hypervisor|28)			hypervisor_setup ;;
 
 		test|29)					
-									add_hooks 'MODULES=overlay|HOOKS=overlayroot' $mnt/etc/mkinitcpio.conf
-
 									;;
 		custom|30)				custom_install ;;
 		setup|31)				setup_menu ;;
