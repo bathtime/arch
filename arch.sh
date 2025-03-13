@@ -1766,7 +1766,8 @@ EOF
 
 	if [[ $mnt = '' ]]; then
 		
-		pacman -S --noconfirm --needed snapper snap-pac
+		#pacman -S --noconfirm --needed snapper snap-pac
+		pacman -S --noconfirm --needed snapper
 
 		if [ -d /.snapshots/ ]; then
 			umount /.snapshots/
@@ -1792,14 +1793,15 @@ EOF
 #EOF
 
 		arch-chroot $mnt pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
-		arch-chroot $mnt pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/btrfs-assistant-*.zst
+		#arch-chroot $mnt pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/btrfs-assistant-*.zst
 
 		# Bypass must be erased or won't work
 		rm -rf $mnt/etc/systemd/system/grub-btrfsd.service.d/
 
-		pacstrap_install cronie grub-btrfs
+		#pacstrap_install cronie grub-btrfs
+		pacstrap_install grub-btrfs
 
-   	systemctl --root=$mnt enable cronie.service
+   	#systemctl --root=$mnt enable cronie.service
    	systemctl --root=$mnt enable grub-btrfsd.service
 	
 		echo -e "\nSnapshot: snapper -c root create --read-write --description <NAME>\n
