@@ -819,7 +819,7 @@ BINARIES=()
 FILES=()
 
 #HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block filesystems fsck)
-HOOKS=(base udev autodetect microcode modconf block filesystems resume $extra_hook)
+HOOKS=(base udev autodetect microcode modconf keyboard block filesystems resume $extra_hook)
 
 COMPRESSION="lz4"
 
@@ -1601,7 +1601,7 @@ install_backup () {
 									fi
 									;;
 		
-		5|grub-btrfsd)			echo "Not implimented." ;;
+		5|grub-btrfsd)			install_grub-btrfsd ;;
 
 		6|snapper-rollback)	snapper-rollback_setup
 									
@@ -1612,6 +1612,35 @@ install_backup () {
 		*)							echo "Not an option. Exiting." ;;
 	esac
 
+
+}
+
+
+install_grub-btrfsd () {
+
+   pacstrap_install timeshift cronie grub-btrfs
+
+   systemctl --root=$mnt enable cronie.service
+   systemctl --root=$mnt enable grub-btrfsd.service
+
+   if [[ $mnt = '' ]]; then
+
+   systemctl edit --stdin grub-btrfsd << EOF
+[Service]
+ExecStart=
+ExecStart=/usr/bin/grub-btrfsd --syslog -t
+EOF
+   systemctl daemon-reload
+   #systemctl --root=$mnt restart grub-btrfsd.service
+
+   else
+
+      mkdir -p $mnt/etc/systemd/system/grub-btrfsd.service.d/
+      echo '[Service]
+ExecStart=
+ExecStart=/usr/bin/grub-btrfsd --syslog -t' > $mnt/etc/systemd/system/grub-btrfsd.service.d/override.conf
+
+   fi
 
 }
 
@@ -1653,29 +1682,7 @@ timeshift_setup () {
 }
 EOF
 
-   pacstrap_install timeshift cronie grub-btrfs
-
-   systemctl --root=$mnt enable cronie.service
-   systemctl --root=$mnt enable grub-btrfsd.service
-
-   if [[ $mnt = '' ]]; then
-
-   systemctl edit --stdin grub-btrfsd << EOF
-[Service]
-ExecStart=
-ExecStart=/usr/bin/grub-btrfsd --syslog -t
-EOF
-   systemctl daemon-reload
-   #systemctl --root=$mnt restart grub-btrfsd.service
-
-   else
-
-      mkdir -p $mnt/etc/systemd/system/grub-btrfsd.service.d/
-      echo '[Service]
-ExecStart=
-ExecStart=/usr/bin/grub-btrfsd --syslog -t' > $mnt/etc/systemd/system/grub-btrfsd.service.d/override.conf
-
-   fi
+	install_grub-btrfsd
 
 }
 
@@ -2673,12 +2680,23 @@ auto_install_root () {
 		auto_login root
 	fi
 
-	# Bootable snapshots will not work with mkinitcpio
-	if [[ $fstype = btrfs ]]; then
-		choose_initramfs booster
-		choose_initramfs dracut
+	if [[ $fstype = btrfs ]] || [[ $fstype = bcachefs ]]; then
+
+		choose_initramfs dracut 
+
+		[ ! $backup_type = '' ] && install_grub-btrfsd
+
+		# booster doesn't work with bcachefs encryption
+		if [[ $fstype = btrfs ]] || [[ $fstype = bcachefs ]] && [[ $encrypt = false ]]; then
+
+			choose_initramfs booster
+
+		fi
+
 	else
+
 		choose_initramfs $initramfs
+
 	fi
 
 	general_setup
@@ -3277,7 +3295,10 @@ clone_menu () {
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
 
-		[ $fstype = btrfs ] && echo; btrfs su list /
+		if [ $fstype = btrfs ]; then
+			echo
+			btrfs su list /
+		fi
 
 		echo
 		echo "${config_choices[@]}" | column
