@@ -814,7 +814,8 @@ choose_initramfs () {
 		extra_hook=bcachefs
 	fi
 
-	echo 'MODULES=(lz4 $extra_module)
+	cat > $mnt/etc/mkinitcpio.conf << EOF
+MODULES=(lz4 $extra_module)
 BINARIES=()
 FILES=()
 
@@ -825,7 +826,8 @@ COMPRESSION="lz4"
 
 #COMPRESSION_OPTIONS=()
 
-MODULES_DECOMPRESS="no"' > $mnt/etc/mkinitcpio.conf
+MODULES_DECOMPRESS="no"
+EOF
 
 
 	if [ "$1" ]; then
