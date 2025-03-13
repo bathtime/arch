@@ -812,9 +812,8 @@ choose_initramfs () {
 	if [ $encrypt = true ] && [ $fstype = bcachefs ]; then
 		extra_module=bcachefs
 		extra_hook=bcachefs
-	fi
 
-	cat > $mnt/etc/mkinitcpio.conf << EOF
+	cat > $mnt/etc/mkinitcpio.conf <<EOF
 MODULES=(lz4 $extra_module)
 BINARIES=()
 FILES=()
@@ -828,6 +827,12 @@ COMPRESSION="lz4"
 
 MODULES_DECOMPRESS="no"
 EOF
+
+	cat $mnt/etc/mkinitcpio.conf
+
+	arch-chroot $mnt mkinitcpio -P
+
+	fi
 
 
 	if [ "$1" ]; then
