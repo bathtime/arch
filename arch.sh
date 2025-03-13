@@ -2340,6 +2340,14 @@ do_snapper-rollback () {
 
 	snapper-rollback $choice
 
+	echo -e "\nPress 'r' to reboot or any other key to continue./n"
+	read -n 1 -s choice
+
+	if [ $choice = r ]; then
+		sync_disk
+		reboot
+	fi
+
 }
 
 
@@ -2386,7 +2394,7 @@ snapper_delete_all () {
 	#fi
 
 	# First check if there are any files to delete (else an error)
-	if [ $(ls  /.btrfsroot/ | grep @202*.*:) ]; then
+	if [ "$(ls  /.btrfsroot/ | grep @202*.*:)" ]; then
 
 		recovery=$(btrfs su list / | grep 'level 5 path @2025' | awk '{print $2}')
 
@@ -2400,22 +2408,28 @@ snapper_delete_all () {
 	fi
 	
 
-	if [ $(btrfs su list / | grep '257 path @snapshots') ]; then
-		echo HELLO
-	snapshots=$(btrfs su list / | grep '257 path @snapshots/' | awk '{print $2}')
+	if [ "$(btrfs su list / | grep '257 path @snapshots')" ]; then
+	
+		snapshots=$(btrfs su list / | grep '257 path @snapshots/' | awk '{print $2}')
 
-   for ID in ${snapshots[@]}; do
-      echo -e "\nDeleting ID: $ID..."
-      btrfs su delete -i $ID /
-   done
+   	for ID in ${snapshots[@]}; do
+      	echo -e "\nDeleting ID: $ID..."
+      	btrfs su delete -i $ID /
+   	done
 	
 	else
 		echo -e "\nNo snapshots to delete."
 	fi
 
-	# Delete remaing info.xml files
-	echo -e "\nRunning: rm -rfv /.snapshots/*...\n"
-	rm -rfv /.snapshots/*
+	if [ "$(ls /.snapshots)" ]; then
+
+		# Delete remaing info.xml files
+		echo -e "\nStray .xml files found. Running: rm -rfv /.snapshots/* to delete...\n"
+		rm -rfv /.snapshots/*
+	else
+		echo -e "\nNo stray .xml files to delete."
+	fi
+
 
 	#echo -e "\nRunning: rm -rf /.btrfsroot/@2025*.../n"
 	#rm -rf /.btrfsroot/@202*
