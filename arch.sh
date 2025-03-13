@@ -98,21 +98,27 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 
+checkPartitions='true'		# Check that partitions are configured optimally?
+
 efi_path=/efi
 encrypt=true
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
-fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 
-subvols=(var/log var/tmp)			# used for btrfs and bcachefs
-subvolPrefix='@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
+subvols=(var/log var/tmp)			# TODO: used for btrfs and bcachefs
+subvolPrefix='/'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir='/.snapshots'
+
 btrfsroot='/.btrfsroot'
+btrfs_mountopts="noatime,discard=async"
+bcachefs_mountopts="noatime"
+boot_mountopts="noatime"
+efi_mountopts="noatime"
 
 backup_install='false'		# say 'true' to do snapshots/rysncs during install
-backup_type='snapper-rollback'		# eg., '','rsync','snapper','snapper-rollback','timeshift', 'btrfs-assistant'
+backup_type='snapper-rollback'	# eg., '','rsync','snapper','snapper-rollback','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
-checkPartitions='true'		# Check that partitions are configured optimally?
 
 kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
 
@@ -273,7 +279,7 @@ unmount_disk () {
 
 		umount -n -R $mnt
 		
-		sleep .1
+		sleep .1 
 
 		# Time to get rugged and tough!
 		if [[ "$(mount | grep /mnt)" ]]; then
@@ -488,7 +494,6 @@ create_partitions () {
 						
 						echo "Running tune2fs to create fast commit journal area..." 
 						tune2fs -O fast_commit $disk$rootPart ;;
-
 		xfs)			pacman -S --needed --noconfirm xfsprogs 
 						mkfs.xfs -f -L ROOT $disk$rootPart ;;
 		jfs)			pacman -S --needed --noconfirm jfsutils
@@ -536,13 +541,17 @@ create_partitions () {
 	
 	if [ "$fstype" = "btrfs" ]; then
 
-		btrfs subvolume create /mnt/$subvolPrefix
-		btrfs subvolume create /mnt/$subvolPrefix'snapshots'
-		btrfs subvolume create --parents /mnt/$subvolPrefix'var/log'
-		btrfs subvolume create --parents /mnt/$subvolPrefix'var/tmp'
+		btrfs subvolume create $mnt$subvolPrefix
+		btrfs subvolume create $mnt$subvolPrefix'snapshots'
+		btrfs subvolume create --parents $mnt$subvolPrefix'var/log'
+		btrfs subvolume create --parents $mnt$subvolPrefix'var/tmp'
+		
+		chattr +C -R "$mnt$subvolPrefix"var/{log,tmp}
+		lsattr "$mnt$subvolPrefix"var
 
 		btrfs subvolume list /mnt
 
+		
 		#for subvol in "${subvols[@]}"; do
 		#	echo btrfs su cr --parents "$mnt$subvolPrefix$subvol"
 		#	btrfs su cr --parents "$mnt$subvolPrefix$subvol"
@@ -552,6 +561,11 @@ create_partitions () {
 
 	if [ "$fstype" = "bcachefs" ]; then
 	
+	if [ "$fstype" = "bcachefs" ]; then
+		mkdir -p $mnt$snapshot_dir
+	fi
+			:
+
 		for subvol in "${subvols[@]}"; do
 
 			echo -e "Creating subvolume: $mnt$subvolPrefix$subvol..."
@@ -569,26 +583,16 @@ create_partitions () {
 	mount_disk
 
 	mkdir -p $mnt/{dev,etc,proc,root,run,sys,tmp,var/cache/pacman/pkg,/var/log,/var/tmp}
-	
-	#if [ "$fstype" = "btrfs" ]; then
-		#rm -rf /var/{log,tmp}/*
-		#chattr -R +C /var/{log,tmp}
-		#lsattr /var
-	#fi
 
-	if [ "$fstype" = "bcachefs" ]; then
-		mkdir -p $mnt$snapshot_dir
-	fi
-
-	
 	chmod -R 750 $mnt/root
 	mkdir -p $mnt/root/.gnupg
 	chmod -R 700 $mnt/root/.gnupg
 	chmod -R 1777 $mnt/var/tmp
 
-	echo
-	btrfs su list $mnt
-	echo
+	if [ $fstype = btrfs ]; then
+		btrfs su list $mnt
+	fi
+
 	genfstab -U $mnt
 
 }
@@ -607,13 +611,12 @@ mount_disk () {
 
 			echo -e "\nMounting...\n"
 			
-			mountopts="noatime,discard=async"
 
-			mount $disk$rootPart --mkdir -o $mountopts,subvolid=256 $mnt
-			mount $disk$rootPart --mkdir -o $mountopts,subvolid=257 $mnt$snapshot_dir
-			mount $disk$rootPart --mkdir -o $mountopts,subvolid=258 $mnt/var/log
-			mount $disk$rootPart --mkdir -o $mountopts,subvolid=259 $mnt/var/tmp
-			mount $disk$rootPart --mkdir -o $mountopts,subvolid=5 $mnt$btrfsroot
+			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=256 $mnt
+			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=257 $mnt$snapshot_dir
+			mount $disk$rootPart --mkdir -o $bttfs_mountopts,subvolid=258 $mnt/var/log
+			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=259 $mnt/var/tmp
+			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=5 $mnt$btrfsroot
 
 			#for subvol in "${subvols[@]}"; do
 				#mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
@@ -626,33 +629,33 @@ mount_disk () {
 				bcachefs unlock -k session $disk$rootPart
 			fi
 
-			echo mount -t $fstype --mkdir $disk$rootPart $mnt
-			mount -t $fstype --mkdir $disk$rootPart $mnt
+			mount -t $fstype --mkdir -o "$bcachefs_mountopts" $disk$rootPart $mnt
 
 			for subvol in "${subvols[@]}"; do
 			
-				echo mount --bind $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
-				mount --bind $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
+				echo mount --bind -o $bcachefs_mountopts $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
+				#mkdir -p $mnt$subvolPrefix$subvol
+				mount --bind -o "$bcachefs_mountopts" $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
 			
 			done
 
 		else
 
-			echo mount -t $fstype --mkdir $disk$rootPart $mnt	
-			mount -t $fstype --mkdir $disk$rootPart $mnt	
+			echo mount -t $fstype --mkdir -o $mountops $disk$rootPart $mnt	
+			mount -t $fstype --mkdir -o $mountops $disk$rootPart $mnt	
 
 		fi
 
 	fi
 	
 	if [[ ! $(mount | grep -E $disk$bootPart | grep -E "on $mnt/boot") ]] && [[ $bootOwnPartition = true ]]; then
-		echo mount --mkdir $disk$bootPart $mnt/boot
-		mount --mkdir $disk$bootPart $mnt/boot
+		echo mount --mkdir -o $boot_mountopts $disk$bootPart $mnt/boot
+		mount --mkdir -o $boot_mountopts $disk$bootPart $mnt/boot
 	fi
 
 	if [[ ! $(mount | grep -E $disk$espPart | grep -E "on $mnt$efi_path") ]]; then
-		echo mount --mkdir $disk$espPart $mnt$efi_path
-		mount --mkdir $disk$espPart $mnt$efi_path
+		echo mount --mkdir -o $efi_mountopts $disk$espPart $mnt$efi_path
+		mount --mkdir -o $efi_mountopts $disk$espPart $mnt$efi_path
 	fi
 
 }
@@ -776,7 +779,7 @@ setup_fstab () {
 	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 
 	# Changing compression
-	sed -i 's/zstd:3/zstd:1/' $mnt/etc/fstab
+	#sed -i 's/zstd:3/zstd:1/' $mnt/etc/fstab
 
 	# Bad idea to use subids when rolling back 
 	#sed -i 's/subvolid=.*,//g' $mnt/etc/fstab
@@ -784,12 +787,12 @@ setup_fstab () {
 	# genfstab will generate a swap drive. we're using a swap file instead
 	sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
 
-	sed -i 's/relatime/noatime/g' $mnt/etc/fstab
+	#sed -i 's/relatime/noatime/g' $mnt/etc/fstab
 	
 
 	sed -i '/portal/d' $mnt/etc/fstab
 
-	sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,commit=60      0 1/' $mnt/etc/fstab
+	#sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,commit=60      0 1/' $mnt/etc/fstab
 
 	# Make /efi read-only
 	#sed -i 's/\/efi.*vfat.*rw/\/efi     vfat     ro/' $mnt/etc/fstab
