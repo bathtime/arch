@@ -2364,9 +2364,20 @@ snapper_delete () {
 }
 
 
-snapper_delete_all () {
+snapper_delete_recovery () {
 
-	mount_disk
+	snapshotsToDelete=$(btrfs su list / | grep 'level 5 path @2025' | awk '{print $2}')
+
+	for ID in ${snapshotsToDelete[@]}; do
+		echo -e "\nDeleting ID: $ID..."
+		btrfs su delete -i $ID /
+	done
+
+}
+
+
+
+snapper_delete_all () {
 
 	btrfs su list /
 
@@ -2383,8 +2394,8 @@ snapper_delete_all () {
 		btrfs su delete -i $ID /
 	done
 
-	echo -e "\nRunning: rm -rf /.snapshots/*..."
-	rm -rf /.snapshots/*
+	echo -e "\n*NOT* Running: rm -rf /.snapshots/*..."
+	#rm -rf /.snapshots/*
 
 	echo -e "\nRunning: rm -rf /.btrfsroot/@2025*.../n"
 	rm -rf /.btrfsroot/@202*
@@ -3252,7 +3263,8 @@ clone_menu () {
 22. Snapper snapshot
 23. Snapper rollback
 24. Snapper delete
-25. Snapper delete all")
+25. Snapper delete recovery
+26. Snapper delete all")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3299,7 +3311,8 @@ clone_menu () {
 								snapper list ;;
 			rollback|23)	do_snapper-rollback ;;
 			delete|24)		snapper_delete ;;
-			delete-all|25)	snapper_delete_all ;;
+			delete-rec|25) snapper_delete_recovery ;;
+			delete-all|26)	snapper_delete_all ;;
       	'')				;;
       	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
