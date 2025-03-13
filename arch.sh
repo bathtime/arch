@@ -2379,15 +2379,15 @@ snapper_delete_all () {
 	snapshotsToDelete=$(btrfs su list / | grep '257 path @snapshots/' | awk '{print $2}')
 
 	for ID in ${snapshotsToDelete[@]}; do
-		echo "Deleting ID: $ID..."
+		echo -e "\nDeleting ID: $ID..."
 		btrfs su delete -i $ID /
 	done
 
 	echo -e "\nRunning: rm -rf /.snapshots/*..."
-	rm -rfv /.snapshots/*
+	rm -rf /.snapshots/*
 
-	echo "Running: rm -rf /.btrfsroot/@2025*.../n"
-	rm -rfv /.btrfsroot/@202*
+	echo -e "\nRunning: rm -rf /.btrfsroot/@2025*.../n"
+	rm -rf /.btrfsroot/@202*
 
 	sleep .1
 	sync_disk
