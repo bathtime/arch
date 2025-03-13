@@ -107,7 +107,7 @@ fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 subvols=(var/log var/tmp)			# used for btrfs and bcachefs
 subvolPrefix='@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir='/.snapshots'
-
+btrfsroot='/.btrfsroot'
 
 backup_install='false'		# say 'true' to do snapshots/rysncs during install
 backup_type='snapper-rollback'		# eg., '','rsync','snapper','snapper-rollback','timeshift', 'btrfs-assistant'
@@ -533,24 +533,15 @@ create_partitions () {
 	echo -e "\nMounting $mnt..."
 
 	mount -t $fstype --mkdir $disk$rootPart $mnt
-
 	
 	if [ "$fstype" = "btrfs" ]; then
 
-		btrfs subvolume create /mnt/@
-		btrfs subvolume create /mnt/@snapshots
-		btrfs subvolume create --parents /mnt/@var/log
-		btrfs subvolume create --parents /mnt/@var/tmp
+		btrfs subvolume create /mnt/$subvolPrefix
+		btrfs subvolume create /mnt/$subvolPrefix'snapshots'
+		btrfs subvolume create --parents /mnt/$subvolPrefix'var/log'
+		btrfs subvolume create --parents /mnt/$subvolPrefix'var/tmp'
 
 		btrfs subvolume list /mnt
-
-		#if [[ ! $subvolPrefix = '/' ]] && [[ ! $subvolPrefix = '' ]]; then
-		#	echo btrfs su cr --parents "$mnt$subvolPrefix"
-		#	btrfs su cr --parents "$mnt$subvolPrefix"
-		#fi
-		
-		# Strip leading '/'
-		#btrfs su cr --parents $(echo $snapshot_dir | sed 's#^/##')
 
 		#for subvol in "${subvols[@]}"; do
 		#	echo btrfs su cr --parents "$mnt$subvolPrefix$subvol"
@@ -582,7 +573,7 @@ create_partitions () {
 	#if [ "$fstype" = "btrfs" ]; then
 		#rm -rf /var/{log,tmp}/*
 		#chattr -R +C /var/{log,tmp}
-		lsattr /var
+		#lsattr /var
 	#fi
 
 	if [ "$fstype" = "bcachefs" ]; then
@@ -595,7 +586,9 @@ create_partitions () {
 	chmod -R 700 $mnt/root/.gnupg
 	chmod -R 1777 $mnt/var/tmp
 
+	echo
 	btrfs su list $mnt
+	echo
 	genfstab -U $mnt
 
 }
@@ -613,43 +606,19 @@ mount_disk () {
 		if [ "$fstype" = "btrfs" ]; then
 
 			echo -e "\nMounting...\n"
-
-			mount $disk$rootPart -o subvolid=256 /mnt
 			
-			#mkdir -p /mnt/.snapshots
-			#mkdir -p /mnt/var/log
-			#mkdir -p /mnt/var/tmp
-			#mkdir -p /mnt/.btrfsroot
-			
-			mount $disk$rootPart --mkdir -o subvolid=257 /mnt/.snapshots
-			mount $disk$rootPart --mkdir -o subvolid=258 /mnt/var/log
-			mount $disk$rootPart --mkdir -o subvolid=259 /mnt/var/tmp
-			mount $disk$rootPart --mkdir -o subvolid=5 /mnt/.btrfsroot
+			mountopts="noatime,discard=async"
 
-
-
-			#mountopts="noatime,discard=async"
-			
-			#if [[ ! $subvolPrefix = '/' ]] && [[ ! $subvolPrefix = '' ]]; then
-
-			#	subvol=''
-			#	echo mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
-			#	mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
-
-			#else
-			
-			#	echo mount -t $fstype --mkdir $disk$rootPart $mnt
-			#	mount -t $fstype --mkdir $disk$rootPart $mnt
-			
-			#fi
+			mount $disk$rootPart --mkdir -o $mountopts,subvolid=256 $mnt
+			mount $disk$rootPart --mkdir -o $mountopts,subvolid=257 $mnt$snapshot_dir
+			mount $disk$rootPart --mkdir -o $mountopts,subvolid=258 $mnt/var/log
+			mount $disk$rootPart --mkdir -o $mountopts,subvolid=259 $mnt/var/tmp
+			mount $disk$rootPart --mkdir -o $mountopts,subvolid=5 $mnt$btrfsroot
 
 			#for subvol in "${subvols[@]}"; do
-				
-			#	echo mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
-			#	mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
-
+				#mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
 			#done
-			
+
 		elif [[ $fstype = bcachefs ]]; then
 	
 			if [[ $encrypt = true ]]; then
@@ -1756,7 +1725,7 @@ subvol_main = @
 # Name of your snapper snapshot subvolume
 subvol_snapshots = @snapshots
 # Directory to which your btrfs root is mounted.
-mountpoint = /.btrfsroot
+mountpoint = $btrfsroot
 # Device file for btrfs root.
 # If your btrfs root isn't mounted to mountpoint directory, then automatically
 # mount this device there before rolling back. This parameter is optional, but
@@ -2375,7 +2344,7 @@ snapper_delete () {
 snapper_delete_recovery () {
 
 	# First check if there are any files to delete (else an error)
-	if [ "$(ls  /.btrfsroot/ | grep @202*.*:)" ]; then
+	if [ "$(ls  $btrfsroot/ | grep @202*.*:)" ]; then
 
 		recovery=$(btrfs su list / | grep 'level 5 path @2025' | awk '{print $2}')
 
@@ -2426,10 +2395,10 @@ snapper_delete_all () {
 	fi
 
 
-	#echo -e "\nRunning: rm -rf /.btrfsroot/@2025*.../n"
-	rm -rfv /.btrfsroot/@202*
+	#echo -e "\nRunning: rm -rf $btrfsroot/@2025*.../n"
+	rm -rfv $btrfsroot/@202*
 
-	sleep .1
+	sleep 1
 	sync_disk
 	
 	#mkdir /.snapshots
