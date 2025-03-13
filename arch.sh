@@ -2372,24 +2372,26 @@ snapper_delete_all () {
 
 	cd /
 
-	if [ "$(mount | grep /.snapshots)" ]; then
-		umount /.snapshots
-	fi
+	#if [ "$(mount | grep /.snapshots)" ]; then
+	#	umount /.snapshots
+	#fi
 
-	rm -rf /.snapshots
+	echo -e "\nRunning: rm -rf /.snapshots/*..."
+	rm -rf /.snapshots/*
+
+	echo "Running: rm -rf /.btrfsroot/@2025*.../n"
+
 	rm -rf /.btrfsroot/@2025*
-	rm -rf  /.btrfsroot/\@snapshots/*
+	#rm -rf  /.btrfsroot/\@snapshots/*
 
-	sleep 1
 	sync_disk
-	mkdir /.snapshots
+	sleep .1
+	#mkdir /.snapshots
 
 	echo
 
-	mount -o subvol=@snapshots $disk$rootPart /.snapshots
-	mount -a
-
-	btrfs su list /
+	#mount -o subvol=@snapshots $disk$rootPart /.snapshots
+	#mount -a
 
 }
 
@@ -3252,11 +3254,14 @@ clone_menu () {
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
 
+		[ $fstype = btrfs ] && btrfs su list /
+
 		echo
 		echo "${config_choices[@]}" | column
 		echo  
 
-		read -p "Which option? " config_choice
+		echo -e "Which option?\n"
+		read config_choice
 
 		case $config_choice in
 			quit|1)			echo "Quitting!"; break ;;
