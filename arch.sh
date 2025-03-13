@@ -2376,7 +2376,8 @@ snapper_delete_all () {
 		umount /.snapshots
 	fi
 
-	rm -r /.snapshots
+	rm -rf /.snapshots
+	rm -rf /.btrfsroot/@2025*
 
 	sleep 1
 	sync_disk
