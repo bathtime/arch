@@ -611,8 +611,7 @@ mount_disk () {
 
 			echo -e "\nMounting...\n"
 			
-
-			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=256 $mnt
+			mount $disk$rootPart --mkdir -o $btrfs_mountopts $mnt
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=257 $mnt$snapshot_dir
 			mount $disk$rootPart --mkdir -o $bttfs_mountopts,subvolid=258 $mnt/var/log
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=259 $mnt/var/tmp
@@ -1706,13 +1705,13 @@ snapper_setup () {
 		fi
 
 		rm -rf $mnt$snapshot_dir
-		#mkdir -p $mnt$snapshot_dir
+		mkdir -p $mnt$snapshot_dir
 
+		mount -a
 		
-		if [[ ! "$(ls $mnt/etc/snapper/configs/ | grep root)" ]]; then
+		if [[ ! -f $mnt/etc/snapper/configs/root ]]; then
 			snapper -c root create-config /
 		fi
-		mount -a
 
 	else
 
@@ -2378,6 +2377,10 @@ snapper_delete_all () {
 
 	cd /
 
+	#if [ "$(mount | grep /.snapshots)" ]; then
+	#	umount /.snapshots
+	#fi
+
 	snapper_delete_recovery
 	
 
@@ -2410,6 +2413,10 @@ snapper_delete_all () {
 	sleep 1
 	sync_disk
 	
+	#mkdir /.snapshots
+	#mount -o subvol=@snapshots $disk$rootPart /.snapshots
+	#mount -a
+
 }
 
 
