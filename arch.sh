@@ -2343,16 +2343,22 @@ do_snapper-rollback () {
 
 snapper_delete () {
 
-	snapper list
-	btrfs su list /
+	while true; do
 
-	echo -e "\nWhich snapshot would you like to delete?\n"
+		btrfs su list /
 
-	read choice
+		echo -e "\nWhich snapshot would you like to delete? (q = quit)\n"
 
-	btrfs su delete -i $choice /
-	
-	btrfs su list /
+		read choice
+
+		[ $choice = 'q' ] && return
+
+		btrfs su delete -i $choice /
+
+		echo
+
+	done
+
 
 }
 
