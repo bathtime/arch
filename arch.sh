@@ -610,13 +610,17 @@ mount_disk () {
 		if [ "$fstype" = "btrfs" ]; then
 
 			echo -e "\nMounting...\n"
+		
+		
+			#mount $disk$rootPart --mkdir $mnt
 			
-			mount $disk$rootPart --mkdir -o $btrfs_mountopts $mnt
+			mount $disk$rootPart -o subvolid=256 $mnt
+
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=257 $mnt$snapshot_dir
 			mount $disk$rootPart --mkdir -o $bttfs_mountopts,subvolid=258 $mnt/var/log
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=259 $mnt/var/tmp
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=5 $mnt$btrfsroot
-
+	
 			#for subvol in "${subvols[@]}"; do
 				#mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
 			#done
@@ -1705,13 +1709,14 @@ snapper_setup () {
 		fi
 
 		rm -rf $mnt$snapshot_dir
-		mkdir -p $mnt$snapshot_dir
+		#mkdir -p $mnt$snapshot_dir
 
-		mount -a
 		
 		if [[ ! -f $mnt/etc/snapper/configs/root ]]; then
 			snapper -c root create-config /
 		fi
+		
+		mount -a
 
 	else
 
@@ -2315,9 +2320,11 @@ do_snapper-rollback () {
 
 	snapper list
 
-	echo -e "\nWhich snapshot would you like to roll back to?\n"
+	echo -e "\nWhich snapshot would you like to roll back to? ('q' to quit)\n"
 
 	read choice
+	
+	[ $choice = q ] && return
 
 	snapper-rollback $choice
 
@@ -2377,12 +2384,7 @@ snapper_delete_all () {
 
 	cd /
 
-	#if [ "$(mount | grep /.snapshots)" ]; then
-	#	umount /.snapshots
-	#fi
-
 	snapper_delete_recovery
-	
 
 	if [ "$(btrfs su list / | grep '257 path @snapshots')" ]; then
 	
@@ -2397,22 +2399,24 @@ snapper_delete_all () {
 		echo -e "\nNo snapshots to delete."
 	fi
 
+
+
 	if [ "$(ls /.snapshots)" ]; then
 
 		# Delete remaing info.xml files
 		echo -e "\nStray .xml files found.\nRunning: rm -rfv /.snapshots/* to delete...\n"
-		rm -rfv /.snapshots/*
+		rm -rf /.snapshots/*
 	else
 		echo -e "\nNo stray .xml files to delete."
 	fi
-
 
 	echo -e "\nRunning: rm -rf $btrfsroot/@2025*...\n"
 	rm -rf $btrfsroot/@202*
 
 	sleep 1
 	sync_disk
-	
+
+	snapper list
 	#mkdir /.snapshots
 	#mount -o subvol=@snapshots $disk$rootPart /.snapshots
 	#mount -a
@@ -3380,9 +3384,9 @@ setup_menu () {
 			copy|7)		echo "Copying packages from /setup.tar to $mnt/..."
 							cp /setup.tar $mnt/ ;;
 			pkgs|8)		copy_pkgs ;;
-			arch|9)		#mount_disk	
+			arch|9)		mount_disk	
 							echo -e "\nCopying $arch_path/$arch_file -> $mnt$arch_path/$arch_file...\n"
-							cp $arch_path/$arch_file $mnt$arch_path/$arch_file
+							cp $arch_path/$arch_file $mnt$arch_path
 
 							;;
          '')			last_modified ;;
