@@ -1730,42 +1730,6 @@ snapper_setup () {
 		mkdir -p $snapshot_dir
 		mount -a
 
-
-
-
-
-
-return
-
-
-
-
-
-
-umount $mnt$snapshot_dir
-rm -r $mnt$snapshot_dir
-
-snapper -c root create-config /
-
-btrfs subvolume delete $mnt$snapshot_dir
-
-mkdir $mnt$snapshot_dir
-mount -o subvol=@snapshots $mnt$rootPart $mnt$snapshot_dir
-
-mount -a
-chmod 750 $mnt$snapshot_dir
-
-
-
-
-
-
-
-
-
-
-
-
 	else
 
 		#pacstrap_install snapper snap-pac
