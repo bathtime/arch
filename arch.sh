@@ -2328,7 +2328,7 @@ do_snapper-rollback () {
 
 	snapper-rollback $choice
 
-	echo -e "\nPress 'r' to reboot or any other key to continue./n"
+	echo -e "\nPress 'r' to reboot or any other key to continue.\n"
 	read -n 1 -s choice
 
 	if [ $choice = r ]; then
