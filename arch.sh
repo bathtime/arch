@@ -74,6 +74,7 @@ fi
 arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
 
+
 mnt=/mnt
 mnt2=/mnt2
 mnt3=/mnt3
@@ -410,7 +411,6 @@ delete_partitions () {
 
 	echo -e "\nWiping disk...\n"
 
-
 	wipefs -af $disk
 
 	check_pkg gptfdisk
@@ -551,21 +551,13 @@ create_partitions () {
 
 		btrfs subvolume list /mnt
 
-		
-		#for subvol in "${subvols[@]}"; do
-		#	echo btrfs su cr --parents "$mnt$subvolPrefix$subvol"
-		#	btrfs su cr --parents "$mnt$subvolPrefix$subvol"
-		#done
-	
 	fi
 
 	if [ "$fstype" = "bcachefs" ]; then
 	
-	if [ "$fstype" = "bcachefs" ]; then
 		mkdir -p $mnt$snapshot_dir
-	fi
-			:
 
+		# Subvolumes not currently being added to /etc/fstab
 		for subvol in "${subvols[@]}"; do
 
 			echo -e "Creating subvolume: $mnt$subvolPrefix$subvol..."
@@ -624,10 +616,6 @@ mount_disk () {
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=258 $mnt/var/log
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=259 $mnt/var/tmp
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=5 $mnt$btrfsroot
-
-			#for subvol in "${subvols[@]}"; do
-				#mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
-			#done
 
 		elif [[ $fstype = bcachefs ]]; then
 	
@@ -785,20 +773,20 @@ setup_fstab () {
 
 	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 
+	# genfstab will generate a swap drive. we're using a swap file instead
+	sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
+
+	sed -i '/portal/d' $mnt/etc/fstab
+
+
 	# Changing compression
 	#sed -i 's/zstd:3/zstd:1/' $mnt/etc/fstab
 
 	# Bad idea to use subids when rolling back 
 	#sed -i 's/subvolid=.*,//g' $mnt/etc/fstab
 
-	# genfstab will generate a swap drive. we're using a swap file instead
-	sed -i '/LABEL=SWAP/d; /none.*swap.*defaults/d' $mnt/etc/fstab
-
 	#sed -i 's/relatime/noatime/g' $mnt/etc/fstab
 	
-
-	sed -i '/portal/d' $mnt/etc/fstab
-
 	#sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,commit=60      0 1/' $mnt/etc/fstab
 
 	# Make /efi read-only
@@ -1710,7 +1698,7 @@ snapper_setup () {
 	mount_disk
 
    if [[ $mnt = '' ]]; then
-		
+
 		pacstrap_install snapper
 		
 		if [[ "$(mount | grep $mnt$snapshot_dir)" ]]; then
@@ -1737,11 +1725,60 @@ snapper_setup () {
 
 		#pacstrap_install snapper snap-pac
 		pacstrap_install snapper
+		
+		runonce
 
 	fi
 
 }
 
+
+runonce () {
+
+
+echo '#!/bin/bash
+		
+if [[ "$(mount | grep /.snapshots)" ]]; then
+	umount /.snapshots
+fi
+
+rm -rf /.snapshots
+
+if [[ ! -f /etc/snapper/configs/root ]]; then
+	snapper -c root create-config /
+fi
+		
+mount -a
+
+btrfs su delete -i 262 /
+
+mkdir -p /.snapshots
+mount -a
+
+touch /root/runonce-$(date)
+systemctl disable runonce.service' > /usr/local/bin/runonce.sh
+
+chmod +x $mnt/usr/local/bin/runonce.sh
+
+
+	cat > $mnt/etc/systemd/system/runonce.service <<EOF
+[Unit]
+Description=Run once
+After=local-fs.target
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/runonce.sh
+RemainAfterExit=true
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+	systemctl --root=$mnt enable runonce.service
+
+}
 
 
 snapper-rollback_setup () {
@@ -1971,6 +2008,12 @@ install_hooks () {
 
 							#	pacman --noconfirm -U /home/user/.local/bin/overlayroot*.zst
 
+	cp $mnt/etc/grub.d/10_linux $mnt/etc/grub.d/10_linux-overlay
+	sed -i 's/\"\$title\"/\"\$title \(overlayroot\)\"/g' $mnt/etc/grub.d/10_linux-overlay
+	sed -i 's/ rw / rw overlayroot /g' $mnt/etc/grub.d/10_linux-overlay
+	
+							grub-mkconfig -o /boot/grub/grub.cfg
+
 							echo -e "\nAdd 'overlayroot' to kernal parameters to run\n"
 							;;
 		*) echo -e "\nInvalid choice: $choice\n"; return ;;
@@ -2037,7 +2080,7 @@ clone () {
 
 	echo -e "\n$1 $3 -> $4. Please be patient...\n"
 	
-	rsync_excludes=" --exclude=/run/timeshift/ --exclude=/etc/timeshift/timeshift.json --exclude=/etc/fstab --exclude=/etc/default/grub --exclude=/root.squashfs --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=/snapshots/"
+	rsync_excludes=" --exclude=/run/timeshift/ --exclude=/etc/timeshift/timeshift.json --exclude=/etc/fstab --exclude=/etc/default/grub --exclude=/root.squashfs --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=/snapshots/ --exclude=/.btrfsroot/"
 
 
 	rsync --dry-run -v $2 $rsync_excludes $3 $4 | less
