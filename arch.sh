@@ -580,10 +580,7 @@ create_partitions () {
 	fi
 
 	unmount_disk
-
-	install=true
 	mount_disk
-	install=false
 
 	mkdir -p $mnt/{dev,etc,proc,root,run,sys,tmp,var/cache/pacman/pkg,/var/log,/var/tmp}
 
@@ -618,12 +615,11 @@ mount_disk () {
 			mount $disk$rootPart $mnt
 
 			ID=$(btrfs su list $mnt | grep -E "level 5 path @$" | awk '{print $2}')
-			echo "Mounting root as ID: $ID"
+			echo "Mounting root subvolume as ID: $ID"
 				
 			umount $mnt
 
 			mount $disk$rootPart -o $btrfs_mountopts,subvolid=$ID $mnt
-
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=257 $mnt$snapshot_dir
 			mount $disk$rootPart --mkdir -o $bttfs_mountopts,subvolid=258 $mnt/var/log
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=259 $mnt/var/tmp
@@ -2349,7 +2345,7 @@ bork_system () {
 
 do_snapper-rollback () {
 
-	snapper list
+	snapper list --columns number,date,description,default
 
 	echo -e "\nWhich snapshot would you like to roll back to? ('q' to quit)\n"
 
@@ -2370,13 +2366,13 @@ do_snapper-rollback () {
 }
 
 
-snapper_delete () {
+btrfs_delete () {
 
 	while true; do
 
 		btrfs su list /
 
-		echo -e "\nWhich snapshot would you like to delete? (q = quit)\n"
+		echo -e "\nWhich subvolume would you like to delete? (q = quit)\n"
 
 		read choice
 
@@ -2384,10 +2380,26 @@ snapper_delete () {
 
 		btrfs su delete -i $choice /
 
+		echo
+
+	done
+
+}
+
+snapper_delete () {
+
+	while true; do
+
+		snapper list --columns number,date,description,default
+
+		echo -e "\nWhich snapshot would you like to delete? (q = quit)\n"
+
+		read choice
+
+		[ $choice = 'q' ] && return
 
 		# To free the space used by the snapshot(s) immediately, use --sync
-		snapper -c root delete --sync 65
-
+		snapper -c root delete --sync $choice
 
 		echo
 
@@ -2420,10 +2432,10 @@ snapper_delete_all () {
 
 	cd /
 	
-	ID=$(btrfs su list / | grep -E "level 256 path .snapshots$" | awk '{print $2}')
-   echo -e "Deleting: ID $ID level 256 path .snaphots..."
+	#ID=$(btrfs su list / | grep -E "level 256 path .snapshots$" | awk '{print $2}')
+   #echo -e "Deleting: ID $ID level 256 path .snaphots..."
 
-	btrfs su delete -i $ID /
+	#btrfs su delete -i $ID /
 
 	snapper_delete_recovery
 
@@ -2457,7 +2469,6 @@ snapper_delete_all () {
 	sleep 1
 	sync_disk
 
-	snapper list
 	#mkdir /.snapshots
 	#mount -o subvol=@snapshots $disk$rootPart /.snapshots
 	#mount -a
@@ -3330,14 +3341,17 @@ clone_menu () {
 21. Bork system
 22. Snapper snapshot
 23. Snapper rollback
-24. Snapper delete
-25. Snapper delete recovery
-26. Snapper delete all")
+24. Btrfs delete
+25. Snapper delete
+26. Snapper delete recovery
+27. Snapper delete all")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
 
 		if [ $fstype = btrfs ]; then
+			echo
+			snapper list --columns number,date,description,default
 			echo
 			btrfs su list /
 		fi
@@ -3373,7 +3387,8 @@ clone_menu () {
 			delete|19)		delete_snapshot ;;
 			timeshift|20)	delete_timeshift_snapshots ;;
 			bork|21)			bork_system ;;
-			snapper|22)		snapper list
+			snapper|22)		
+								snapper list --columns number,date,description,default
 								echo -e "\nWhat would you like to name this snapshot?\n"
 								read snapshot
 								touch "/root/snapper-$snapshot"
@@ -3381,11 +3396,12 @@ clone_menu () {
 								sync_disk
 								sleep .1
 								rm -rf "/root/snapper-$snapshot"
-								snapper list ;;
-			rollback|23)	do_snapper-rollback ;;
-			delete|24)		snapper_delete ;;
-			delete-rec|25) snapper_delete_recovery ;;
-			delete-all|26)	snapper_delete_all ;;
+								;;
+			rollback|23)		do_snapper-rollback ;;
+			btrfs-del|24)		btrfs_delete ;;
+			snapper-del|25)	snapper_delete ;;
+			delete-rec|26) snapper_delete_recovery ;;
+			delete-all|27)	snapper_delete_all ;;
       	'')				;;
       	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
