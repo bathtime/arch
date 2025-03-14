@@ -1627,7 +1627,7 @@ install_backup () {
 
 install_grub-btrfsd () {
 
-   pacstrap_install timeshift cronie grub-btrfs
+   pacstrap_install cronie grub-btrfs
 
    systemctl --root=$mnt enable cronie.service
    systemctl --root=$mnt enable grub-btrfsd.service
@@ -1659,7 +1659,11 @@ timeshift_setup () {
 	[ ! $fstype = btrfs ] && return 
    
 	mount_disk
-	
+
+
+
+	pacstrap_install timeshift
+
 	UUID=$(blkid -s UUID -o value $disk$rootPart)
 
 	mkdir -p $mnt/etc/timeshift
