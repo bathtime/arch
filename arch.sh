@@ -1720,7 +1720,7 @@ snapper_setup () {
 			snapper -c root create-config /
 		fi
 		
-		mkdir -p $mnt$snapshot_dir
+		#mkdir -p $mnt$snapshot_dir
 		mount -a
 
 		read -p "Will attempt to delete unneeded snapshot subvolume."
