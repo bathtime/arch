@@ -1715,15 +1715,12 @@ snapper_setup () {
 		fi
 
 		rm -rf $mnt$snapshot_dir
-		
+
 		if [[ ! -f $mnt/etc/snapper/configs/root ]]; then
 			snapper -c root create-config /
 		fi
 		
-		#mkdir -p $mnt$snapshot_dir
 		mount -a
-
-		read -p "Will attempt to delete unneeded snapshot subvolume."
 
 		ID=$(btrfs su list / | grep -E "level 256 path .snapshots$" | awk '{print $2}')
    	echo -e "Deleting: ID $ID level 256 path .snaphots..."
@@ -2462,7 +2459,11 @@ snapper_delete_all () {
 	
 	snapper_delete_all_snapshots 
 	
-	snapper_delete_recovery
+	#snapper_delete_recovery
+
+	echo -e "\nRunning: rm -rf $btrfsroot/@2025*...\n"
+	rm -rf $btrfsroot/@202*
+
 
 	return
 
