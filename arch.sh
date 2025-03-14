@@ -2453,19 +2453,18 @@ snapper_delete_all_snapshots () {
 snapper_delete_all () {
 
 	cd /
-	
-	snapper_delete_all_snapshots 
-	
+
 	#ID=$(btrfs su list / | grep -E "level 256 path .snapshots$" | awk '{print $2}')
    #echo -e "Deleting: ID $ID level 256 path .snaphots..."
 
 	#btrfs su delete -i $ID /
 
-#	snapper_delete_recovery
-
 	
-	return
+	snapper_delete_all_snapshots 
+	
+	snapper_delete_recovery
 
+	return
 
 	if [ "$(btrfs su list / | grep '257 path @snapshots')" ]; then
 	
