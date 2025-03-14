@@ -101,7 +101,7 @@ rootPart=$rootPartNum
 checkPartitions='true'		# Check that partitions are configured optimally?
 
 efi_path=/efi
-encrypt=true
+encrypt='true'					# bcachefs only
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
@@ -2390,7 +2390,8 @@ snapper_delete_recovery () {
 
 snapper_delete_all_snapshots () {
 
-	snapshots=$(snapper list | grep -v '──┼' | grep -v ' # ' | awk '{print $1}')
+	# grep -v '-' to tell snapper not to delete current, active snapshots
+	snapshots=$(snapper list | grep -v '──┼' | grep -v ' # ' | grep -v '-' | awk '{print $1}')
 	
 	if [ "$snapshots" ]; then
 
@@ -2422,7 +2423,7 @@ snapper_delete_all () {
 
 	
 	snapper_delete_all_snapshots 
-	
+
 	#snapper_delete_recovery
 
 	echo -e "\nRunning: rm -rf $btrfsroot/@2025*...\n"
@@ -2725,17 +2726,19 @@ auto_install_root () {
 
 	if [[ $fstype = btrfs ]] || [[ $fstype = bcachefs ]]; then
 
-		choose_initramfs dracut 
-
 		[ ! $backup_type = '' ] && [ ! $fstype = bcachefs ] && install_grub-btrfsd
 
 		if [[ $fstype = btrfs ]]; then
 			choose_initramfs booster
+			choose_initramfs dracut 
 		fi
 
 		# booster doesn't work with bcachefs encryption
 		if [[ $fstype = bcachefs ]] && [[ $encrypt = false ]]; then
+			choose_initramfs dracut 
 			choose_initramfs booster
+		elif [[ $fstype = bcachefs ]] && [[ $encrypt = true ]]; then
+			choose_initramfs mkinitcpio 
 		fi
 
 	else
@@ -2756,6 +2759,7 @@ auto_install_root () {
 	
 	install_backup $backup_type
 	do_backup "Root-installed"
+	sync_disk
 
 }
 
@@ -2783,6 +2787,7 @@ auto_install_user () {
 	copy_pkgs
 
 	do_backup "User-installed"
+	sync_disk
 
 }
 
@@ -2808,6 +2813,7 @@ auto_install_kde () {
 
 
 	do_backup "KDE-installed"
+	sync_disk
 
 }
 
