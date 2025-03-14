@@ -103,7 +103,7 @@ checkPartitions='true'		# Check that partitions are configured optimally?
 efi_path=/efi
 encrypt='true'					# bcachefs only
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
-fsPercent='50'					# What percentage of space should the root drive take?
+fsPercent='100'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 
 subvols=(var/log var/tmp)			# TODO: used for btrfs and bcachefs
@@ -621,7 +621,7 @@ mount_disk () {
 
 			mount $disk$rootPart -o $btrfs_mountopts,subvolid=$ID $mnt
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=257 $mnt$snapshot_dir
-			mount $disk$rootPart --mkdir -o $bttfs_mountopts,subvolid=258 $mnt/var/log
+			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=258 $mnt/var/log
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=259 $mnt/var/tmp
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=5 $mnt$btrfsroot
 
@@ -1636,9 +1636,11 @@ install_grub-btrfsd () {
    systemctl --root=$mnt enable cronie.service
    systemctl --root=$mnt enable grub-btrfsd.service
 
-   if [[ $mnt = '' ]]; then
+	if [[ $backup_type = 'timeshift' ]]; then
 
-   systemctl edit --stdin grub-btrfsd << EOF
+   	if [[ $mnt = '' ]]; then
+
+   		systemctl edit --stdin grub-btrfsd << EOF
 [Service]
 ExecStart=
 ExecStart=/usr/bin/grub-btrfsd --syslog -t
@@ -1646,14 +1648,15 @@ EOF
    systemctl daemon-reload
    #systemctl --root=$mnt restart grub-btrfsd.service
 
-   else
+   	else
 
-      mkdir -p $mnt/etc/systemd/system/grub-btrfsd.service.d/
-      echo '[Service]
+      	mkdir -p $mnt/etc/systemd/system/grub-btrfsd.service.d/
+      	echo '[Service]
 ExecStart=
 ExecStart=/usr/bin/grub-btrfsd --syslog -t' > $mnt/etc/systemd/system/grub-btrfsd.service.d/override.conf
 
-   fi
+   	fi
+	fi
 
 }
 
