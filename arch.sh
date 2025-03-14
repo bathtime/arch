@@ -192,6 +192,7 @@ CONFIG_FILES="
 /etc/systemd/coredump.conf.d/custom.conf
 /etc/systemd/system/getty@tty1.service.d/autologin.conf
 /etc/wpa_supplicant
+/etc/updatedb.conf
 /root/.mkshrc
 /var/lib/dhcpcd
 /var/lib/iwd
@@ -439,7 +440,6 @@ create_partitions () {
 
 	check_on_root
 
-
 	delete_partitions
 	
 	systemctl daemon-reload
@@ -580,7 +580,10 @@ create_partitions () {
 	fi
 
 	unmount_disk
+
+	install=true
 	mount_disk
+	install=false
 
 	mkdir -p $mnt/{dev,etc,proc,root,run,sys,tmp,var/cache/pacman/pkg,/var/log,/var/tmp}
 
@@ -610,17 +613,19 @@ mount_disk () {
 		if [ "$fstype" = "btrfs" ]; then
 
 			echo -e "\nMounting...\n"
-		
-		
-			#mount $disk$rootPart --mkdir $mnt
-			
-			mount $disk$rootPart -o subvolid=256 $mnt
+	
+			# After a restore root ID might be changed
+			if [[ $install = true ]]; then
+				mount $disk$rootPart -o $btrfs_mountopts,subvolid=256 $mnt
+			else
+				mount $disk$rootPart -o $btrfs_mountopts $mnt
+			fi
 
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=257 $mnt$snapshot_dir
 			mount $disk$rootPart --mkdir -o $bttfs_mountopts,subvolid=258 $mnt/var/log
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=259 $mnt/var/tmp
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=5 $mnt$btrfsroot
-	
+
 			#for subvol in "${subvols[@]}"; do
 				#mount --mkdir -o "$mountopts",subvol="$subvolPrefix$subvol" $disk$rootPart $mnt/$subvol
 			#done
@@ -1660,8 +1665,6 @@ timeshift_setup () {
    
 	mount_disk
 
-
-
 	pacstrap_install timeshift
 
 	UUID=$(blkid -s UUID -o value $disk$rootPart)
@@ -1713,30 +1716,55 @@ snapper_setup () {
 		fi
 
 		rm -rf $mnt$snapshot_dir
-		#mkdir -p $mnt$snapshot_dir
-
 		
 		if [[ ! -f $mnt/etc/snapper/configs/root ]]; then
 			snapper -c root create-config /
 		fi
 		
+		mkdir -p $mnt$snapshot_dir
 		mount -a
+
+
+
+
+
+
+
+return
+
+
+
+
+
+
+umount $mnt$snapshot_dir
+rm -r $mnt$snapshot_dir
+
+snapper -c root create-config /
+
+btrfs subvolume delete $mnt$snapshot_dir
+
+mkdir $mnt$snapshot_dir
+mount -o subvol=@snapshots $mnt$rootPart $mnt$snapshot_dir
+
+mount -a
+chmod 750 $mnt$snapshot_dir
+
+
+
+
+
+
+
+
+
+
+
 
 	else
 
 		#pacstrap_install snapper snap-pac
 		pacstrap_install snapper
-
-		
-		#arch-chroot $mnt /bin/bash << EOF
-#
-#		umount /.snapshots/
-#		rm -rf /.snapshots/
-#
-#		snapper -c root create-config 	
-#		mount -a
-#
-#EOF
 
 	fi
 
@@ -1772,28 +1800,14 @@ EOF
 	if [[ $mnt = '' ]]; then
 		
 		pacman -U --noconfirm --needed /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
-		#pacman -U --noconfirm --needed /home/user/.local/bin/backup-pkgs/btrfs-assistant-*.zst
 
 	else
 
-		#read -p "Check if snapper config exists. Press any key to continue."
-	
-		#arch-chroot $mnt /bin/bash << EOF
-
-		#snapper --root=/mnt --no-dbus -c root create-config /	
-		#arch-chroot $mnt snapper -c root create-config /	
-		#arch-chroot $mnt mount -a
-
-#EOF
-		
 		cp /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst $mnt/var/cache/pacman/pkg/
 		
 		arch-chroot $mnt /bin/bash -e << EOF
 pacman -U --noconfirm /var/cache/pacman/pkg/snapper-rollback-*.zst
 EOF
-
-		#arch-chroot $mnt pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
-		#arch-chroot $mnt pacman -U --noconfirm /home/user/.local/bin/backup-pkgs/btrfs-assistant-*.zst
 
 		echo -e "\nSnapshot: snapper -c root create --read-write --description <NAME>\n"
 
@@ -1820,8 +1834,9 @@ do_backup () {
 									;;
 
 		snapper|snapper-rollback)	if [[ $fstype = btrfs ]]; then
-										arch-chroot $mnt snapper -c root create --read-write --description "$1"
-									echo
+										echo "Not implimented yet."
+										#arch-chroot $mnt snapper -c root create --read-write --description "$1"
+									else
 										echo "Will not do a backup with btrfs-assistant on $fstype."
 									fi
 									;;
@@ -2356,6 +2371,11 @@ snapper_delete () {
 		[ $choice = 'q' ] && return
 
 		btrfs su delete -i $choice /
+
+
+		# To free the space used by the snapshot(s) immediately, use --sync
+		snapper -c root delete --sync 65
+
 
 		echo
 
