@@ -2427,17 +2427,45 @@ snapper_delete_recovery () {
 }
 
 
+snapper_delete_all_snapshots () {
+
+	snapshots=$(snapper list | grep -v '──┼' | grep -v ' # ' | awk '{print $1}')
+	
+	if [ "$snapshots" ]; then
+
+   	for snapshot in ${snapshots[@]}; do
+			
+			if [ ! $snapshot = 0 ] && [ ! $snapshot = '' ]; then
+      		echo -e "\nDeleting snapshot #$snapshot..."
+				snapper -c root delete --sync $snapshot
+			fi
+
+   	done
+	
+	else
+		echo -e "\nNo snapshots to delete."
+	fi
+
+
+}
+
 
 snapper_delete_all () {
 
 	cd /
+	
+	snapper_delete_all_snapshots 
 	
 	#ID=$(btrfs su list / | grep -E "level 256 path .snapshots$" | awk '{print $2}')
    #echo -e "Deleting: ID $ID level 256 path .snaphots..."
 
 	#btrfs su delete -i $ID /
 
-	snapper_delete_recovery
+#	snapper_delete_recovery
+
+	
+	return
+
 
 	if [ "$(btrfs su list / | grep '257 path @snapshots')" ]; then
 	
