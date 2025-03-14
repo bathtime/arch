@@ -614,12 +614,15 @@ mount_disk () {
 
 			echo -e "\nMounting...\n"
 	
-			# After a restore root ID might be changed
-			if [[ $install = true ]]; then
-				mount $disk$rootPart -o $btrfs_mountopts,subvolid=256 $mnt
-			else
-				mount $disk$rootPart -o $btrfs_mountopts $mnt
-			fi
+			# Find root ID (could have been changed if fs was restored) 
+			mount $disk$rootPart $mnt
+
+			ID=$(btrfs su list $mnt | grep -E "level 5 path @$" | awk '{print $2}')
+			echo "Mounting root as ID: $ID"
+				
+			umount $mnt
+
+			mount $disk$rootPart -o $btrfs_mountopts,subvolid=$ID $mnt
 
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=257 $mnt$snapshot_dir
 			mount $disk$rootPart --mkdir -o $bttfs_mountopts,subvolid=258 $mnt/var/log
@@ -1724,6 +1727,15 @@ snapper_setup () {
 		mkdir -p $mnt$snapshot_dir
 		mount -a
 
+		read -p "Will attempt to delete unneeded snapshot subvolume."
+
+		ID=$(btrfs su list / | grep -E "level 256 path .snapshots$" | awk '{print $2}')
+   	echo -e "Deleting: ID $ID level 256 path .snaphots..."
+
+		btrfs su delete -i $ID /
+
+		mkdir -p $snapshot_dir
+		mount -a
 
 
 
@@ -1798,8 +1810,8 @@ mountpoint = $btrfsroot
 EOF
 
 	if [[ $mnt = '' ]]; then
-		
-		pacman -U --noconfirm --needed /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
+		echo
+		#pacman -U --noconfirm --needed /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
 
 	else
 
@@ -2407,6 +2419,11 @@ snapper_delete_recovery () {
 snapper_delete_all () {
 
 	cd /
+	
+	ID=$(btrfs su list / | grep -E "level 256 path .snapshots$" | awk '{print $2}')
+   echo -e "Deleting: ID $ID level 256 path .snaphots..."
+
+	btrfs su delete -i $ID /
 
 	snapper_delete_recovery
 
