@@ -1699,6 +1699,7 @@ snapper_setup () {
 
    if [[ $mnt = '' ]]; then
 
+
 		pacstrap_install snapper
 		
 		if [[ "$(mount | grep $mnt$snapshot_dir)" ]]; then
@@ -1755,8 +1756,8 @@ btrfs su delete -i 262 /
 mkdir -p /.snapshots
 mount -a
 
-touch /root/runonce-$(date)
-systemctl disable runonce.service' > /usr/local/bin/runonce.sh
+touch /root/runonce-"$(date)"
+systemctl disable runonce.service' > $mnt/usr/local/bin/runonce.sh
 
 chmod +x $mnt/usr/local/bin/runonce.sh
 
