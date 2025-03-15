@@ -156,8 +156,9 @@ wlan="wlan0"
 wifi_ssid=""
 wifi_pass=""
 
+backup_file=/root/setup.tar.gz
 
-# Files that will be saved to /setup.tar as part of a backup
+# Files that will be saved to $backup_file as part of a backup
 CONFIG_FILES="
 
 /etc/snapper-rollback.conf
@@ -199,6 +200,7 @@ CONFIG_FILES="
 /var/lib/dhcpcd
 /var/lib/iwd
 
+/home/$user/Documents
 /home/$user/.bash_profile
 /home/$user/.bashrc
 /home/$user/.config/
@@ -336,7 +338,7 @@ choose_disk () {
 
 		[[ $fstype = 'btrfs' ]] || [[ $fstype = 'bcachefs' ]] && extra='snapshots '
 
-		choices='quit backup edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / '$extra'script logout reboot suspend hibernate poweroff stats benchmark'
+		choices='quit '$extra'backup edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / script logout reboot suspend hibernate poweroff stats benchmark'
 		
 
 		echo -e "\nWhich drive?\n"
@@ -2350,13 +2352,7 @@ bork_system () {
 	read choice
 	
 	[[ ! "$choice" = 'yes' ]] && return
-
-	if [[ $mnt = '' ]]; then
-		pacman -Rnsc plasma
-	else
-		arch-chroot $mnt pacman -Rnsc -noconfirm plasma 
-	fi
-
+	
 	rm -rf $mnt/etc
 
 }
@@ -3046,23 +3042,22 @@ backup_config () {
 
 	echo -e "\nCreating backup file. Please be patient...\n"
 	
-	cd /
-
-	#sudo -u $user tar -pcf setup.tar $CONFIG_FILES
-	#tar -pcf setup.tar $CONFIG_FILES
+	#sudo -u $user tar -pcf $backup_file $CONFIG_FILES
+	#tar -pcf $backup_file $CONFIG_FILES
 
 	rm -rf /home/$user/.local/share/Trash/*
-	#tar -pcf setup.tar $CONFIG_FILES
-	time tar -pczf setup.tar.gz $CONFIG_FILES
+	#tar -pcf $backup_file $CONFIG_FILES
+	time tar -pczf $backup_file $CONFIG_FILES
 	
 	echo -e "\nVerifying file contents. Please be patient...\n"
-	#tar xOf setup.tar.gz &> /dev/null; echo $?
-	tar -tf setup.tar.gz &> /dev/null; echo $?
+	#tar xOf $backup_file &> /dev/null; echo $?
+	tar -tf $backup_file &> /dev/null; echo $?
 
-	#sudo -u $user gpg --yes -c setup.tar
-	#ls -lah setup.tar setup.tar.gpg
+	#sudo -u $user gpg --yes -c $backup_file
+
+	#ls -lah $backup_file $backup_file.gpg
 	
-	ls -lah setup.tar.gz
+	ls -lah $backup_file
 
 }
 
@@ -3075,13 +3070,12 @@ restore_config () {
 	cd $mnt/
 	
 	echo -e "\nVerifying file contents. Please be patient...\n"
-	#tar xOf setup.tar.gz &> /dev/null; echo $?
-	tar -tf setup.tar.gz &> /dev/null; echo $?
+	#tar xOf $backup_file &> /dev/null; echo $?
+	tar -tf $mnt$backup_file &> /dev/null; echo $?
 
 	echo "Extracting setup file..."
-	#tar -xvf /setup.tar
+	time tar -xvf $backup_file
 	
-	time tar -xvf /setup.tar.gz
 	chown -R $user:$user $mnt/home/$user/
 
 }
@@ -3095,14 +3089,14 @@ install_config () {
 
 	#read -p "Press any key when ready to enter password."
 	#echo "Decrypting setup file..."
-	#gpg --yes --output /home/$user/setup.tar --decrypt /home/$user/setup.tar.gpg
+	#gpg --yes --output /home/$user/$backup_file --decrypt /home/$user/$backup_file.gpg
 
 
-	#cp /home/$user/setup.tar{,.gpg} $mnt/home/$user/
-	cp /setup.tar.gz $mnt/
+	#cp /home/$user/$backup_file{,.gpg} $mnt/home/$user/
+	cp $backup_file $mnt$backup_file
 
 	echo "Extracting setup files..."
-	arch-chroot $mnt tar -xvf /setup.tar.gz --directory /
+	arch-chroot $mnt tar -xvf $backup_file --directory /
 	arch-chroot $mnt chown -R $user:$user /home/$user/
 
 	count=`ls -1 /home/user/.local/bin/*.zst 2>/dev/null | wc -l`
@@ -3402,18 +3396,18 @@ install_group () {
 snapshots_menu () {
 	
 	config_choices=("1. Quit to main menu
-2. Rsync snapshot
-3. Take btrfs/bcachefs snapshot
-4. Restore btrfs/bcachefs snapshot
-5. Delete btrfs/bcachefs snapshot
-6. Delete timeshift backups
-7. Bork system
-8. Snapper snapshot
-9. Snapper rollback
-10. Btrfs delete
-11. Snapper delete
-12. Snapper delete recovery
-13. Snapper delete all")
+2. Snapper snapshot
+3. Snapper rollback
+4. Btrfs delete
+5. Snapper delete
+6. Snapper delete recovery
+7. Snapper delete all
+8. Rsync snapshot
+9. Take btrfs/bcachefs snapshot
+10. Restore btrfs/bcachefs snapshot
+11. Delete btrfs/bcachefs snapshot
+12. Delete timeshift backups
+13. Bork system")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3434,19 +3428,19 @@ snapshots_menu () {
 
 		case $config_choice in
 			quit|1)			echo "Quitting!"; break ;;
-			rsync|2)		rsync_snapshot ;;
-			snapshot|3)	take_snapshot ;;
-			restore|4)		restore_snapshot ;;
-			delete|5)		delete_snapshot ;;
-			timeshift|6)	delete_timeshift_snapshots ;;
-			bork|7)			bork_system ;;
-			snapper|8)		create_snapshot ;;	
-			rollback|9)		do_snapper-rollback ;;
-			btrfs-del|10)		btrfs_delete ;;
-			snapper-del|11)	snapper_delete ;;
-			delete-rec|12) snapper_delete_recovery ;;
-			delete-all|13)	snapper_delete_all ;;
-      	'')				;;
+			snapper|2)		create_snapshot ;;	
+			rollback|3)		do_snapper-rollback ;;
+			btrfs-del|4)	btrfs_delete ;;
+			snapper-del|5)	snapper_delete ;;
+			delete-rec|6) 	snapper_delete_recovery ;;
+			delete-all|7)	snapper_delete_all ;;
+			rsync|8)			rsync_snapshot ;;
+			snapshot|9)		take_snapshot ;;
+			restore|10)		restore_snapshot ;;
+			delete|11)		delete_snapshot ;;
+			timeshift|12)	delete_timeshift_snapshots ;;
+			bork|13)			bork_system ;;
+	      	'')				;;
       	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
 
@@ -3470,19 +3464,7 @@ clone_menu () {
 12. Wipe (urandom)
 13. Wipe freespace     
 14. Shred $disk
-15. Create squashfs image
-16. Rsync snapshot
-17. Take btrfs/bcachefs snapshot
-18. Restore btrfs/bcachefs snapshot
-19. Delete btrfs/bcachefs snapshot
-20. Delete timeshift backups
-21. Bork system
-22. Snapper snapshot
-23. Snapper rollback
-24. Btrfs delete
-25. Snapper delete
-26. Snapper delete recovery
-27. Snapper delete all")
+15. Create squashfs image")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3519,27 +3501,6 @@ clone_menu () {
 			wipe-free|13)	wipe_freespace ;;
 			shred|14)		unmount_disk; shred -n 1 -v -z $disk ;;
 			squashfs|15)	create_archive ;;
-			rsync|16)		rsync_snapshot ;;
-			snapshot|17)	take_snapshot ;;
-			restore|18)		restore_snapshot ;;
-			delete|19)		delete_snapshot ;;
-			timeshift|20)	delete_timeshift_snapshots ;;
-			bork|21)			bork_system ;;
-			snapper|22)		
-								snapper list --columns number,description,date
-								echo -e "\nWhat would you like to name this snapshot?\n"
-								read snapshot
-								touch "/root/snapper-$snapshot"
-								snapper -c root create --read-write --description "$snapshot"
-								sync_disk
-								sleep .1
-								rm -rf "/root/snapper-$snapshot"
-								;;
-			rollback|23)		do_snapper-rollback ;;
-			btrfs-del|24)		btrfs_delete ;;
-			snapper-del|25)	snapper_delete ;;
-			delete-rec|26) snapper_delete_recovery ;;
-			delete-all|27)	snapper_delete_all ;;
       	'')				;;
       	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
@@ -3576,8 +3537,8 @@ setup_menu () {
   			install|4)	install_config ;;
    		clean|5)		clean_system ;;
    		last|6)		last_modified ;;
-			copy|7)		echo "Copying packages from /setup.tar to $mnt/..."
-							cp /setup.tar $mnt/ ;;
+			copy|7)		echo "Copying packages from $backup_file to $mnt/..."
+							cp $backup_file $mnt/ ;;
 			pkgs|8)		copy_pkgs ;;
 			arch|9)		mount_disk	
 							echo -e "\nCopying $arch_path/$arch_file -> $mnt$arch_path/$arch_file...\n"
@@ -3709,10 +3670,11 @@ while :; do
 29. Test
 30. Custom install
 31. Setup ~ files
-32. Snapshot/sync/wipe ->
-33. Install aur packages ->
-34. Install group packages ->
-35. Benchmark")
+32. Snapshot ->
+33. clone/sync/wipe ->
+34. Install aur packages ->
+35. Install group packages ->
+36. Benchmark")
 
 
 echo
@@ -3756,10 +3718,11 @@ echo
 									;;
 		custom|30)				custom_install ;;
 		setup|31)				setup_menu ;;
-		copy|32)					clone_menu ;;
-		setup|33)      		aur_package_install ;; 
-		packages|34)			install_group ;;
-		benchmark|35)			benchmark ;;
+		snapshot|32)			snapshots_menu ;;
+		copy|33)					clone_menu ;;
+		setup|34)      		aur_package_install ;; 
+		packages|35)			install_group ;;
+		benchmark|36)			benchmark ;;
 		'')						;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
