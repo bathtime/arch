@@ -106,7 +106,7 @@ encrypt='true'					# bcachefs only
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='100'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-simpleInstall=true
+simpleInstall='true'		# true = no net,cached packages,tweaks...
 
 subvols=(var/log var/tmp)			# TODO: used for btrfs and bcachefs
 subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
@@ -1751,8 +1751,6 @@ fi
 		
 mount -a
 
-#btrfs su delete -i 262 /
-
 ID=$(btrfs su list / | grep -E "level 256 path .snapshots$" | sed "s/ID //;s/ gen .*$//")
 btrfs su delete -i $ID /
 
@@ -1877,7 +1875,8 @@ install_tweaks () {
 
 	mount_disk
 	
-	pacstrap_install terminus-font ncdu
+	#pacstrap_install terminus-font ncdu
+	pacstrap_install ncdu
 
 	echo 'vm.swappiness = 10' > $mnt/etc/sysctl.d/99-swappiness.conf
 	echo 'vm.vfs_cache_pressure=50' > $mnt/etc/sysctl.d/99-cache-pressure.conf
@@ -2798,17 +2797,21 @@ auto_install_root () {
 	fi
 
 	general_setup
-	
+
 	#setup_iwd
 	setup_networkmanager
 	#setup_wpa
 	
-	install_tweaks
+	if [[ ! $simpleInstall = true ]]; then
+		install_tweaks
+		copy_pkgs
+	fi
+
 	copy_script
-	copy_pkgs
-	
+		
 	install_backup $backup_type
 	do_backup "Root-installed"
+	
 	sync_disk
 
 }
