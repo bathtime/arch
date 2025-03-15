@@ -67,8 +67,6 @@ error_bypass=0
 
 
 # fml, I could swear all developers have 20/20 vision :/
-#if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ] && [[ ! $(cat /etc/mkinitcpio.conf | #grep -e '^HOOKS|consolefont') = '' ]]; then
-
 if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ] && [[ ! $(grep -e '^HOOKS|consolefont' /etc/mkinitcpio.conf) = '' ]]; then
 	setfont ter-132b
 else
@@ -126,8 +124,8 @@ efi_mountopts="noatime"
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
 backup_type='snapper-rollback'	# eg., '','rsync','snapper','snapper-rollback','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
-extra_module='lz4'				# adds to /etc/mkinitcpio modules
-extra_hook=''					# adds to /etc/mkinitcpio hooks
+extra_modules='lz4'				# adds to /etc/mkinitcpio modules
+extra_hooks='resume'					# adds to /etc/mkinitcpio hooks
 
 
 kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
@@ -833,17 +831,17 @@ choose_initramfs () {
 		mkinitcpio|2)	pacstrap_install mkinitcpio 
 
 							if [ $encrypt = true ] && [ $fstype = bcachefs ]; then
-								extra_module="$extra_module bcachefs"
-								extra_hook="$extra_hook bcachefs"
+								add_hooks MODULES bcachefs 
+                     	add_hooks HOOKS bcachefs
 							fi
 
 							cat > $mnt/etc/mkinitcpio.conf <<EOF
-MODULES=($extra_module)
+MODULES=($extra_modules)
 BINARIES=()
 FILES=()
 
 #HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block filesystems fsck)
-HOOKS=(base udev autodetect microcode modconf keyboard block filesystems resume $extra_hook)
+HOOKS=(base udev autodetect microcode modconf keyboard block filesystems $extra_hooks)
 
 COMPRESSION="lz4"
 
@@ -1960,11 +1958,28 @@ EOF
 
 add_hooks () {
 
-mount_disk
+	mount_disk
+
+	if [ "$(grep ^$1= $mnt/etc/mkinitcpio.conf | grep -v $2)" ] && [ "$1" = "HOOKS" ]; then
+		
+		sed -i "s/filesystems/filesystems $2/" $mnt/etc/mkinitcpio.conf
+	
+	elif [ "$(grep ^$1= $mnt/etc/mkinitcpio.conf | grep -v $2)" ] && [ "$1" = "MODULES" ]; then
+		sed -i "s/MODULES=(/MODULES=($2 /" $mnt/etc/mkinitcpio.conf
+
+	fi
+
+	sed -i "s/ )/)/" $mnt/etc/mkinitcpio.conf
+
+return
 
 #addThis='MODULES=liveroot|HOOKS=liveroot'
+#addThis="$1"
 
-addThis="$1"
+	addThis="$1=$2"
+
+	#$mnt/etc/mkinitcpio.conf
+
 
 	awk -F'[=()]' -v add="${addThis}" '
   BEGIN {
@@ -1975,11 +1990,12 @@ addThis="$1"
   $1 in addT {
 	 sub( /\([^)]*/, ("& " addT[$1]) )
   }
-  1
-  ' "$2" > "/temp.txt"
-  #cat /temp.txt
-  cp /temp.txt "$2"
-  rm -rf /temp.txt
+  ' "$2" 
+#> "/temp.txt"#  cat /temp.txt
+
+
+  #cp /temp.txt "$2"
+  #rm -rf /temp.txt
 
 }
 
@@ -2003,19 +2019,11 @@ install_hooks () {
 							touch $mnt/etc/vconsole.conf
 							pacstrap_install rsync squashfs-tools
 
-							#[ "$(cat $mnt/usr/lib/initcpio/install/liveroot | grep 'add_binary btrfs')" ] || sed -i 's/build() {/& \n        add_binary btrfs/g' $mnt/usr/lib/initcpio/install/liveroot
-
-
 
 							[ "$(grep 'add_binary btrfs' $mnt/usr/lib/initcpio/install/liveroot)" ] || sed -i 's/build() {/& \n        add_binary btrfs/g' $mnt/usr/lib/initcpio/install/liveroot
 							
-							#cat $mnt/etc/mkinitcpio.conf | grep ^HOOKS | grep -v liveroot && sed -i 's/resume/liveroot resume/' $mnt/etc/mkinitcpio.conf
-							grep ^HOOKS $mnt/etc/mkinitcpio.conf | grep -v liveroot && sed -i 's/resume/liveroot resume/' $mnt/etc/mkinitcpio.conf
+							add_hooks HOOKS liveroot
 
-
-
-
-							#add_hooks 'HOOKS=liveroot' $mnt/etc/mkinitcpio.conf
 
 							# So systemd won't remount as 'rw'
 							#systemctl --root=$mnt mask systemd-remount-fs.service
@@ -2026,19 +2034,11 @@ install_hooks () {
 		2|overlayroot)	
 							#https://aur.archlinux.org/packages/overlayroot
 							#https://github.com/hilderingt/archlinux-overlayroot
-	
-							#cat $mnt/etc/mkinitcpio.conf | grep ^MODULES= | grep -v overlay && sed -i 's/(lz4/(lz4 overlay/' $mnt/etc/mkinitcpio.conf
-
-							#cat $mnt/etc/mkinitcpio.conf | grep ^HOOKS | grep -v overlayroot && sed -i 's/resume/resume overlayroot/' $mnt/etc/mkinitcpio.conf
-
-
-							#cat $mnt/etc/mkinitcpio.conf | grep ^MODULES= | grep -v overlay && add_hooks 'MODULES=overlay' $mnt/etc/mkinitcpio.conf
-							grep ^MODULES= $mnt/etc/mkinitcpio.conf | grep -v overlay && add_hooks 'MODULES=overlay' $mnt/etc/mkinitcpio.conf
 							
-							#cat $mnt/etc/mkinitcpio.conf | grep ^HOOKS= | grep -v overlayroot && add_hooks 'HOOKS=overlayroot' $mnt/etc/mkinitcpio.conf
-							grep ^HOOKS= $mnt/etc/mkinitcpio.conf | grep -v overlayroot && add_hooks 'HOOKS=overlayroot' $mnt/etc/mkinitcpio.conf
-
 							#	pacman --noconfirm -U /home/user/.local/bin/overlayroot*.zst
+
+							add_hooks MODULES overlay
+                     add_hooks HOOKS overlayroot
 
 	cp $mnt/etc/grub.d/10_linux $mnt/etc/grub.d/10_linux-overlay
 	sed -i 's/\"\$title\"/\"\$title \(overlayroot\)\"/g' $mnt/etc/grub.d/10_linux-overlay
@@ -2346,8 +2346,13 @@ delete_snapshot () {
    done
 
 	if [ -d "$mnt$snapshot_dir/$snapshot" ] && [ ! "$snapshot" = '' ]; then
-
-		btrfs subvolume delete "$mnt$snapshot_dir/$snapshot"
+		
+		if [ "$fstype" = "btrfs" ]; then
+			btrfs subvolume delete "$mnt$snapshot_dir/$snapshot"
+		elif [ "$fstype" = "bcachefs" ]; then
+			echo rm -rf "$mnt$snapshot_dir/$snapshot"
+			rm -rf "$mnt$snapshot_dir/$snapshot"
+		fi
 
 	else
 		echo "Snapshot directory does not exist. Exiting."
@@ -2820,13 +2825,13 @@ auto_install_root () {
 	setup_fstab
 	install_base
 	install_grub
-	
 
 	if [[ $autologin = true ]]; then
 		auto_login root
 	fi
 
 	if [[ $fstype = btrfs ]] || [[ $fstype = bcachefs ]]; then
+
 
 		[ ! $backup_type = '' ] && [ ! $fstype = bcachefs ] && install_grub-btrfsd
 
@@ -2839,16 +2844,16 @@ auto_install_root () {
 		if [[ $fstype = bcachefs ]] && [[ $encrypt = false ]]; then
 			choose_initramfs dracut 
 			choose_initramfs booster
-		elif [[ $fstype = bcachefs ]] && [[ $encrypt = true ]]; then
-			choose_initramfs mkinitcpio 
 		fi
+		
+		choose_initramfs mkinitcpio
 
 	else
 
 		choose_initramfs $initramfs
 
 	fi
-
+	
 	general_setup
 
 	#setup_iwd
@@ -2910,12 +2915,14 @@ auto_install_kde () {
 	sed -i 's/manager=.*$/manager=kde/g' $mnt/home/$user/.bash_profile
 
 	install_config
-	install_hooks overlayroot
 	install_mksh
 
 	#if [ $backup_type = 'btrfs-assistant' ] && [ $fstype = btrfs ]; then
 	#	arch-chroot $mnt pacman -U --noconfirm /home/$user/.local/bin/backup-pkgs/btrfs-assistant-*.zst
 	#fi
+
+	install_hooks liveroot
+	install_hooks overlayroot
 
 
 	do_backup "KDE-installed"
@@ -3744,6 +3751,8 @@ echo
 		hypervisor|28)			hypervisor_setup ;;
 
 		test|29)					
+
+
 									;;
 		custom|30)				custom_install ;;
 		setup|31)				setup_menu ;;
