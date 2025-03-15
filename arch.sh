@@ -9,6 +9,9 @@ bash <(curl -sL bit.ly/a-install)
 DOCS
 
 
+# TODO: 
+
+
 ###  Set error detection  ###
 error() {
 
@@ -64,7 +67,9 @@ error_bypass=0
 
 
 # fml, I could swear all developers have 20/20 vision :/
-if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ] && [[ ! $(cat /etc/mkinitcpio.conf | grep -e '^HOOKS|consolefont') = '' ]]; then
+#if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ] && [[ ! $(cat /etc/mkinitcpio.conf | #grep -e '^HOOKS|consolefont') = '' ]]; then
+
+if [ -f /usr/share/kbd/consolefonts/ter-132b.psf.gz ] && [[ ! $(grep -e '^HOOKS|consolefont' /etc/mkinitcpio.conf) = '' ]]; then
 	setfont ter-132b
 else
 	setfont -d
@@ -121,6 +126,9 @@ efi_mountopts="noatime"
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
 backup_type='snapper-rollback'	# eg., '','rsync','snapper','snapper-rollback','timeshift', 'btrfs-assistant'
 initramfs='booster'			# mkinitcpio, dracut, booster
+extra_module='lz4'				# adds to /etc/mkinitcpio modules
+extra_hook=''					# adds to /etc/mkinitcpio hooks
+
 
 kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
 
@@ -209,6 +217,7 @@ CONFIG_FILES="
 /home/$user/.mkshrc
 /home/$user/.profile
 /home/$user/.vimrc"
+
 
 
 check_pkg () {
@@ -774,7 +783,6 @@ setup_fstab () {
 	genfstab -U $mnt/ > $mnt/etc/fstab
 	grep $disk /proc/mounts > $mnt/etc/fstab.bak
 
-
 	###  Tweak the resulting /etc/fstab generated  ###
 
 	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
@@ -810,12 +818,27 @@ choose_initramfs () {
 
 	mount_disk
 
-	if [ $encrypt = true ] && [ $fstype = bcachefs ]; then
-		extra_module=bcachefs
-		extra_hook=bcachefs
+	if [ "$1" ]; then
+		choice=$1
+	else
 
-	cat > $mnt/etc/mkinitcpio.conf <<EOF
-MODULES=(lz4 $extra_module)
+		echo -e "\nWhich initramfs would you like to install?\n
+1. quit 2. mkinitcpio 3. dracut 4. booster\n"
+
+		read choice
+	fi
+
+	case $choice in
+		quit|1)			;;
+		mkinitcpio|2)	pacstrap_install mkinitcpio 
+
+							if [ $encrypt = true ] && [ $fstype = bcachefs ]; then
+								extra_module="$extra_module bcachefs"
+								extra_hook="$extra_hook bcachefs"
+							fi
+
+							cat > $mnt/etc/mkinitcpio.conf <<EOF
+MODULES=($extra_module)
 BINARIES=()
 FILES=()
 
@@ -829,26 +852,15 @@ COMPRESSION="lz4"
 MODULES_DECOMPRESS="no"
 EOF
 
-	cat $mnt/etc/mkinitcpio.conf
+							cat $mnt/etc/mkinitcpio.conf
 
-	arch-chroot $mnt mkinitcpio -P
+							if [[ $mnt = '' ]]; then
+								mkinitcpio -p linux
+							else
+								arch-chroot $mnt mkinitcpio -P
+							fi
 
-	fi
-
-
-	if [ "$1" ]; then
-		choice=$1
-	else
-
-		echo -e "\nWhich initramfs would you like to install?\n
-1. quit 2. mkinitcpio 3. dracut 4. booster\n"
-
-		read choice
-	fi
-
-	case $choice in
-		quit|1)			;;
-		mkinitcpio|2)	pacstrap_install mkinitcpio ;;
+							;;
 		dracut|3)		pacstrap_install dracut 
 
 							echo 'hostonly="yes"
@@ -1389,7 +1401,8 @@ setup_dhcp () {
 ExecStart=
 ExecStart=/usr/bin/dhcpcd -b -q %I' > $mnt/etc/systemd/system/dhcpcd@.service.d/no-wait.conf
 
-	[ "$(cat $mnt/etc/dhcpcd.conf | grep noarp)" ] && echo noarp >> $mnt/etc/dhcpcd.conf
+	#[ "$(cat $mnt/etc/dhcpcd.conf | grep noarp)" ] && echo noarp >> $mnt/etc/dhcpcd.conf
+	[ "$(grep noarp $mnt/etc/dhcpcd.conf)" ] && echo noarp >> $mnt/etc/dhcpcd.conf
 
 	echo "Enabling dhcp services..."
 	systemctl --root=$mnt enable dhcpcd.service
@@ -1990,9 +2003,17 @@ install_hooks () {
 							touch $mnt/etc/vconsole.conf
 							pacstrap_install rsync squashfs-tools
 
-							[ "$(cat $mnt/usr/lib/initcpio/install/liveroot | grep 'add_binary btrfs')" ] || sed -i 's/build() {/& \n        add_binary btrfs/g' $mnt/usr/lib/initcpio/install/liveroot
+							#[ "$(cat $mnt/usr/lib/initcpio/install/liveroot | grep 'add_binary btrfs')" ] || sed -i 's/build() {/& \n        add_binary btrfs/g' $mnt/usr/lib/initcpio/install/liveroot
+
+
+
+							[ "$(grep 'add_binary btrfs' $mnt/usr/lib/initcpio/install/liveroot)" ] || sed -i 's/build() {/& \n        add_binary btrfs/g' $mnt/usr/lib/initcpio/install/liveroot
 							
-							cat $mnt/etc/mkinitcpio.conf | grep ^HOOKS | grep -v liveroot && sed -i 's/resume/liveroot resume/' $mnt/etc/mkinitcpio.conf
+							#cat $mnt/etc/mkinitcpio.conf | grep ^HOOKS | grep -v liveroot && sed -i 's/resume/liveroot resume/' $mnt/etc/mkinitcpio.conf
+							grep ^HOOKS $mnt/etc/mkinitcpio.conf | grep -v liveroot && sed -i 's/resume/liveroot resume/' $mnt/etc/mkinitcpio.conf
+
+
+
 
 							#add_hooks 'HOOKS=liveroot' $mnt/etc/mkinitcpio.conf
 
@@ -2011,8 +2032,11 @@ install_hooks () {
 							#cat $mnt/etc/mkinitcpio.conf | grep ^HOOKS | grep -v overlayroot && sed -i 's/resume/resume overlayroot/' $mnt/etc/mkinitcpio.conf
 
 
-							cat $mnt/etc/mkinitcpio.conf | grep ^MODULES= | grep -v overlay && add_hooks 'MODULES=overlay' $mnt/etc/mkinitcpio.conf
-							cat $mnt/etc/mkinitcpio.conf | grep ^HOOKS= | grep -v overlayroot && add_hooks 'HOOKS=overlayroot' $mnt/etc/mkinitcpio.conf
+							#cat $mnt/etc/mkinitcpio.conf | grep ^MODULES= | grep -v overlay && add_hooks 'MODULES=overlay' $mnt/etc/mkinitcpio.conf
+							grep ^MODULES= $mnt/etc/mkinitcpio.conf | grep -v overlay && add_hooks 'MODULES=overlay' $mnt/etc/mkinitcpio.conf
+							
+							#cat $mnt/etc/mkinitcpio.conf | grep ^HOOKS= | grep -v overlayroot && add_hooks 'HOOKS=overlayroot' $mnt/etc/mkinitcpio.conf
+							grep ^HOOKS= $mnt/etc/mkinitcpio.conf | grep -v overlayroot && add_hooks 'HOOKS=overlayroot' $mnt/etc/mkinitcpio.conf
 
 							#	pacman --noconfirm -U /home/user/.local/bin/overlayroot*.zst
 
@@ -2020,7 +2044,12 @@ install_hooks () {
 	sed -i 's/\"\$title\"/\"\$title \(overlayroot\)\"/g' $mnt/etc/grub.d/10_linux-overlay
 	sed -i 's/ rw / rw overlayroot /g' $mnt/etc/grub.d/10_linux-overlay
 	
-							grub-mkconfig -o /boot/grub/grub.cfg
+
+							if [[ $mnt = '' ]]; then
+								grub-mkconfig -o /boot/grub/grub.cfg
+							else
+								arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
+							fi
 
 							echo -e "\nAdd 'overlayroot' to kernal parameters to run\n"
 							;;
