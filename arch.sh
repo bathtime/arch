@@ -334,7 +334,7 @@ choose_disk () {
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#&  $rootfs#g" | sed "s#$host.*#& (host)#g"
 
-		choices='quit sync edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / script logout reboot suspend hibernate poweroff stats benchmark'
+		choices='quit sync edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / script logout reboot suspend hibernate poweroff stats benchmark snapshots'
 		
 
 		echo -e "\nWhich drive?\n"
@@ -363,6 +363,7 @@ choose_disk () {
 								systemd-analyze | sed 's/in .*=/in/;s/graph.*//'
 								echo $(systemd-analyze  blame | wc -l) systemd services
 								;;
+				snapshots)	snapshots_menu ;;
 				/)				disk=$host; search_disks=0; break ;;
 				*)    		if [[ $disk = '' ]]; then
 						   		
@@ -2342,6 +2343,12 @@ delete_timeshift_snapshots () {
 
 bork_system () {
 
+	echo -e "\nAre you sure you want to bork the system? Type 'yes' to proceed.\n"
+
+	read choice
+	
+	[[ ! "$choice" = 'yes' ]] && return
+
 	if [[ $mnt = '' ]]; then
 		pacman -Rnsc plasma
 	else
@@ -2372,6 +2379,25 @@ do_snapper-rollback () {
 		sync_disk
 		reboot
 	fi
+
+}
+
+
+create_snapshot () {
+
+	snapper list --columns number,date,description,default
+	
+	echo -e "\nWhat would you like to name this snapshot?\n"
+	read snapshot
+	
+	touch "/root/snapper-$snapshot"
+	
+	snapper -c root create --read-write --description "$snapshot"
+	
+	sync_disk
+	
+	sleep .1
+	rm -rf "/root/snapper-$snapshot"
 
 }
 
@@ -3366,6 +3392,61 @@ install_group () {
 }
 
 
+
+snapshots_menu () {
+	
+	config_choices=("1. Quit to main menu
+2. Rsync snapshot
+3. Take btrfs/bcachefs snapshot
+4. Restore btrfs/bcachefs snapshot
+5. Delete btrfs/bcachefs snapshot
+6. Delete timeshift backups
+7. Bork system
+8. Snapper snapshot
+9. Snapper rollback
+10. Btrfs delete
+11. Snapper delete
+12. Snapper delete recovery
+13. Snapper delete all")
+
+	config_choice=0
+	while [ ! "$config_choice" = "1" ]; do
+
+		if [ $fstype = btrfs ]; then
+			echo
+			snapper list --columns number,date,description,default
+			echo
+			btrfs su list /
+		fi
+
+		echo
+		echo "${config_choices[@]}" | column
+		echo  
+
+		echo -e "Which option?\n"
+		read config_choice
+
+		case $config_choice in
+			quit|1)			echo "Quitting!"; break ;;
+			rsync|2)		rsync_snapshot ;;
+			snapshot|3)	take_snapshot ;;
+			restore|4)		restore_snapshot ;;
+			delete|5)		delete_snapshot ;;
+			timeshift|6)	delete_timeshift_snapshots ;;
+			bork|7)			bork_system ;;
+			snapper|8)		create_snapshot ;;	
+			rollback|9)		do_snapper-rollback ;;
+			btrfs-del|10)		btrfs_delete ;;
+			snapper-del|11)	snapper_delete ;;
+			delete-rec|12) snapper_delete_recovery ;;
+			delete-all|13)	snapper_delete_all ;;
+      	'')				;;
+      	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
+		esac
+
+	done 
+
+}
 
 clone_menu () {
 	
