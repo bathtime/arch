@@ -106,7 +106,7 @@ encrypt='true'					# bcachefs only
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='100'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-simpleInstall='true'		# true = no net,cached packages,tweaks...
+simpleInstall='false'		# true = no net,cached packages,tweaks...
 
 subvols=(var/log var/tmp)			# TODO: used for btrfs and bcachefs
 subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
@@ -3052,12 +3052,13 @@ backup_config () {
 	#tar -pcf setup.tar $CONFIG_FILES
 
 	rm -rf /home/$user/.local/share/Trash/*
-	tar -pcf setup.tar $CONFIG_FILES
+	#tar -pcf setup.tar $CONFIG_FILES
+	time tar -pczf setup.tar.gz $CONFIG_FILES
 
 	#sudo -u $user gpg --yes -c setup.tar
 	#ls -lah setup.tar setup.tar.gpg
 	
-	ls -lah setup.tar
+	ls -lah setup.tar.gz
 
 }
 
@@ -3070,7 +3071,8 @@ restore_config () {
 	cd $mnt/
 
 	echo "Extracting setup file..."
-	tar xvf /setup.tar
+	#tar -xvf /setup.tar
+	time tar -xvf /setup.tar.gz
 	chown -R $user:$user $mnt/home/$user/
 
 }
@@ -3088,10 +3090,10 @@ install_config () {
 
 
 	#cp /home/$user/setup.tar{,.gpg} $mnt/home/$user/
-	cp /setup.tar $mnt/
+	cp /setup.tar.gz $mnt/
 
 	echo "Extracting setup files..."
-	arch-chroot $mnt tar xvf /setup.tar --directory /
+	arch-chroot $mnt tar -xvf /setup.tar.gz --directory /
 	arch-chroot $mnt chown -R $user:$user /home/$user/
 
 	count=`ls -1 /home/user/.local/bin/*.zst 2>/dev/null | wc -l`
