@@ -2890,7 +2890,8 @@ auto_install_user () {
 	fi
 
 	# Auto-launch
-	sed -i 's/manager=.*$/manager=none/g' $mnt/home/$user/.bash_profile
+	#sed -i 's/manager=.*$/manager=none/g' $mnt/home/$user/.bash_profile
+	window-manager=none
 
 	#install_aur
 	#setup_acpid
@@ -2912,18 +2913,14 @@ auto_install_kde () {
 	copy_pkgs
 
 	# Auto-launch
-	sed -i 's/manager=.*$/manager=kde/g' $mnt/home/$user/.bash_profile
+	#sed -i 's/manager=.*$/manager=kde/g' $mnt/home/$user/.bash_profile
+	window-manager=kde
 
 	install_config
 	install_mksh
 
-	#if [ $backup_type = 'btrfs-assistant' ] && [ $fstype = btrfs ]; then
-	#	arch-chroot $mnt pacman -U --noconfirm /home/$user/.local/bin/backup-pkgs/btrfs-assistant-*.zst
-	#fi
-
-	install_hooks liveroot
+	#install_hooks liveroot
 	install_hooks overlayroot
-
 
 	do_backup "KDE-installed"
 	sync_disk
@@ -2940,7 +2937,8 @@ auto_install_gnome () {
 	copy_pkgs
 
 	# Auto launch
-	sed -i 's/manager=.*$/manager=gnome/g' $mnt/home/$user/.bash_profile
+	#sed -i 's/manager=.*$/manager=gnome/g' $mnt/home/$user/.bash_profile
+	window-manager=gnome
 
 	install_config
 	do_backup "Gnome-installed"
@@ -2956,9 +2954,8 @@ auto_install_gnomekde () {
 	
 	copy_pkgs
 
-	# Customize system
-
-	sed -i 's/manager=.*$/manager=choice/g' $mnt/home/$user/.bash_profile
+	#sed -i 's/manager=.*$/manager=choice/g' $mnt/home/$user/.bash_profile
+	window-manager=choice
 
 	install_config
 	do_backup "Gnome-KDE-installed"
@@ -2975,7 +2972,8 @@ auto_install_cage () {
 	copy_pkgs
 
 	# Auto launch
-	sed -i 's/manager=.*$/manager=cage/g' $mnt/home/$user/.bash_profile
+	#sed -i 's/manager=.*$/manager=cage/g' $mnt/home/$user/.bash_profile
+	window-manager=cage
 
 	install_config
 
@@ -2993,7 +2991,8 @@ auto_install_weston () {
 
 	copy_pkgs
 	
-	sed -i 's/manager=.*$/manager=weston/g' $mnt/home/$user/.bash_profile
+	#sed -i 's/manager=.*$/manager=weston/g' $mnt/home/$user/.bash_profile
+	window-manager=weston
 
 	install_config
 	do_backup "Weston-installed"
@@ -3010,7 +3009,8 @@ auto_install_phosh () {
 	copy_pkgs
 
 	# Auto launch
-	sed -i 's/manager=.*$/manager=phosh/g' $mnt/home/$user/.bash_profile
+	#sed -i 's/manager=.*$/manager=phosh/g' $mnt/home/$user/.bash_profile
+	window-manager=phosh
 
 	install_config
 }
@@ -3026,11 +3026,18 @@ auto_install_all () {
 
 	# Customize system
 
-	sed -i 's/manager=.*$/manager=choice/g' $mnt/home/$user/.bash_profile
+	#sed -i 's/manager=.*$/manager=choice/g' $mnt/home/$user/.bash_profile
+	window_manager=choice
 
 	install_config
 }
 
+
+window-manager () {
+
+	sed -i "s/manager=.*$/manager=$1/g" $mnt/home/$user/.bash_profile
+
+}
 
 
 clean_system () {
