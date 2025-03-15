@@ -106,6 +106,7 @@ encrypt='true'					# bcachefs only
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='100'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+simpleInstall=true
 
 subvols=(var/log var/tmp)			# TODO: used for btrfs and bcachefs
 subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
@@ -1699,7 +1700,6 @@ snapper_setup () {
 
    if [[ $mnt = '' ]]; then
 
-
 		pacstrap_install snapper
 		
 		if [[ "$(mount | grep $mnt$snapshot_dir)" ]]; then
@@ -1751,27 +1751,30 @@ fi
 		
 mount -a
 
-btrfs su delete -i 262 /
+#btrfs su delete -i 262 /
+
+ID=$(btrfs su list / | grep -E "level 256 path .snapshots$" | sed "s/ID //;s/ gen .*$//")
+btrfs su delete -i $ID /
 
 mkdir -p /.snapshots
 mount -a
 
-touch /root/runonce-"$(date)"
-systemctl disable runonce.service' > $mnt/usr/local/bin/runonce.sh
+touch /tmp/runonce-"ID-$ID-$(date)"
+
+systemctl disable runonce.service
+
+' > $mnt/usr/local/bin/runonce.sh
 
 chmod +x $mnt/usr/local/bin/runonce.sh
 
 
 	cat > $mnt/etc/systemd/system/runonce.service <<EOF
 [Unit]
-Description=Run once
-After=local-fs.target
-After=network.target
+Description=Run at first boot only once to complete system setup
 
 [Service]
-ExecStart=/usr/local/bin/runonce.sh
-RemainAfterExit=true
 Type=oneshot
+ExecStart=/usr/local/bin/runonce.sh
 
 [Install]
 WantedBy=multi-user.target
@@ -2775,7 +2778,7 @@ auto_install_root () {
 
 		[ ! $backup_type = '' ] && [ ! $fstype = bcachefs ] && install_grub-btrfsd
 
-		if [[ $fstype = btrfs ]]; then
+		if [[ $fstype = btrfs ]] && [[ ! $simpleInstall = true ]]; then
 			choose_initramfs booster
 			choose_initramfs dracut 
 		fi
