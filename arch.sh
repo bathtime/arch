@@ -336,7 +336,7 @@ choose_disk () {
 
 		[[ $fstype = 'btrfs' ]] || [[ $fstype = 'bcachefs' ]] && extra='snapshots '
 
-		choices='quit sync edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / script logout reboot suspend hibernate poweroff stats benchmark '$extra
+		choices='quit sync edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / '$extra'script logout reboot suspend hibernate poweroff stats benchmark'
 		
 
 		echo -e "\nWhich drive?\n"
