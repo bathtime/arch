@@ -108,11 +108,11 @@ efi_path=/efi
 encrypt='true'					# bcachefs only
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='100'					# What percentage of space should the root drive take?
-fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='ext4'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 simpleInstall='false'		# true = no net,cached packages,tweaks...
 
 subvols=(var/log var/tmp)			# TODO: used for btrfs and bcachefs
-subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
+subvolPrefix='/'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir='/.snapshots'
 
 btrfsroot='/.btrfsroot'
@@ -122,8 +122,8 @@ boot_mountopts="noatime"
 efi_mountopts="noatime"
 
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
-backup_type='snapper-rollback'	# eg., '','rsync','snapper','snapper-rollback','timeshift', 'btrfs-assistant'
-initramfs='booster'			# mkinitcpio, dracut, booster
+backup_type='rsync'	# eg., '','rsync','snapper','snapper-rollback','timeshift', 'btrfs-assistant'
+initramfs='mkinitcpio'			# mkinitcpio, dracut, booster
 extra_modules='lz4'				# adds to /etc/mkinitcpio modules
 extra_hooks='resume'					# adds to /etc/mkinitcpio hooks
 
@@ -436,6 +436,7 @@ delete_partitions () {
 fs_packages () {
 
 	case $fstype in
+		ext4)			pkg=e2fsprogs ;;
 		btrfs)		pkg="btrfs-progs grub-btrfs rsync" ;;
 		bcachefs)	pkg="bcachefs-tools rsync" ;;
 		xfs)			pkg=xfsprogs ;;
@@ -649,8 +650,12 @@ mount_disk () {
 
 		else
 
-			echo mount -t $fstype --mkdir -o $mountops $disk$rootPart $mnt	
-			mount -t $fstype --mkdir -o $mountops $disk$rootPart $mnt	
+			# For some reason ext4 prefers a plain mount
+			if [ "$fstype" = "ext4" ]; then		
+				mount $disk$rootPart $mnt	
+			else
+				mount -t $fstype --mkdir -o $mountops $disk$rootPart $mnt	
+			fi
 
 		fi
 
@@ -971,7 +976,9 @@ install_grub () {
 
 	fi
 
-	grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --boot-directory=$mnt/boot
+	#grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --recheck $disk --boot-directory=$mnt/boot
+	
+	grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --recheck $disk --boot-directory=$mnt/boot
 
 	cat > $mnt/etc/default/grub << EOF2
 
@@ -992,12 +999,6 @@ GRUB_DISABLE_OS_PROBER=true
 
 EOF2
 
-
-	# Allows grub to run snapshots
-	#if [ "$fstype" = "btrfs" ]; then
-	#	systemctl --root=$mnt enable grub-btrfsd.service
-	#	/etc/grub.d/41_snapshots-btrfs
-	#fi
 
 	# Remove grub os-prober message
 	#sed -i 's/grub_warn/#grub_warn/g' $mnt/etc/grub.d/30_os-prober
@@ -1898,7 +1899,9 @@ install_tweaks () {
 	echo 'vm.vfs_cache_pressure=50' > $mnt/etc/sysctl.d/99-cache-pressure.conf
 	echo 'net.ipv4.tcp_fin_timeout = 30' > $mnt/etc/sysctl.d/99-net-timeout.conf
 	echo 'net.ipv4.tcp_keepalive_time = 120' > $mnt/etc/sysctl.d/99-net-keepalive.conf
-	
+
+	echo 'vm.dirty_background_ratio=5' > $mnt/etc/sysctl.d/99-dirtyb-background.conf
+	echo 'vm.dirty_ratio=10' > $mnt/etc/sysctl.d/99-dirty-ratio.conf
 
 	systemctl --root=$mnt enable systemd-oomd
 
@@ -2830,30 +2833,12 @@ auto_install_root () {
 		auto_login root
 	fi
 
-	if [[ $fstype = btrfs ]] || [[ $fstype = bcachefs ]]; then
+	#choose_initramfs booster
+	#choose_initramfs dracut 
+	#choose_initramfs mkinitcpio
 
+	choose_initramfs $initramfs
 
-		[ ! $backup_type = '' ] && [ ! $fstype = bcachefs ] && install_grub-btrfsd
-
-		if [[ $fstype = btrfs ]] && [[ ! $simpleInstall = true ]]; then
-			choose_initramfs booster
-			choose_initramfs dracut 
-		fi
-
-		# booster doesn't work with bcachefs encryption
-		if [[ $fstype = bcachefs ]] && [[ $encrypt = false ]]; then
-			choose_initramfs dracut 
-			choose_initramfs booster
-		fi
-		
-		choose_initramfs mkinitcpio
-
-	else
-
-		choose_initramfs $initramfs
-
-	fi
-	
 	general_setup
 
 	#setup_iwd
@@ -2875,6 +2860,13 @@ auto_install_root () {
 }
 
 
+window_manager () {
+
+	sed -i "s/manager=.*$/manager=$1/" $mnt/home/$user/.bash_profile
+
+}
+
+
 auto_install_user () {
 
 	auto_install_root
@@ -2891,7 +2883,7 @@ auto_install_user () {
 
 	# Auto-launch
 	#sed -i 's/manager=.*$/manager=none/g' $mnt/home/$user/.bash_profile
-	window-manager=none
+	window_manager=none
 
 	#install_aur
 	#setup_acpid
@@ -2914,7 +2906,7 @@ auto_install_kde () {
 
 	# Auto-launch
 	#sed -i 's/manager=.*$/manager=kde/g' $mnt/home/$user/.bash_profile
-	window-manager=kde
+	windowr_manager=kde
 
 	install_config
 	install_mksh
@@ -3032,12 +3024,6 @@ auto_install_all () {
 	install_config
 }
 
-
-window-manager () {
-
-	sed -i "s/manager=.*$/manager=$1/g" $mnt/home/$user/.bash_profile
-
-}
 
 
 clean_system () {
