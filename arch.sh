@@ -108,7 +108,7 @@ efi_path=/efi
 encrypt='true'					# bcachefs only
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='100'					# What percentage of space should the root drive take?
-fstype='ext4'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 simpleInstall='false'		# true = no net,cached packages,tweaks...
 
 subvols=(var/log var/tmp)			# TODO: used for btrfs and bcachefs
@@ -343,7 +343,7 @@ choose_disk () {
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#&  $rootfs#g" | sed "s#$host.*#& (host)#g"
 
-		[[ $fstype = 'btrfs' ]] || [[ $fstype = 'bcachefs' ]] && extra='snapshots '
+		[[ $rootfs = 'btrfs' ]] || [[ $rootfs = 'bcachefs' ]] && extra='snapshots '
 
 		choices='quit '$extra'backup edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / script logout reboot suspend hibernate poweroff stats benchmark'
 		
@@ -3427,14 +3427,14 @@ snapshots_menu () {
 	config_choices=("1. Quit to main menu
 2. Snapper snapshot
 3. Snapper rollback
-4. Btrfs delete
-5. Snapper delete
-6. Snapper delete recovery
-7. Snapper delete all
-8. Rsync snapshot
-9. Take btrfs/bcachefs snapshot
-10. Restore btrfs/bcachefs snapshot
-11. Delete btrfs/bcachefs snapshot
+4. Snapper delete
+5. Snapper delete recovery
+6. Snapper delete all
+7. Rsync snapshot
+8. Take btrfs/bcachefs snapshot
+9. Restore btrfs/bcachefs snapshot
+10. Delete btrfs/bcachefs snapshot
+11. Btrfs delete subvolume
 12. Delete timeshift backups
 13. Bork system")
 
@@ -3459,14 +3459,14 @@ snapshots_menu () {
 			quit|1)			echo "Quitting!"; break ;;
 			snapper|2)		create_snapshot ;;	
 			rollback|3)		do_snapper-rollback ;;
-			btrfs-del|4)	btrfs_delete ;;
-			snapper-del|5)	snapper_delete ;;
-			delete-rec|6) 	snapper_delete_recovery ;;
-			delete-all|7)	snapper_delete_all ;;
-			rsync|8)			rsync_snapshot ;;
-			snapshot|9)		take_snapshot ;;
-			restore|10)		restore_snapshot ;;
-			delete|11)		delete_snapshot ;;
+			snapper-del|4)	snapper_delete ;;
+			delete-rec|5) 	snapper_delete_recovery ;;
+			delete-all|6)	snapper_delete_all ;;
+			rsync|7)			rsync_snapshot ;;
+			snapshot|8)		take_snapshot ;;
+			restore|9)		restore_snapshot ;;
+			delete|10)		delete_snapshot ;;
+			btrfs-del|11)	btrfs_delete ;;
 			timeshift|12)	delete_timeshift_snapshots ;;
 			bork|13)			bork_system ;;
 	      	'')				;;
