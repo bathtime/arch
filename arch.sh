@@ -3054,6 +3054,10 @@ backup_config () {
 	rm -rf /home/$user/.local/share/Trash/*
 	#tar -pcf setup.tar $CONFIG_FILES
 	time tar -pczf setup.tar.gz $CONFIG_FILES
+	
+	echo -e "\nVerifying file contents. Please be patient...\n"
+	#tar xOf setup.tar.gz &> /dev/null; echo $?
+	tar -tf setup.tar.gz &> /dev/null; echo $?
 
 	#sudo -u $user gpg --yes -c setup.tar
 	#ls -lah setup.tar setup.tar.gpg
@@ -3069,9 +3073,14 @@ restore_config () {
 	mount_disk
 	
 	cd $mnt/
+	
+	echo -e "\nVerifying file contents. Please be patient...\n"
+	#tar xOf setup.tar.gz &> /dev/null; echo $?
+	tar -tf setup.tar.gz &> /dev/null; echo $?
 
 	echo "Extracting setup file..."
 	#tar -xvf /setup.tar
+	
 	time tar -xvf /setup.tar.gz
 	chown -R $user:$user $mnt/home/$user/
 
