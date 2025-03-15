@@ -336,7 +336,7 @@ choose_disk () {
 
 		[[ $fstype = 'btrfs' ]] || [[ $fstype = 'bcachefs' ]] && extra='snapshots '
 
-		choices='quit sync edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / '$extra'script logout reboot suspend hibernate poweroff stats benchmark'
+		choices='quit backup edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / '$extra'script logout reboot suspend hibernate poweroff stats benchmark'
 		
 
 		echo -e "\nWhich drive?\n"
@@ -348,7 +348,7 @@ choose_disk () {
 				edit)			vim $arch_path/$arch_file; exit ;;
 				$)				sudo -u $user bash ;;
 				\#)			bash ;;
-				sync)			sync_disk ;;
+				backup)		backup_config ;;
 				script)		download_script ;;
 				logout)		killall systemd ;;
 				reboot)		reboot ;;
@@ -2364,7 +2364,7 @@ bork_system () {
 
 do_snapper-rollback () {
 
-	snapper list --columns number,date,description,default
+	snapper list --columns number,description,date
 
 	echo -e "\nWhich snapshot would you like to roll back to? ('q' to quit)\n"
 
@@ -2387,7 +2387,7 @@ do_snapper-rollback () {
 
 create_snapshot () {
 
-	snapper list --columns number,date,description,default
+	snapper list --columns number,description,date
 	
 	echo -e "\nWhat would you like to name this snapshot?\n"
 	read snapshot
@@ -2428,7 +2428,7 @@ snapper_delete () {
 
 	while true; do
 
-		snapper list --columns number,date,description,default
+		snapper list --columns number,description,date
 
 		echo -e "\nWhich snapshot would you like to delete? (q = quit)\n"
 
@@ -3044,22 +3044,15 @@ clean_system () {
 
 backup_config () {
 
-	echo -e "\nYou may wish to clean your system first!\n"
-
+	echo -e "\nCreating backup file. Please be patient...\n"
+	
 	cd /
-	rm -rf setup.tar
 
 	#sudo -u $user tar -pcf setup.tar $CONFIG_FILES
-	
-
 	#tar -pcf setup.tar $CONFIG_FILES
 
 	rm -rf /home/$user/.local/share/Trash/*
 	tar -pcf setup.tar $CONFIG_FILES
-	
-
-	#chown $user:$user /home/$user/setup.tar
-	chown -R $user:$user /home/$user/
 
 	#sudo -u $user gpg --yes -c setup.tar
 	#ls -lah setup.tar setup.tar.gpg
@@ -3416,7 +3409,7 @@ snapshots_menu () {
 
 		if [ $fstype = btrfs ]; then
 			echo
-			snapper list --columns number,date,description,default
+			snapper list --columns number,description,date
 			echo
 			btrfs su list /
 		fi
@@ -3485,7 +3478,7 @@ clone_menu () {
 
 		if [ $fstype = btrfs ]; then
 			echo
-			snapper list --columns number,date,description,default
+			snapper list --columns number,description,date
 			echo
 			btrfs su list /
 		fi
@@ -3522,7 +3515,7 @@ clone_menu () {
 			timeshift|20)	delete_timeshift_snapshots ;;
 			bork|21)			bork_system ;;
 			snapper|22)		
-								snapper list --columns number,date,description,default
+								snapper list --columns number,description,date
 								echo -e "\nWhat would you like to name this snapshot?\n"
 								read snapshot
 								touch "/root/snapper-$snapshot"
