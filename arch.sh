@@ -177,6 +177,8 @@ CONFIG_FILES="
 /usr/lib/initcpio/hooks/overlayroot
 /usr/lib/initcpio/install/overlayroot
 
+/etc/mkinitcpio.d/linux.preset
+
 /etc/booster.yaml
 /etc/default/grub-btrfs/config
 /etc/dracut.conf.d/
@@ -834,6 +836,8 @@ choose_initramfs () {
 	case $choice in
 		quit|1)			;;
 		mkinitcpio|2)	pacstrap_install mkinitcpio 
+
+							sed -i "s/PRESETS=.*/PRESETS=('default')/" $mnt/etc/mkinitcpio.d/linux.preset
 
 							if [ $encrypt = true ] && [ $fstype = bcachefs ]; then
 								add_hooks MODULES bcachefs 
