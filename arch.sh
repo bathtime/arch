@@ -325,7 +325,10 @@ unmount_disk () {
 		echo -e "\nDisk already unmounted!\n"
 	fi
 
-	if [ "$encryptLuks" = 'true' ]; then
+	if [ "$encryptLuks" = 'true' ] && [ "$(mount | grep /dev/mapper/root)" ]; then
+		cd /	
+		disk_sync
+		sleep 1
 		cryptsetup close root
 	fi
 
@@ -530,12 +533,14 @@ create_partitions () {
 
 						else
 
-							mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart 
-						
+							mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart
+							
+							echo "Running tune2fs to create fast commit journal area..." 
+							tune2fs -O fast_commit $disk$rootPart 						
 						fi
 
-						echo "Running tune2fs to create fast commit journal area..." 
-						tune2fs -O fast_commit $disk$rootPart ;;
+
+						;;
 		xfs)			pacman -S --needed --noconfirm xfsprogs 
 						mkfs.xfs -f -L ROOT $disk$rootPart ;;
 		jfs)			pacman -S --needed --noconfirm jfsutils
@@ -583,7 +588,10 @@ create_partitions () {
 
 	if [ "$encryptLuks" = 'true' ]; then
 
-		cryptsetup open $disk$rootPart root
+		if [ ! "$(mount | grep /dev/mapper/root)" ]; then
+			cryptsetup open $disk$rootPart root
+		fi
+
 		mount /dev/mapper/root $mnt
 
 	else
