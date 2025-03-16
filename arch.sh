@@ -105,7 +105,7 @@ rootPart=$rootPartNum
 checkPartitions='true'		# Check that partitions are configured optimally?
 
 efi_path=/efi
-encrypt='false'					# bcachefs only
+encrypt='true'					# bcachefs only
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='100'					# What percentage of space should the root drive take?
 fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
@@ -599,9 +599,7 @@ create_partitions () {
 		btrfs su list $mnt
 	fi
 
-
 	genfstab -U $mnt
-	
 
 }
 
@@ -644,7 +642,8 @@ mount_disk () {
 
 			for subvol in "${subvols[@]}"; do
 			
-				echo mount --bind -o "$bcachefs_mountopts" $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
+				echo mount --bind -o $bcachefs_mountopts $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
+				#mkdir -p $mnt$subvolPrefix$subvol
 				mount --bind -o "$bcachefs_mountopts" $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
 			
 			done
@@ -809,20 +808,6 @@ setup_fstab () {
 
 	# Make /efi read-only
 	#sed -i 's/\/efi.*vfat.*rw/\/efi     vfat     ro/' $mnt/etc/fstab
-
-	if [ $fstype = bcachefs ]; then
-
-		# bcachefs mounts are not added automatically
-		for subvol in "${subvols[@]}"; do
-			
-			echo "$subvolPrefix$subvol                $subvolPrefix$subvol          none            rw,$bcachefs_mountopts,rw,noshard_inode_numbers,bind  0 0" >> $mnt/etc/fstab 
-				
-			done
-
-	fi
-
-	# Remount to test	
-	mount -a
 
 	systemctl daemon-reload
 
@@ -2370,8 +2355,14 @@ delete_snapshot () {
 		if [ "$fstype" = "btrfs" ]; then
 			btrfs subvolume delete "$mnt$snapshot_dir/$snapshot"
 		elif [ "$fstype" = "bcachefs" ]; then
-			echo rm -rf "$mnt$snapshot_dir/$snapshot"
-			rm -rf "$mnt$snapshot_dir/$snapshot"
+
+			echo -e "\nDelete using rm -rf --no-preserve-root $mnt$snapshot_dir/$snapshot...? Enter 'y' to proceed.\n"
+
+			read choice
+	
+			[[ ! "$choice" = 'y' ]] && return
+			echo rm -rf --no-preserve-root "$mnt$snapshot_dir/$snapshot"
+			rm -rf --no-preserve-root "$mnt$snapshot_dir/$snapshot"
 		fi
 
 	else
