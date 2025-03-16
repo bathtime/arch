@@ -107,12 +107,12 @@ checkPartitions='true'		# Check that partitions are configured optimally?
 efi_path=/efi
 encrypt='true'					# bcachefs only
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
-fsPercent='100'					# What percentage of space should the root drive take?
+fsPercent='50'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 simpleInstall='false'		# true = no net,cached packages,tweaks...
 
 subvols=(var/log var/tmp)			# TODO: used for btrfs and bcachefs
-subvolPrefix='/'				# eg., '/' or '/@' Used for btrfs and bcachefs only
+subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir='/.snapshots'
 
 btrfsroot='/.btrfsroot'
@@ -122,7 +122,7 @@ boot_mountopts="noatime"
 efi_mountopts="noatime"
 
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
-backup_type='rsync'	# eg., '','rsync','snapper','snapper-rollback','timeshift', 'btrfs-assistant'
+backup_type='snapper-rollback'	# eg., '','rsync','snapper','snapper-rollback','timeshift', 'btrfs-assistant'
 initramfs='mkinitcpio'			# mkinitcpio, dracut, booster
 extra_modules='lz4'				# adds to /etc/mkinitcpio modules
 extra_hooks='resume'					# adds to /etc/mkinitcpio hooks
@@ -2821,6 +2821,12 @@ check_online () {
 }
 
 
+window_manager () {
+
+	sed -i "s/manager=.*$/manager=$1/" $mnt/home/$user/.bash_profile
+
+}
+
 
 auto_install_root () {
 
@@ -2829,15 +2835,13 @@ auto_install_root () {
 	install_base
 	install_grub
 
-	if [[ $autologin = true ]]; then
-		auto_login root
-	fi
+	[ $autologin = true ] && auto_login root
 
-	#choose_initramfs booster
 	#choose_initramfs dracut 
-	#choose_initramfs mkinitcpio
+	choose_initramfs mkinitcpio
+	choose_initramfs booster
 
-	choose_initramfs $initramfs
+	#choose_initramfs $initramfs
 
 	general_setup
 
@@ -2860,12 +2864,6 @@ auto_install_root () {
 }
 
 
-window_manager () {
-
-	sed -i "s/manager=.*$/manager=$1/" $mnt/home/$user/.bash_profile
-
-}
-
 
 auto_install_user () {
 
@@ -2877,12 +2875,8 @@ auto_install_user () {
 
 	pacstrap_install sudo
 
-	if [[ $autologin = true ]]; then
-		auto_login $user
-	fi
+	[ $autologin = true ] && auto_login $user
 
-	# Auto-launch
-	#sed -i 's/manager=.*$/manager=none/g' $mnt/home/$user/.bash_profile
 	window_manager=none
 
 	#install_aur
@@ -2904,9 +2898,7 @@ auto_install_kde () {
 
 	copy_pkgs
 
-	# Auto-launch
-	#sed -i 's/manager=.*$/manager=kde/g' $mnt/home/$user/.bash_profile
-	windowr_manager=kde
+	window_manager=kde
 
 	install_config
 	install_mksh
@@ -2928,9 +2920,7 @@ auto_install_gnome () {
  
 	copy_pkgs
 
-	# Auto launch
-	#sed -i 's/manager=.*$/manager=gnome/g' $mnt/home/$user/.bash_profile
-	window-manager=gnome
+	window_manager=gnome
 
 	install_config
 	do_backup "Gnome-installed"
@@ -2946,8 +2936,7 @@ auto_install_gnomekde () {
 	
 	copy_pkgs
 
-	#sed -i 's/manager=.*$/manager=choice/g' $mnt/home/$user/.bash_profile
-	window-manager=choice
+	window_manager=choice
 
 	install_config
 	do_backup "Gnome-KDE-installed"
@@ -2963,9 +2952,7 @@ auto_install_cage () {
 
 	copy_pkgs
 
-	# Auto launch
-	#sed -i 's/manager=.*$/manager=cage/g' $mnt/home/$user/.bash_profile
-	window-manager=cage
+	window_manager=cage
 
 	install_config
 
@@ -2983,8 +2970,7 @@ auto_install_weston () {
 
 	copy_pkgs
 	
-	#sed -i 's/manager=.*$/manager=weston/g' $mnt/home/$user/.bash_profile
-	window-manager=weston
+	window_manager=weston
 
 	install_config
 	do_backup "Weston-installed"
@@ -3000,9 +2986,7 @@ auto_install_phosh () {
 
 	copy_pkgs
 
-	# Auto launch
-	#sed -i 's/manager=.*$/manager=phosh/g' $mnt/home/$user/.bash_profile
-	window-manager=phosh
+	window_manager=phosh
 
 	install_config
 }
@@ -3016,9 +3000,6 @@ auto_install_all () {
 
 	copy_pkgs
 
-	# Customize system
-
-	#sed -i 's/manager=.*$/manager=choice/g' $mnt/home/$user/.bash_profile
 	window_manager=choice
 
 	install_config
@@ -3548,8 +3529,9 @@ setup_menu () {
 5. Cleanup system
 6. Last modified
 7. Copy config
-8. Copy packages
-9. Copy arch.sh")			config_choice=0
+8. Copy packages")			
+
+	config_choice=0
 
 	while [ ! "$config_choice" = "1" ]; do
 
@@ -3569,11 +3551,6 @@ setup_menu () {
 			copy|7)		echo "Copying packages from $backup_file to $mnt/..."
 							cp $backup_file $mnt/ ;;
 			pkgs|8)		copy_pkgs ;;
-			arch|9)		mount_disk	
-							echo -e "\nCopying $arch_path/$arch_file -> $mnt$arch_path/$arch_file...\n"
-							cp $arch_path/$arch_file $mnt$arch_path
-
-							;;
          '')			last_modified ;;
          *)				echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
