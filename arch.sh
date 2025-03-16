@@ -106,14 +106,14 @@ checkPartitions='true'		# Check that partitions are configured optimally?
 
 efi_path=/efi
 encrypt='true'					# bcachefs only
-encryptLuks='true'
+encryptLuks='false'
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='100'					# What percentage of space should the root drive take?
-fstype='ext4'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 simpleInstall='false'		# true = no net,cached packages,tweaks...
 
-subvols=(.snapshots var/log var/tmp)			# TODO: used for btrfs and bcachefs
-subvolPrefix='/'				# eg., '/' or '/@' Used for btrfs and bcachefs only
+subvols=(var/log var/tmp)			# TODO: used for btrfs and bcachefs
+subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir='/.snapshots'
 
 btrfsroot='/.btrfsroot'
@@ -122,11 +122,11 @@ bcachefs_mountopts="noatime"
 boot_mountopts="noatime"
 efi_mountopts="noatime"
 
-backup_install='false'		# say 'true' to do snapshots/rysncs during install
-backup_type='rysnc'	# eg., '','rsync','snapper','snapper-rollback','timeshift', 'btrfs-assistant'
+backup_install='true'		# say 'true' to do snapshots/rysncs during install
+backup_type='snapper-rollback'	# eg., '','rsync','snapper','snapper-rollback','timeshift', 'btrfs-assistant'
 initramfs='mkinitcpio'			# mkinitcpio, dracut, booster
 extra_modules='lz4'				# adds to /etc/mkinitcpio modules
-extra_hooks='encrypt resume'					# adds to /etc/mkinitcpio hooks
+extra_hooks='resume'					# adds to /etc/mkinitcpio hooks
 
 
 kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
@@ -326,10 +326,8 @@ unmount_disk () {
 	fi
 
 	if [ "$encryptLuks" = 'true' ] && [ "$(mount | grep /dev/mapper/root)" ]; then
-		cd /	
-		disk_sync
-		sleep 1
-		cryptsetup close root
+echo
+		#cryptsetup close root
 	fi
 
 }
