@@ -105,10 +105,11 @@ rootPart=$rootPartNum
 checkPartitions='true'		# Check that partitions are configured optimally?
 
 efi_path=/efi
-encrypt='false'					# bcachefs only
+encrypt='true'					# bcachefs only
+encryptLuks='true'
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='100'					# What percentage of space should the root drive take?
-fstype='bcachefs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='ext4'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 simpleInstall='false'		# true = no net,cached packages,tweaks...
 
 subvols=(.snapshots var/log var/tmp)			# TODO: used for btrfs and bcachefs
@@ -121,11 +122,11 @@ bcachefs_mountopts="noatime"
 boot_mountopts="noatime"
 efi_mountopts="noatime"
 
-backup_install='true'		# say 'true' to do snapshots/rysncs during install
+backup_install='false'		# say 'true' to do snapshots/rysncs during install
 backup_type='rysnc'	# eg., '','rsync','snapper','snapper-rollback','timeshift', 'btrfs-assistant'
 initramfs='mkinitcpio'			# mkinitcpio, dracut, booster
 extra_modules='lz4'				# adds to /etc/mkinitcpio modules
-extra_hooks='resume'					# adds to /etc/mkinitcpio hooks
+extra_hooks='encrypt resume'					# adds to /etc/mkinitcpio hooks
 
 
 kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
@@ -324,6 +325,10 @@ unmount_disk () {
 		echo -e "\nDisk already unmounted!\n"
 	fi
 
+	if [ "$encryptLuks" = 'true' ]; then
+		cryptsetup close root
+	fi
+
 }
 
 
@@ -500,14 +505,35 @@ create_partitions () {
 	mkfs.fat -F 32 -n EFI $disk$espPart 
 	mkswap -L SWAP $disk$swapPart
 
+	if [ "$encryptLuks" = 'true' ]; then
+ 		cryptsetup -v luksFormat $disk$rootPart
+ 		cryptsetup open $disk$rootPart root
+	fi
+
 	pacman -S --needed --noconfirm $(fs_packages)
 
 	case $fstype in
 
 		btrfs)		pacman -S --needed --noconfirm btrfs-progs
 						mkfs.btrfs -f -L ROOT $disk$rootPart ;;
-		ext4)			mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart 
+		ext4)			if [ "$encryptLuks" = 'true' ]; then
+
+							mkfs.ext4 /dev/mapper/root
+
+							mount /dev/mapper/root $mnt
+							
+							# Check that mapping works as intended: 
+							umount $mnt
+							cryptsetup close root
+							cryptsetup open $disk$rootPart root
+							mount /dev/mapper/root $mnt
+
+						else
+
+							mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart 
 						
+						fi
+
 						echo "Running tune2fs to create fast commit journal area..." 
 						tune2fs -O fast_commit $disk$rootPart ;;
 		xfs)			pacman -S --needed --noconfirm xfsprogs 
@@ -553,8 +579,21 @@ create_partitions () {
 
 	echo -e "\nMounting $mnt..."
 
-	mount -t $fstype --mkdir $disk$rootPart $mnt
+
+
+	if [ "$encryptLuks" = 'true' ]; then
+
+		cryptsetup open $disk$rootPart root
+		mount /dev/mapper/root $mnt
+
+	else
+
+		mount -t $fstype --mkdir $disk$rootPart $mnt
 	
+	fi
+
+
+
 	if [ "$fstype" = "btrfs" ]; then
 
 		btrfs subvolume create $mnt$subvolPrefix
@@ -650,12 +689,24 @@ mount_disk () {
 			done
 
 		else
+	
+			if [ "$encryptLuks" = 'true' ]; then
 
-			# For some reason ext4 prefers a plain mount
-			if [ "$fstype" = "ext4" ]; then		
-				mount $disk$rootPart $mnt	
+				if [ ! "$(mount | grep /dev/mapper/root)" ]; then
+					cryptsetup open $disk$rootPart root
+				fi
+
+				mount /dev/mapper/root $mnt
+
 			else
-				mount -t $fstype --mkdir -o $mountops $disk$rootPart $mnt	
+
+				# For some reason ext4 prefers a plain mount
+				if [ "$fstype" = "ext4" ]; then		
+					mount $disk$rootPart $mnt	
+				else
+					mount -t $fstype --mkdir -o $mountops $disk$rootPart $mnt	
+				fi
+
 			fi
 
 		fi
@@ -981,7 +1032,17 @@ install_grub () {
    echo "$SWAP_UUID"
 
 	[[ $fstype = bcachefs ]] && extra_ops='rootfstype=bcachefs'
-	
+
+	if [ "$encryptLuks" = 'true' ]; then
+
+		ENCRYPT_UUID=$(blkid | grep /dev/sda4 | awk -F\" '{print $2}')
+		echo "Encrypt UUID: $ENCRYPT_UUID"
+
+		extra_ops="$extra_ops cryptdevice=UUID=$ENCRYPT_UUID:root root=/dev/mapper/root"
+
+	fi
+
+
 	# May cause grub-snapshots to not work correctly
 	if [[ $fstype = btrfs ]] && [[ $subvolPrefix = '/@' ]]; then
 
