@@ -2772,24 +2772,44 @@ copy_script () {
 
 install_aur_packages () {
 
+	mount_disk
+
+	apps="$1"
 	packages=''
 	cd $aur_apps_path
 
-	for app in $1; do
+	if [ "$apps" = '' ]; then
+		
+		select choice in 'quit' *.*tar.zst; do
+			case choice in
+				*)		apps="$(echo $choice | sed 's/-[0-9].*//')"; break ;;
+			esac
+		done
+	
+		[ "$apps" = 'quit' ] && return
+
+	fi
+
+
+	for app in $apps; do
 		
 		package="$(ls $app-[0-9]*.*tar.zst)"
+
+		if [ "$mnt" = '' ]; then
+		
+			pacman -U --noconfirm $package
+		
+		else
+		
+			echo -e "\nCopying $aur_apps_path$package to $mnt$aur_apps_path..."
+
+			cp $aur_apps_path$package $mnt$aur_apps_path
+
+			echo -e "\nInstalling $package...\n"
+
+			arch-chroot $mnt pacman -U --noconfirm "$aur_apps_path$package"
 	
-
-	if [ "$mnt" = '' ]; then
-		pacman -U --noconfirm $package
-	else
-
-		cp $aur_apps_path$package $mnt$aur_apps_path
-		ls $mnt$aur_apps_path
-
-		echo arch-chroot $mnt pacman -U --noconfirm "$aur_apps_path$package"
-		arch-chroot $mnt pacman -U --noconfirm "$aur_apps_path$package"
-	fi
+		fi
 	
 	done
 
@@ -3789,6 +3809,7 @@ while :; do
 15. Install hooks
 16. Setup acpid
 17. Choose initramfs
+18. Install backup apps
 19. Mount $mnt
 20. Unmount $mnt
 21. Update grub
@@ -3835,7 +3856,8 @@ echo
 		hooks|15)				install_hooks ;;
 		acpid|16)				setup_acpid ;;
 		initramfs|17)			choose_initramfs ;;
-      mount|19)				mount_disk  ;;
+      backup|18)				install_aur_packages ;;
+		mount|19)				mount_disk  ;;
       unmount|20)				unmount_disk  ;;
 		grub|21)					grub-mkconfig -o $mnt/boot/grub/grub.cfg ;;
 		connect|iwd|22)		connect_wireless ;;
