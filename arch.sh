@@ -209,6 +209,8 @@ CONFIG_FILES="
 /etc/wpa_supplicant
 /etc/updatedb.conf
 /root/.mkshrc
+/root/.vimrc
+/root/pkgs/
 /var/lib/dhcpcd
 /var/lib/iwd
 
@@ -3808,7 +3810,7 @@ while :; do
 15. Install hooks
 16. Setup acpid
 17. Choose initramfs
-18. Install backup apps
+18. Install aur packages
 19. Mount $mnt
 20. Unmount $mnt
 21. Update grub
