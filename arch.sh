@@ -136,6 +136,9 @@ password='123456'
 autologin=true
 aur_app=none
 aur_path=/home/$user/aur
+aur_apps_root='iozone'
+aur_apps_user='brave-bin'
+aur_apps_path=/root/pkgs/
 
 base_install="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar man-db dosfstools"
 
@@ -633,7 +636,7 @@ create_partitions () {
 	unmount_disk
 	mount_disk
 
-	mkdir -p $mnt/{dev,etc,proc,root,run,sys,tmp,var/cache/pacman/pkg,/var/log,/var/tmp}
+	mkdir -p $mnt/{dev,etc,proc,root,run,sys,tmp,var/cache/pacman/pkg,/var/log,/var/tmp,$aur_apps_path}
 
 	chmod -R 750 $mnt/root
 	mkdir -p $mnt/root/.gnupg
@@ -908,6 +911,9 @@ choose_initramfs () {
 		mkinitcpio|2)	pacstrap_install mkinitcpio 
 
 							sed -i "s/PRESETS=.*/PRESETS=('default')/" $mnt/etc/mkinitcpio.d/linux.preset
+
+		cat /etc/mkinitcpio.conf | awk -F'[=()]' -v srch="filesystems" -v repl="liveroot" -v var="HOOKS=" '$0 ~ var { sub(srch,repl" "srch,$0) }; { print $0 }'
+
 
 							if [ $encrypt = true ] && [ $fstype = bcachefs ]; then
 								add_hooks MODULES bcachefs 
@@ -1826,8 +1832,10 @@ snapper_setup () {
 	else
 
 		#pacstrap_install snapper snap-pac
-		pacstrap_install snapper
+		#pacstrap_install snapper
 		
+		install_aur_packages snapper
+
 		runonce
 
 	fi
@@ -1915,14 +1923,15 @@ EOF
 
 	else
 
-		cp /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst $mnt/var/cache/pacman/pkg/
+		#cp /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst $mnt/var/cache/pacman/pkg/
 		
-		arch-chroot $mnt /bin/bash -e << EOF
-pacman -U --noconfirm /var/cache/pacman/pkg/snapper-rollback-*.zst
-EOF
+		#arch-chroot $mnt /bin/bash -e << EOF
+#pacman -U --noconfirm /var/cache/pacman/pkg/snapper-rollback-*.zst
+#EOF
+		
+		install_aur_packages snapper-rollback
 
-		echo -e "\nSnapshot: snapper -c root create --read-write --description <NAME>\n"
-
+		echo "Snapper-rollback setup will finish once new system is booted."
 	fi
 
 }
@@ -2039,6 +2048,8 @@ EOF
 	fi
 
 	cp $mnt/home/$user/.bash_profile $mnt/home/$user/.profile
+
+	install_aur_packages mksh
 
 }
 
@@ -2759,6 +2770,31 @@ copy_script () {
 }
 
 
+install_aur_packages () {
+
+	packages=''
+	cd $aur_apps_path
+
+	for app in $1; do
+		
+		package="$(ls $app-[0-9]*.*tar.zst)"
+	
+
+	if [ "$mnt" = '' ]; then
+		pacman -U --noconfirm $package
+	else
+
+		cp $aur_apps_path$package $mnt$aur_apps_path
+		ls $mnt$aur_apps_path
+
+		echo arch-chroot $mnt pacman -U --noconfirm "$aur_apps_path$package"
+		arch-chroot $mnt pacman -U --noconfirm "$aur_apps_path$package"
+	fi
+	
+	done
+
+}
+
 
 pacstrap_install () {
 
@@ -2938,8 +2974,11 @@ auto_install_root () {
 		copy_pkgs
 	fi
 
+	install_aur_packages mksh
+
 	copy_script
-		
+	install_aur_packages "$aur_apps_root"
+
 	install_backup $backup_type
 	do_backup "Root-installed"
 	
@@ -2989,6 +3028,8 @@ auto_install_kde () {
 
 	#install_hooks liveroot
 	install_hooks overlayroot
+	
+	install_aur_packages "$aur_apps_user"
 
 	do_backup "KDE-installed"
 	sync_disk
@@ -3193,18 +3234,18 @@ install_config () {
 	arch-chroot $mnt tar -xvf $backup_file --directory /
 	arch-chroot $mnt chown -R $user:$user /home/$user/
 
-	count=`ls -1 /home/user/.local/bin/*.zst 2>/dev/null | wc -l`
+	count=ls -1 $mnt$aur_apps_path*.zst 2>/dev/null | wc -l
 
 	if [ $count != 0 ]; then
-
-		echo -e "\nInstalling extra packages...\n"
+	
+		echo -e "\nYou have $count packages in $aur_apps_path...\n"
 	
 		if [[ $mnt = '' ]]; then
-			sudo pacman -U --noconfirm /home/user/.local/bin/*.zst
+			#sudo pacman -U --noconfirm /home/user/.local/bin/*.zst
 			# Fix shared libraries error
 			sudo ln -s /usr/lib/libalpm.so.15 /usr/lib/libalpm.so.13
 		else
-			arch-chroot $mnt sudo pacman -U --noconfirm /home/user/.local/bin/*.zst
+			#arch-chroot $mnt sudo pacman -U --noconfirm /home/user/.local/bin/*.zst
    		arch-chroot $mnt ln -s /usr/lib/libalpm.so.15 /usr/lib/libalpm.so.13
 		fi
 
@@ -3805,7 +3846,7 @@ echo
 		hypervisor|28)			hypervisor_setup ;;
 
 		test|29)					
-
+									install_aur_packages 'snapper mksh'
 
 									;;
 		custom|30)				custom_install ;;
