@@ -136,7 +136,7 @@ password='123456'
 autologin=true
 aur_app=none
 aur_path=/home/$user/aur
-aur_apps_root='iozone'
+aur_apps_root=''
 aur_apps_user='brave-bin'
 aur_apps_path=/root/pkgs/
 
@@ -2994,7 +2994,6 @@ auto_install_root () {
 		copy_pkgs
 	fi
 
-	install_aur_packages mksh
 
 	copy_script
 	install_aur_packages "$aur_apps_root"
