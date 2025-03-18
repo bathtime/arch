@@ -214,6 +214,7 @@ CONFIG_FILES="
 /root/pkgs/
 /var/lib/dhcpcd
 /var/lib/iwd
+/var/spool/cron/root
 
 /home/$user/Documents
 /home/$user/.bash_profile
@@ -3295,9 +3296,8 @@ install_config () {
 	arch-chroot $mnt chown -R $user:$user /home/$user/
 
 	#count=ls -1 $mnt$aur_apps_path*.zst 2>/dev/null | wc -l
-	
-	count=0	
-	
+	count=0
+
 	if [ $count != 0 ]; then
 	
 		echo -e "\nYou have $count packages in $aur_apps_path...\n"
