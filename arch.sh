@@ -167,7 +167,7 @@ wlan="wlan0"
 wifi_ssid=""
 wifi_pass=""
 
-backup_file=/root/setup.tar.gz
+backup_file=/setup.tar.gz
 
 # Files that will be saved to $backup_file as part of a backup
 CONFIG_FILES="
