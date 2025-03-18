@@ -2523,6 +2523,7 @@ snapper_undochange () {
 	[ "$choice" = 'q' ] && return
 
 	snapper undochange $choice..0
+	pacman -Syuu --noconfirm
 
 }
 
