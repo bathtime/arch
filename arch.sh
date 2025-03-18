@@ -2494,6 +2494,39 @@ bork_system () {
 }
 
 
+snapper_status () {
+
+	snapper list --columns number,description,date
+
+	echo -e "\nEnter first snapshot to compare ('q' to quit)\n"
+
+	read choice1
+	[ "$choice1" = 'q' ] && return
+
+echo -e "\nEnter second snapshot to compare (Press <ENTER> for current. 'q' to quit)\n"
+
+	read choice2
+	[ "$choice2" = 'q' ] && return
+	[ "$chocie2" = '' ] && choice2=0
+
+	snapper status $choice1..$choice2 | less
+
+}
+
+snapper_undochange () {
+
+	snapper list --columns number,description,date
+
+	echo -e "\nEnter first snapshot to revert to ('q' to quit)\n"
+
+	read choice
+	[ "$choice" = 'q' ] && return
+
+	snapper undochange $choice..0
+
+}
+
+
 do_snapper-rollback () {
 
 	snapper list --columns number,description,date
@@ -3559,16 +3592,18 @@ snapshots_menu () {
 	config_choices=("1. Quit to main menu
 2. Snapper snapshot
 3. Snapper rollback
-4. Snapper delete
-5. Snapper delete recovery
-6. Snapper delete all
-7. Rsync snapshot
-8. Take btrfs/bcachefs snapshot
-9. Restore btrfs/bcachefs snapshot
-10. Delete btrfs/bcachefs snapshot
-11. Btrfs delete subvolume
-12. Delete timeshift backups
-13. Bork system")
+4. Snapper status
+5. Snapper undo
+6. Snapper delete
+7. Snapper delete recovery
+8. Snapper delete all
+9. Rsync snapshot
+10. Take btrfs/bcachefs snapshot
+11. Restore btrfs/bcachefs snapshot
+12. Delete btrfs/bcachefs snapshot
+13. Btrfs delete subvolume
+14. Delete timeshift backups
+15. Bork system")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3589,18 +3624,20 @@ snapshots_menu () {
 
 		case $config_choice in
 			quit|1)			echo "Quitting!"; break ;;
-			snapper|2)		create_snapshot ;;	
+			snapper|2)		create_snapshot ;;
 			rollback|3)		do_snapper-rollback ;;
-			snapper-del|4)	snapper_delete ;;
-			delete-rec|5) 	snapper_delete_recovery ;;
-			delete-all|6)	snapper_delete_all ;;
-			rsync|7)			rsync_snapshot ;;
-			snapshot|8)		take_snapshot ;;
-			restore|9)		restore_snapshot ;;
-			delete|10)		delete_snapshot ;;
-			btrfs-del|11)	btrfs_delete ;;
-			timeshift|12)	delete_timeshift_snapshots ;;
-			bork|13)			bork_system ;;
+			status|4)		snapper_status ;;
+			undo|5)			snapper_undochange ;;
+			snapper-del|5)	snapper_delete ;;
+			delete-rec|6) 	snapper_delete_recovery ;;
+			delete-all|7)	snapper_delete_all ;;
+			rsync|8)			rsync_snapshot ;;
+			snapshot|9)		take_snapshot ;;
+			restore|10)		restore_snapshot ;;
+			delete|11)		delete_snapshot ;;
+			btrfs-del|12)	btrfs_delete ;;
+			timeshift|13)	delete_timeshift_snapshots ;;
+			bork|14)			bork_system ;;
 	      	'')				;;
       	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
