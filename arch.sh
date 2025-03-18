@@ -1838,7 +1838,18 @@ snapper_setup () {
 		#pacstrap_install snapper snap-pac
 		#pacstrap_install snapper
 		
-		install_aur_packages snapper
+		install_aur_packages snapper cronie
+
+		mkdir -p $mnt/etc/systemd/system/snapper-timeline.timer.d
+		
+		# Timer set to every 5 minutes
+		echo '[Timer]
+OnCalendar=
+OnCalendar=*:0/5' > $mnt/etc/systemd/system/snapper-timeline.timer.d/override.conf
+
+		mkdir -p $mnt/etc/systemd/system/snapper-cleanup.timer.d
+		echo '[Timer]
+OnUnitActiveSec=1h' > $mnt/etc/systemd/system/snapper-cleanup.timer.d/override.conf
 
 		runonce
 
