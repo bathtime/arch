@@ -136,9 +136,10 @@ password='123456'
 autologin=true
 aur_app=none
 aur_path=/home/$user/aur
+aur_apps_path=/root/pkgs/
 aur_apps_root=''
 aur_apps_user='brave-bin'
-aur_apps_path=/root/pkgs/
+aur_apps_kde=''
 
 base_install="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar man-db dosfstools"
 
@@ -2018,6 +2019,8 @@ install_mksh () {
 
 	mount_disk
 	
+	install_aur_packages mksh
+	
 	echo "HISTFILE=/root/.mksh_history
 HISTSIZE=5000
 export VISUAL=emacs
@@ -2051,7 +2054,6 @@ EOF
 
 	cp $mnt/home/$user/.bash_profile $mnt/home/$user/.profile
 
-	install_aur_packages mksh
 
 }
 
@@ -2998,7 +3000,7 @@ auto_install_root () {
 
 
 	copy_script
-	install_aur_packages "$aur_apps_root"
+	[ "$aur_apps_root" ] && install_aur_packages "$aur_apps_root"
 
 	install_backup $backup_type
 	do_backup "Root-installed"
@@ -3027,6 +3029,8 @@ auto_install_user () {
 	#setup_acpid
 	
 	copy_pkgs
+	
+	[ "$aur_apps_user" ] && install_aur_packages "$aur_apps_user"
 
 	do_backup "User-installed"
 	sync_disk
@@ -3050,7 +3054,7 @@ auto_install_kde () {
 	#install_hooks liveroot
 	install_hooks overlayroot
 	
-	install_aur_packages "$aur_apps_user"
+	[ "$aur_apps_kde" ] && install_aur_packages "$aur_apps_kde"
 
 	do_backup "KDE-installed"
 	sync_disk
