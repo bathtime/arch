@@ -3591,9 +3591,9 @@ snapshots_menu () {
 	
 	config_choices=("1. Quit to main menu
 2. Snapper snapshot
-3. Snapper rollback
-4. Snapper status
-5. Snapper undo
+3. Snapper status
+4. Snapper undo
+5. Snapper rollback
 6. Snapper delete
 7. Snapper delete recovery
 8. Snapper delete all
@@ -3625,19 +3625,19 @@ snapshots_menu () {
 		case $config_choice in
 			quit|1)			echo "Quitting!"; break ;;
 			snapper|2)		create_snapshot ;;
-			rollback|3)		do_snapper-rollback ;;
-			status|4)		snapper_status ;;
-			undo|5)			snapper_undochange ;;
-			snapper-del|5)	snapper_delete ;;
-			delete-rec|6) 	snapper_delete_recovery ;;
-			delete-all|7)	snapper_delete_all ;;
-			rsync|8)			rsync_snapshot ;;
-			snapshot|9)		take_snapshot ;;
-			restore|10)		restore_snapshot ;;
-			delete|11)		delete_snapshot ;;
-			btrfs-del|12)	btrfs_delete ;;
-			timeshift|13)	delete_timeshift_snapshots ;;
-			bork|14)			bork_system ;;
+			status|3)		snapper_status ;;
+			undo|4)			snapper_undochange ;;
+			rollback|5)		do_snapper-rollback ;;
+			snapper-del|6)	snapper_delete ;;
+			delete-rec|7) 	snapper_delete_recovery ;;
+			delete-all|8)	snapper_delete_all ;;
+			rsync|9)			rsync_snapshot ;;
+			snapshot|10)		take_snapshot ;;
+			restore|11)		restore_snapshot ;;
+			delete|12)		delete_snapshot ;;
+			btrfs-del|13)	btrfs_delete ;;
+			timeshift|14)	delete_timeshift_snapshots ;;
+			bork|15)			bork_system ;;
 	      	'')				;;
       	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
