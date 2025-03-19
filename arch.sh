@@ -2525,6 +2525,7 @@ echo -e "\nEnter second snapshot to compare (Press <ENTER> for current. 'q' to q
 
 }
 
+
 snapper_undochange () {
 
 	snapper list --columns number,description,date
@@ -2535,7 +2536,7 @@ snapper_undochange () {
 	[ "$choice" = 'q' ] && return
 
 	snapper undochange $choice..0
-	pacman -Syuu --noconfirm
+	pacman -Syyu --noconfirm
 
 }
 
