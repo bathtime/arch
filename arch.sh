@@ -138,8 +138,8 @@ aur_app=none
 aur_path=/home/$user/aur
 aur_apps_path=/root/pkgs/
 aur_apps_root=''
-aur_apps_user='brave-bin'
-aur_apps_kde=''
+aur_apps_user=''
+aur_apps_kde='brave-bin'
 
 base_install="base linux linux-firmware vim parted gptfdisk arch-install-scripts pacman-contrib tar man-db dosfstools"
 
