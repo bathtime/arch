@@ -2566,6 +2566,10 @@ do_snapper-rollback () {
 
 rollback () {
 
+	# Follow the instructions in this video to set up btrfs properly
+	# It's not necessary to install snapper and snapper-rollback
+	# https://www.youtube.com/watch?v=maIu1d2lAiI
+
 	snapper list
 
 	echo -e "\nWhich snapshot would you like to roll back to? ('q' to quit)\n"
@@ -2574,7 +2578,7 @@ rollback () {
 	
 	[ $choice = q ] && return
 
-
+	# You must not be in the directory you're about to move or it's a busy error
 	cd /.btrfsroot/
 
 	mv @ "@-rollback-$(date)"
@@ -2582,6 +2586,7 @@ rollback () {
 	btrfs su snapshot /.snapshots/$choice/snapshot/ @
 
 	btrfs su set-default @
+
 
    echo -e "\nPress 'r' to reboot or any other key to continue.\n"
    read -n 1 -s choice
