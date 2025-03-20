@@ -2625,6 +2625,25 @@ snapper_delete () {
 }
 
 
+snapper_delete_by_date () {
+
+	echo -e "\nHow many hours old to delete? (q = quit)\n"
+
+	read hours
+
+	[ $hours = 'q' ] && return
+
+	mins=$(( hours * 60 ))
+
+	snapshots="$(find /.snapshots/ -maxdepth 1 -type d -mmin +$mins | sed 's#/.snapshots/##')"
+	for snapshot in $snapshots; do
+		echo "Deleting snapshot #$snapshot..."
+		#snapper -c root delete --sync $snapshot
+	done
+
+}
+
+
 snapper_delete_recovery () {
 
 	# First check if there are any files to delete (else an error)
@@ -3610,15 +3629,16 @@ snapshots_menu () {
 4. Snapper undo
 5. Snapper rollback
 6. Snapper delete
-7. Snapper delete recovery
-8. Snapper delete all
-9. Rsync snapshot
-10. Take btrfs/bcachefs snapshot
-11. Restore btrfs/bcachefs snapshot
-12. Delete btrfs/bcachefs snapshot
-13. Btrfs delete subvolume
-14. Delete timeshift backups
-15. Bork system")
+7. Snapper delete by date
+8. Snapper delete recovery
+9. Snapper delete all
+10. Rsync snapshot
+11. Take btrfs/bcachefs snapshot
+12. Restore btrfs/bcachefs snapshot
+13. Delete btrfs/bcachefs snapshot
+14. Btrfs delete subvolume
+15. Delete timeshift backups
+16. Bork system")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3638,21 +3658,22 @@ snapshots_menu () {
 		read config_choice
 
 		case $config_choice in
-			quit|1)			echo "Quitting!"; break ;;
-			snapper|2)		create_snapshot ;;
-			status|3)		snapper_status ;;
-			undo|4)			snapper_undochange ;;
-			rollback|5)		do_snapper-rollback ;;
-			snapper-del|6)	snapper_delete ;;
-			delete-rec|7) 	snapper_delete_recovery ;;
-			delete-all|8)	snapper_delete_all ;;
-			rsync|9)			rsync_snapshot ;;
-			snapshot|10)		take_snapshot ;;
-			restore|11)		restore_snapshot ;;
-			delete|12)		delete_snapshot ;;
-			btrfs-del|13)	btrfs_delete ;;
-			timeshift|14)	delete_timeshift_snapshots ;;
-			bork|15)			bork_system ;;
+			quit|1)				echo "Quitting!"; break ;;
+			snapper|2)			create_snapshot ;;
+			status|3)			snapper_status ;;
+			undo|4)				snapper_undochange ;;
+			rollback|5)			do_snapper-rollback ;;
+			snapper-del|6)		snapper_delete ;;
+			snapper-date|7) 	snapper_delete_by_date ;;
+			delete-rec|8) 		snapper_delete_recovery ;;
+			delete-all|9)		snapper_delete_all ;;
+			rsync|10)			rsync_snapshot ;;
+			snapshot|11)		take_snapshot ;;
+			restore|12)			restore_snapshot ;;
+			delete|13)			delete_snapshot ;;
+			btrfs-del|14)		btrfs_delete ;;
+			timeshift|15)		delete_timeshift_snapshots ;;
+			bork|16)				bork_system ;;
 	      	'')				;;
       	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
