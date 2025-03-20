@@ -2564,6 +2564,36 @@ do_snapper-rollback () {
 }
 
 
+rollback () {
+
+	snapper list
+
+	echo -e "\nWhich snapshot would you like to roll back to? ('q' to quit)\n"
+
+	read choice
+	
+	[ $choice = q ] && return
+
+
+	cd /.btrfsroot/
+
+	mv @ "@-rollback-$(date)"
+
+	btrfs su snapshot /.snapshots/$choice/snapshot/ @
+
+	btrfs su set-default @
+
+   echo -e "\nPress 'r' to reboot or any other key to continue.\n"
+   read -n 1 -s choice
+
+   if [ $choice = r ]; then
+      sync_disk
+      reboot
+   fi
+
+}
+
+
 create_snapshot () {
 
 	snapper list --columns number,description,date
@@ -3638,7 +3668,8 @@ snapshots_menu () {
 13. Delete btrfs/bcachefs snapshot
 14. Btrfs delete subvolume
 15. Delete timeshift backups
-16. Bork system")
+16. Bork system
+17. Rollback")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3674,6 +3705,7 @@ snapshots_menu () {
 			btrfs-del|14)		btrfs_delete ;;
 			timeshift|15)		delete_timeshift_snapshots ;;
 			bork|16)				bork_system ;;
+			rollback2|17)		rollback ;;
 	      	'')				;;
       	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
