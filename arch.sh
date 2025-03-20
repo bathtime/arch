@@ -2581,7 +2581,7 @@ rollback () {
 	# You must not be in the directory you're about to move or it's a busy error
 	cd /.btrfsroot/
 
-	mv @ "@-rollback-$(date)"
+	mv @ "@rollback-$(date)"
 
 	btrfs su snapshot /.snapshots/$choice/snapshot/ @
 
@@ -2695,6 +2695,19 @@ snapper_delete_recovery () {
 		echo -e "\nNo recovery snapshots to delete."
 	fi
 
+	if [ "$(ls  $btrfsroot/ | grep @rollback-*.*)" ]; then
+
+		recovery=$(btrfs su list / | grep 'level 5 path @rollback-' | awk '{print $2}')
+
+		for ID in ${recovery[@]}; do
+      	echo -e "\nDeleting ID (recovery snapshot): $ID..."
+      	btrfs su delete -i $ID /
+   	done
+
+	else
+		echo -e "\nNo recovery snapshots to delete."
+	fi
+
 }
 
 
@@ -2739,6 +2752,9 @@ snapper_delete_all () {
 
 	echo -e "\nRunning: rm -rf $btrfsroot/@2025*...\n"
 	rm -rf $btrfsroot/@202*
+
+	echo -e "\nRunning: rm -rf $btrfsroot/@rollback-*...\n"
+	rm -rf $btrfsroot/@rollback-*
 
 
 	return
