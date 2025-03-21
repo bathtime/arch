@@ -1437,10 +1437,12 @@ setup_user () {
 
 	# TODO: find a way to create symbolic link from host
 	if [[ $mnt = '' ]]; then
-		ln -s $mnt/tmp $mnt/home/$user/.cache
+		#ln -s $mnt/tmp $mnt/home/$user/.cache
+		ln -s $mnt/run/user/1000 $mnt/home/$user/.cache
 		visudo -c
 	else
-		arch-chroot $mnt ln -s /tmp /home/$user/.cache
+		#arch-chroot $mnt ln -s /tmp /home/$user/.cache
+		arch-chroot $mnt ln -s /run/user/1000 /home/$user/.cache
 		arch-chroot $mnt visudo -c
 	fi
 
