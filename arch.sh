@@ -957,6 +957,8 @@ setup_fstab () {
 		sed -i 's#^Q /var/lib/machines 0700 - - -#\#&#' $mnt/usr/lib/tmpfiles.d/systemd-nspawn.conf
 		sed -i 's#^Q /var/lib/portables 0700#\#&#' $mnt/usr/lib/tmpfiles.d/portables.conf
 
+		btrfs su delete $mnt/var/lib/portables
+		btrfs su delete $mnt/var/lib/portables
 	fi
 
 	echo -e "\nCreating new /etc/fstab file...\n"
@@ -2764,7 +2766,6 @@ set-default () {
 	snapshot="$snapshot_dir/$choice/snapshot"
 
 	if [ -d "$snapshot" ]; then 
-read -p "wait"
 
 		btrfs su set-default "$snapshot"
 	
