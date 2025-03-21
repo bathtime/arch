@@ -969,6 +969,7 @@ setup_fstab () {
 		
 		sed -i 's#/ .*0 0#/               btrfs           rw,relatime,space_cache=v2      0 0#' $mnt/etc/fstab
 		sed -i 's#rootflags=subvol=${rootsubvol} ##' $mnt/etc/grub.d/10_linux
+		sed -i 's#rootflags=subvol=${rootsubvol} ##' $mnt/etc/grub.d/20_linux_xen
 	fi
 
 	# Remount to test	
@@ -1156,9 +1157,12 @@ install_grub () {
 
 	fi
 
-	#grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --recheck $disk --boot-directory=$mnt/boot
-	
-	grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --recheck $disk --boot-directory=$mnt/boot
+	if [ "$fstype" = 'btrfs' ] && [ "$btrfsSUSE" = 'true' ]; then
+		grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=ARCH-B --removable --modules="normal test efi_gop efi_uga search echo linux all_video gfxmenu gfxterm_background gfxterm_menu gfxterm loadenv configfile gzio part_gpt btrfs"
+		#grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=ARCH-B --removable --modules="normal test efi_gop efi_uga search echo linux all_video gfxmenu gfxterm_background gfxterm_menu gfxterm loadenv configfile gzio part_gpt btrfs" --boot-directory=$mnt/boot
+	else
+		grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --recheck $disk --boot-directory=$mnt/boot
+	fi
 
 	cat > $mnt/etc/default/grub << EOF2
 
