@@ -2901,7 +2901,7 @@ snapper_delete_all_snapshots () {
 
 	# grep -v '-' to tell snapper not to delete current, active snapshots
 	#snapshots=$(snapper list | grep -v '──┼' | grep -v ' # ' | grep -v '-' | grep -v '+' | awk '{print $1}')
-	snapshots=$(snapper list | grep -v '──┼' | grep -v ' # ' | grep -v '^-' | grep -v '^+' | awk '{print $1}')
+	snapshots=$(snapper list | grep -v '──┼' | grep -v ' # ' | grep -v '^-' | grep -v '^+' | grep -v '*' | awk '{print $1}')
 
 	if [ "$snapshots" ]; then
 
