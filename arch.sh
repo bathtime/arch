@@ -695,6 +695,24 @@ create_partitions () {
 		btrfs su list $mnt
 	fi
 
+	if [ $btrfsSUSE = 'true' ]; then
+
+		# If not created snapper won't recognise it as a snapshot
+
+		setdate=$(date +"%Y-%m-%d %H:%M:%S")
+
+		cat > $mnt/.snapshots/16/info.xml << EOF
+<?xml version="1.0"?>
+<snapshot>
+  <type>single</type>
+  <num>1</num>
+  <date>$setdate</date>
+  <description>Initial snapshot</description>
+  <cleanup></cleanup>
+</snapshot>
+EOF
+
+	fi
 
 	genfstab -U $mnt
 	
@@ -936,8 +954,8 @@ setup_fstab () {
 
 	if [ $fstype = 'btrfs' ]; then
 	
-		sed -i 's#^Q /var/lib/machines 0700 - - -#\#&#' /usr/lib/tmpfiles.d/systemd-nspawn.conf
-		sed -i 's#^Q /var/lib/portables 0700#\#&#' /usr/lib/tmpfiles.d/portables.conf
+		sed -i 's#^Q /var/lib/machines 0700 - - -#\#&#' $mnt/usr/lib/tmpfiles.d/systemd-nspawn.conf
+		sed -i 's#^Q /var/lib/portables 0700#\#&#' $mnt/usr/lib/tmpfiles.d/portables.conf
 
 	fi
 
@@ -2733,6 +2751,39 @@ rollback () {
 }
 
 
+set-default () {
+
+	snapper list
+
+	echo -e "\nWhich snapshot would you like to set the default subvolume to? ('q' to quit)\n"
+
+	read choice
+	
+	[ $choice = q ] && return
+
+	snapshot="$snapshot_dir/$choice/snapshot"
+
+	if [ -d "$snapshot" ]; then 
+read -p "wait"
+
+		btrfs su set-default "$snapshot"
+	
+
+	   echo -e "\nPress 'r' to reboot or any other key to continue.\n"
+   	read -n 1 -s choice
+
+   	if [ $choice = r ]; then
+      	sync_disk
+      	reboot
+   	fi
+	
+	else
+		echo -e "\n$snapshot not found.\n"
+	fi
+
+}
+
+
 create_snapshot () {
 
 	snapper list --columns number,description,date
@@ -3825,7 +3876,8 @@ snapshots_menu () {
 14. Btrfs delete subvolume
 15. Delete timeshift backups
 16. Bork system
-17. Rollback")
+17. Rollback
+18. Set default (btrfs)")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3862,6 +3914,7 @@ snapshots_menu () {
 			timeshift|15)		delete_timeshift_snapshots ;;
 			bork|16)				bork_system ;;
 			rollback2|17)		rollback ;;
+			default|18)			set-default ;;
 	      	'')				;;
       	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
