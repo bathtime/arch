@@ -649,8 +649,6 @@ create_partitions () {
 			echo
 			btrfs subvolume list /mnt
 
-			read -p "Is it correct?"
-
 		else
 
 		btrfs subvolume create $mnt$subvolPrefix
@@ -717,7 +715,18 @@ mount_disk () {
 
 			if [ "$btrfsSUSE" = 'true' ]; then
 
-				mount $disk$rootPart $mnt
+				#mount $disk$rootPart $mnt
+
+				#ID="$(btrfs su get-default /mnt | awk '{ print $2 }')"
+				#btrfs su get-default /mnt
+				#echo "Mounting $ID..."
+				#umount $mnt
+
+
+			#mount $disk$rootPart -o subvolid=$ID $mnt
+			mount $disk$rootPart $mnt
+			#mount $disk$rootPart -o subvol=@/.snapshots/2/snapshot 
+
 				mount | grep /mnt
 
 				mkdir -p /mnt/.snapshots
@@ -731,6 +740,8 @@ mount_disk () {
 				mkdir -p /mnt/var/tmp
 				mkdir -p /mnt/efi
 
+
+	
 				mount $disk$rootPart -o subvol=@/.snapshots /mnt/.snapshots 
 				mount $disk$rootPart -o subvol=@/boot/grub /mnt/boot/grub	
 				mount $disk$rootPart -o subvol=@/opt /mnt/opt
@@ -741,9 +752,6 @@ mount_disk () {
 				mount $disk$rootPart -o subvol=@/var/spool,nodatacow /mnt/var/spool
 				mount $disk$rootPart -o subvol=@/var/tmp,nodatacow /mnt/var/tmp
 
-
-
-				read -p "Is it mounted okay?"
 
 			else
 
@@ -1151,15 +1159,18 @@ install_grub () {
 
 		# btrfs-assistant will NOT work with rootflags assigned!
 		# timemachine ONLY works with rootflags assigned!
-		if [[ ! $backup_type = 'btrfs-assistant' ]]; then
+		if [[ ! $backup_type = 'btrfs-assistant' ]] && [[ ! $btrfsSUSE = 'true' ]]; then
 			extra_ops='rootflags=subvol=@'
 		fi
 
 	fi
 
 	if [ "$fstype" = 'btrfs' ] && [ "$btrfsSUSE" = 'true' ]; then
-		grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=ARCH-B --removable --modules="normal test efi_gop efi_uga search echo linux all_video gfxmenu gfxterm_background gfxterm_menu gfxterm loadenv configfile gzio part_gpt btrfs"
+
+		grub-install --target=x86_64-efi --efi-directory=$mnt/efi --bootloader-id=ARCH-B --removable --modules="normal test efi_gop efi_uga search echo linux all_video gfxmenu gfxterm_background gfxterm_menu gfxterm loadenv configfile gzio part_gpt btrfs" --boot-directory=$mnt/boot
+		
 		#grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=ARCH-B --removable --modules="normal test efi_gop efi_uga search echo linux all_video gfxmenu gfxterm_background gfxterm_menu gfxterm loadenv configfile gzio part_gpt btrfs" --boot-directory=$mnt/boot
+	
 	else
 		grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --recheck $disk --boot-directory=$mnt/boot
 	fi
@@ -3198,17 +3209,17 @@ window_manager () {
 auto_install_root () {
 
 	create_partitions
-	setup_fstab
 	install_base
 	install_grub
+	setup_fstab
 
 	[ $autologin = true ] && auto_login root
 
+	#choose_initramfs $initramfs
 	#choose_initramfs dracut 
 	choose_initramfs mkinitcpio
 	choose_initramfs booster
 
-	#choose_initramfs $initramfs
 
 	general_setup
 	install_backup snapper
