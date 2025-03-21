@@ -82,8 +82,7 @@ mnt=/mnt
 mnt2=/mnt2
 mnt3=/mnt3
 
-btrfsSUSE='true'
-
+btrfsSUSE='true'					# requires bootOwnPartition be false
 bootOwnPartition='false'		# make separate boot partition (true/false)?
 
 # Do we want a separate boot partition (which will be ext2)
@@ -358,7 +357,9 @@ choose_disk () {
 
 		[ "$(mount | grep ' on / type overlay' | awk '{print $5}')" ] && echo -e "\n       *** Running in overlay mode! ***\n"
 
-		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#&  $rootfs#g" | sed "s#$host.*#& (host)#g"
+		[ $fstype = 'btrfs' ] && default="($(btrfs su get-default / | awk '{ print $9 }'))"
+
+		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#&  $rootfs#g" | sed "s#$host.*#& (host) $default#g"
 
 		[[ $rootfs = 'btrfs' ]] || [[ $rootfs = 'bcachefs' ]] && extra='snapshots '
 
@@ -633,10 +634,6 @@ create_partitions () {
 			btrfs subvolume create /mnt/@/var/log
 			btrfs subvolume create /mnt/@/var/spool
 			btrfs subvolume create /mnt/@/var/tmp
-
-			#addDate="$(date +"%Y-%m-%d %H:%M:%S")"
-			#sed -e "s/<date>/<date>$addDate/" /mnt/@/.snapshots/1/info.xml
-			#cat /mnt/@/.snapshots/1/info.xml
 
 			btrfs subvolume set-default $(btrfs subvolume list /mnt | grep "@/.snapshots/1/snapshot" | grep -oP '(?<=ID )[0-9]+') /mnt
 
@@ -958,7 +955,7 @@ setup_fstab () {
 		sed -i 's#^Q /var/lib/portables 0700#\#&#' $mnt/usr/lib/tmpfiles.d/portables.conf
 
 		btrfs su delete $mnt/var/lib/portables
-		btrfs su delete $mnt/var/lib/portables
+		btrfs su delete $mnt/var/lib/machines
 	fi
 
 	echo -e "\nCreating new /etc/fstab file...\n"
@@ -2717,6 +2714,28 @@ do_snapper-rollback () {
 
 }
 
+snapper-rollback () {
+
+	snapper list --columns number,description,date
+
+	echo -e "\nWhich snapshot would you like to roll back to? ('q' to quit)\n"
+
+	read choice
+	
+	[ $choice = q ] && return
+
+	snapper rollback $choice
+
+	echo -e "\nPress 'r' to reboot or any other key to continue.\n"
+	read -n 1 -s choice
+
+	if [ $choice = r ]; then
+		sync_disk
+		reboot
+	fi
+
+}
+
 
 rollback () {
 
@@ -2899,8 +2918,6 @@ snapper_delete_recovery () {
 
 snapper_delete_all_snapshots () {
 
-	# grep -v '-' to tell snapper not to delete current, active snapshots
-	#snapshots=$(snapper list | grep -v '──┼' | grep -v ' # ' | grep -v '-' | grep -v '+' | awk '{print $1}')
 	snapshots=$(snapper list | grep -v '──┼' | grep -v ' # ' | grep -v '^-' | grep -v '^+' | grep -v '*' | awk '{print $1}')
 
 	if [ "$snapshots" ]; then
@@ -3877,8 +3894,9 @@ snapshots_menu () {
 14. Btrfs delete subvolume
 15. Delete timeshift backups
 16. Bork system
-17. Rollback
-18. Set default (btrfs)")
+17. snapper-rollback
+18. Set default (btrfs)
+19. snapper rollback")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3916,6 +3934,7 @@ snapshots_menu () {
 			bork|16)				bork_system ;;
 			rollback2|17)		rollback ;;
 			default|18)			set-default ;;
+			roll|19)				snapper-rollback ;;
 	      	'')				;;
       	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
