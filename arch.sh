@@ -625,7 +625,7 @@ create_partitions () {
 			btrfs subvolume create /mnt/@/boot/grub
 			
 			btrfs subvolume create /mnt/@/opt
-			btrfs subvolume create /mnt/@/root
+			#btrfs subvolume create /mnt/@/root
 			btrfs subvolume create /mnt/@/srv
 			btrfs subvolume create /mnt/@/tmp
 
@@ -732,7 +732,7 @@ mount_disk () {
 				mkdir -p /mnt/.snapshots
 				mkdir -p /mnt/boot/grub
 				mkdir -p /mnt/opt
-				mkdir -p /mnt/root
+				#mkdir -p /mnt/root
 				mkdir -p /mnt/srv
 				mkdir -p /mnt/tmp
 				mkdir -p /mnt/var/log
@@ -745,7 +745,7 @@ mount_disk () {
 				mount $disk$rootPart -o subvol=@/.snapshots /mnt/.snapshots 
 				mount $disk$rootPart -o subvol=@/boot/grub /mnt/boot/grub	
 				mount $disk$rootPart -o subvol=@/opt /mnt/opt
-				mount $disk$rootPart -o subvol=@/root /mnt/root
+				#mount $disk$rootPart -o subvol=@/root /mnt/root
 				mount $disk$rootPart -o subvol=@/srv /mnt/srv
 				mount $disk$rootPart -o subvol=@/tmp /mnt/tmp
 				mount $disk$rootPart -o subvol=@/var/log,nodatacow /mnt/var/log
@@ -1790,6 +1790,7 @@ install_backup () {
 
 		2|snapper)				if [[ $fstype = btrfs ]]; then
 										snapper_setup
+										install_grub-btrfsd
 									else
 										echo -e "\nNot installing snapper as it is not compatablie with $fstype. Exiting.\n"
 									fi
@@ -1941,11 +1942,21 @@ snapper_setup () {
 				arch-chroot $mnt /bin/bash << EOF
 umount /.snapshots
 rm -r /.snapshots
+sync
+sleep 1
+
 snapper --no-dbus -c root create-config /
+sleep 1
 btrfs subvolume delete /.snapshots
+sleep 1
 mkdir /.snapshots
 mount -a
 chmod 750 /.snapshots
+
+btrfs su list /
+
+read -p "Press any key."
+
 EOF
 
 
