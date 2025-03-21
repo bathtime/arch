@@ -1936,8 +1936,10 @@ snapper_setup () {
 		mount -a
 
 	else
+		
+		pacstrap_install snapper
 
-		if [ "$btrfsSUSU" = 'true' ]; then
+		if [ "$btrfsSUSE" = 'true' ]; then
 
 				arch-chroot $mnt /bin/bash << EOF
 umount /.snapshots
@@ -1955,10 +1957,10 @@ chmod 750 /.snapshots
 
 btrfs su list /
 
-read -p "Press any key."
 
 EOF
 
+read -p "Press any key."
 
 		else
 
