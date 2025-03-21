@@ -82,7 +82,9 @@ mnt=/mnt
 mnt2=/mnt2
 mnt3=/mnt3
 
-bootOwnPartition='true'		# make separate boot partition (true/false)?
+btrfsSUSE='true'
+
+bootOwnPartition='false'		# make separate boot partition (true/false)?
 
 # Do we want a separate boot partition (which will be ext2)
 if [[ $bootOwnPartition = 'true' ]]; then
@@ -123,7 +125,7 @@ boot_mountopts="noatime"
 efi_mountopts="noatime"
 
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
-backup_type='snapper-rollback'	# eg., '','rsync','snapper','snapper-rollback','timeshift', 'btrfs-assistant'
+backup_type='snapper'	# eg., '','rsync','snapper','snapper-rollback','timeshift', 'btrfs-assistant'
 initramfs='mkinitcpio'			# mkinitcpio, dracut, booster
 extra_modules='lz4'				# adds to /etc/mkinitcpio modules
 extra_hooks='resume'					# adds to /etc/mkinitcpio hooks
@@ -523,7 +525,8 @@ create_partitions () {
 	case $fstype in
 
 		btrfs)		pacman -S --needed --noconfirm btrfs-progs
-						mkfs.btrfs -f -L ROOT $disk$rootPart ;;
+						#mkfs.btrfs -f -n 32k -L ROOT $disk$rootPart ;;
+						mkfs.btrfs -f -n 32k -L ARCH-B-ROOT $disk$rootPart ;;
 		ext4)			if [ "$encryptLuks" = 'true' ]; then
 
 							mkfs.ext4 /dev/mapper/root
@@ -609,6 +612,47 @@ create_partitions () {
 
 	if [ "$fstype" = "btrfs" ]; then
 
+
+		if [ "$btrfsSUSE" = 'true' ]; then
+
+			btrfs subvolume create /mnt/@
+			btrfs subvolume create /mnt/@/.snapshots
+			
+			mkdir /mnt/@/.snapshots/1
+			btrfs subvolume create /mnt/@/.snapshots/1/snapshot
+			
+			mkdir /mnt/@/boot
+			btrfs subvolume create /mnt/@/boot/grub
+			
+			btrfs subvolume create /mnt/@/opt
+			btrfs subvolume create /mnt/@/root
+			btrfs subvolume create /mnt/@/srv
+			btrfs subvolume create /mnt/@/tmp
+
+			mkdir /mnt/@/var
+			btrfs subvolume create /mnt/@/var/log
+			btrfs subvolume create /mnt/@/var/spool
+			btrfs subvolume create /mnt/@/var/tmp
+
+			#addDate="$(date +"%Y-%m-%d %H:%M:%S")"
+			#sed -e "s/<date>/<date>$addDate/" /mnt/@/.snapshots/1/info.xml
+			#cat /mnt/@/.snapshots/1/info.xml
+
+			btrfs subvolume set-default $(btrfs subvolume list /mnt | grep "@/.snapshots/1/snapshot" | grep -oP '(?<=ID )[0-9]+') /mnt
+
+			btrfs subvolume get-default /mnt
+
+			chattr +C /mnt/@/var/log
+			chattr +C /mnt/@/var/spool
+			chattr +C /mnt/@/var/tmp
+
+			echo
+			btrfs subvolume list /mnt
+
+			read -p "Is it correct?"
+
+		else
+
 		btrfs subvolume create $mnt$subvolPrefix
 		btrfs subvolume create $mnt$subvolPrefix'snapshots'
 		btrfs subvolume create --parents $mnt$subvolPrefix'var/log'
@@ -616,6 +660,8 @@ create_partitions () {
 		
 		chattr +C -R "$mnt$subvolPrefix"var/{log,tmp}
 		lsattr "$mnt$subvolPrefix"var
+		
+		fi
 
 		btrfs subvolume list /mnt
 
@@ -669,6 +715,38 @@ mount_disk () {
 
 		if [ "$fstype" = "btrfs" ]; then
 
+			if [ "$btrfsSUSE" = 'true' ]; then
+
+				mount $disk$rootPart $mnt
+				mount | grep /mnt
+
+				mkdir -p /mnt/.snapshots
+				mkdir -p /mnt/boot/grub
+				mkdir -p /mnt/opt
+				mkdir -p /mnt/root
+				mkdir -p /mnt/srv
+				mkdir -p /mnt/tmp
+				mkdir -p /mnt/var/log
+				mkdir -p /mnt/var/spool
+				mkdir -p /mnt/var/tmp
+				mkdir -p /mnt/efi
+
+				mount $disk$rootPart -o subvol=@/.snapshots /mnt/.snapshots 
+				mount $disk$rootPart -o subvol=@/boot/grub /mnt/boot/grub	
+				mount $disk$rootPart -o subvol=@/opt /mnt/opt
+				mount $disk$rootPart -o subvol=@/root /mnt/root
+				mount $disk$rootPart -o subvol=@/srv /mnt/srv
+				mount $disk$rootPart -o subvol=@/tmp /mnt/tmp
+				mount $disk$rootPart -o subvol=@/var/log,nodatacow /mnt/var/log
+				mount $disk$rootPart -o subvol=@/var/spool,nodatacow /mnt/var/spool
+				mount $disk$rootPart -o subvol=@/var/tmp,nodatacow /mnt/var/tmp
+
+
+
+				read -p "Is it mounted okay?"
+
+			else
+
 			echo -e "\nMounting...\n"
 	
 			# Find root ID (could have been changed if fs was restored) 
@@ -684,6 +762,8 @@ mount_disk () {
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=258 $mnt/var/log
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=259 $mnt/var/tmp
 			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=5 $mnt$btrfsroot
+
+		fi
 
 		elif [[ $fstype = bcachefs ]]; then
 	
@@ -883,6 +963,12 @@ setup_fstab () {
 				
 			done
 
+	fi
+
+	if [ "$btrfsSUSE" = 'true' ]; then
+		
+		sed -i 's#/ .*0 0#/               btrfs           rw,relatime,space_cache=v2      0 0#' $mnt/etc/fstab
+		sed -i 's#rootflags=subvol=${rootsubvol} ##' $mnt/etc/grub.d/10_linux
 	fi
 
 	# Remount to test	
@@ -1835,6 +1921,21 @@ snapper_setup () {
 
 	else
 
+		if [ "$btrfsSUSU" = 'true' ]; then
+
+				arch-chroot $mnt /bin/bash << EOF
+umount /.snapshots
+rm -r /.snapshots
+snapper --no-dbus -c root create-config /
+btrfs subvolume delete /.snapshots
+mkdir /.snapshots
+mount -a
+chmod 750 /.snapshots
+EOF
+
+
+		else
+
 		#pacstrap_install snapper snap-pac
 		#pacstrap_install snapper
 		
@@ -1852,7 +1953,7 @@ OnCalendar=*:0/5' > $mnt/etc/systemd/system/snapper-timeline.timer.d/override.co
 OnUnitActiveSec=1h' > $mnt/etc/systemd/system/snapper-cleanup.timer.d/override.conf
 
 		runonce
-
+	fi
 	fi
 
 }
@@ -3106,6 +3207,7 @@ auto_install_root () {
 	#choose_initramfs $initramfs
 
 	general_setup
+	install_backup snapper
 
 	#setup_iwd
 	setup_networkmanager
@@ -3120,8 +3222,8 @@ auto_install_root () {
 	copy_script
 	[ "$aur_apps_root" ] && install_aur_packages "$aur_apps_root"
 
-	install_backup $backup_type
-	do_backup "Root-installed"
+	#install_backup $backup_type
+	#do_backup "Root-installed"
 	
 	sync_disk
 
