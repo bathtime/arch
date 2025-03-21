@@ -701,7 +701,7 @@ create_partitions () {
 
 		setdate=$(date +"%Y-%m-%d %H:%M:%S")
 
-		cat > $mnt/.snapshots/16/info.xml << EOF
+		cat > $mnt/.snapshots/1/info.xml << EOF
 <?xml version="1.0"?>
 <snapshot>
   <type>single</type>
