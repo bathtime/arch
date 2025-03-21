@@ -357,7 +357,7 @@ choose_disk () {
 
 		[ "$(mount | grep ' on / type overlay' | awk '{print $5}')" ] && echo -e "\n       *** Running in overlay mode! ***\n"
 
-		[ $fstype = 'btrfs' ] && default="($(btrfs su get-default / | awk '{ print $9 }'))"
+		[ $fstype = 'btrfs' ] && default="$(mount | grep ' / ' | sed 's#.*.subvol=#(subvol=#')"
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#&  $rootfs#g" | sed "s#$host.*#& (host) $default#g"
 
@@ -625,14 +625,14 @@ create_partitions () {
 			mkdir /mnt/@/boot
 			btrfs subvolume create /mnt/@/boot/grub
 			
-			btrfs subvolume create /mnt/@/opt
+			#btrfs subvolume create /mnt/@/opt
 			#btrfs subvolume create /mnt/@/root
-			btrfs subvolume create /mnt/@/srv
-			btrfs subvolume create /mnt/@/tmp
+			#btrfs subvolume create /mnt/@/srv
+			#btrfs subvolume create /mnt/@/tmp
 
 			mkdir /mnt/@/var
 			btrfs subvolume create /mnt/@/var/log
-			btrfs subvolume create /mnt/@/var/spool
+			#btrfs subvolume create /mnt/@/var/spool
 			btrfs subvolume create /mnt/@/var/tmp
 
 			btrfs subvolume set-default $(btrfs subvolume list /mnt | grep "@/.snapshots/1/snapshot" | grep -oP '(?<=ID )[0-9]+') /mnt
@@ -640,7 +640,7 @@ create_partitions () {
 			btrfs subvolume get-default /mnt
 
 			chattr +C /mnt/@/var/log
-			chattr +C /mnt/@/var/spool
+			#chattr +C /mnt/@/var/spool
 			chattr +C /mnt/@/var/tmp
 
 			echo
@@ -730,41 +730,28 @@ mount_disk () {
 
 			if [ "$btrfsSUSE" = 'true' ]; then
 
-				#mount $disk$rootPart $mnt
-
-				#ID="$(btrfs su get-default /mnt | awk '{ print $2 }')"
-				#btrfs su get-default /mnt
-				#echo "Mounting $ID..."
-				#umount $mnt
-
-
-			#mount $disk$rootPart -o subvolid=$ID $mnt
-			mount $disk$rootPart $mnt
-			#mount $disk$rootPart -o subvol=@/.snapshots/2/snapshot 
-
+				mount $disk$rootPart $mnt
 				mount | grep /mnt
 
 				mkdir -p /mnt/.snapshots
 				mkdir -p /mnt/boot/grub
-				mkdir -p /mnt/opt
+				#mkdir -p /mnt/opt
 				#mkdir -p /mnt/root
-				mkdir -p /mnt/srv
-				mkdir -p /mnt/tmp
+				#mkdir -p /mnt/srv
+				#mkdir -p /mnt/tmp
 				mkdir -p /mnt/var/log
-				mkdir -p /mnt/var/spool
+				#mkdir -p /mnt/var/spool
 				mkdir -p /mnt/var/tmp
 				mkdir -p /mnt/efi
 
-
-	
 				mount $disk$rootPart -o subvol=@/.snapshots /mnt/.snapshots 
 				mount $disk$rootPart -o subvol=@/boot/grub /mnt/boot/grub	
-				mount $disk$rootPart -o subvol=@/opt /mnt/opt
+				#mount $disk$rootPart -o subvol=@/opt /mnt/opt
 				#mount $disk$rootPart -o subvol=@/root /mnt/root
-				mount $disk$rootPart -o subvol=@/srv /mnt/srv
-				mount $disk$rootPart -o subvol=@/tmp /mnt/tmp
+				#mount $disk$rootPart -o subvol=@/srv /mnt/srv
+				#mount $disk$rootPart -o subvol=@/tmp /mnt/tmp
 				mount $disk$rootPart -o subvol=@/var/log,nodatacow /mnt/var/log
-				mount $disk$rootPart -o subvol=@/var/spool,nodatacow /mnt/var/spool
+				#mount $disk$rootPart -o subvol=@/var/spool,nodatacow /mnt/var/spool
 				mount $disk$rootPart -o subvol=@/var/tmp,nodatacow /mnt/var/tmp
 
 
