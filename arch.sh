@@ -934,6 +934,13 @@ setup_fstab () {
 
 	mount_disk
 
+	if [ $fstype = 'btrfs' ]; then
+	
+		sed -i 's#^Q /var/lib/machines 0700 - - -#\#&#' /usr/lib/tmpfiles.d/systemd-nspawn.conf
+		sed -i 's#^Q /var/lib/portables 0700#\#&#' /usr/lib/tmpfiles.d/portables.conf
+
+	fi
+
 	echo -e "\nCreating new /etc/fstab file...\n"
 
 	genfstab -U $mnt/ > $mnt/etc/fstab
@@ -1959,8 +1966,6 @@ btrfs su list /
 
 
 EOF
-
-read -p "Press any key."
 
 		else
 
