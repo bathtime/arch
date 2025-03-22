@@ -364,7 +364,7 @@ choose_disk () {
 			default="$rootSub"
 
 			if [ ! "$rootSub" = "$defaultSub" ]; then
-				echo -e "\n       *** NOT mounted on default subvolume! ***\n"
+				echo -e "\n       *** NOT mounted on default subvolume! ***\n\n"
 			fi
 		fi
 
@@ -1980,7 +1980,7 @@ chmod 750 /.snapshots
 
 btrfs su list /
 
-sed -i 's/TIMELINE_CREATE="yes"/TIMELINE_CREATE="no"/; s/TIMELINE_CLEANUP="yes"/TIMELINE_CLEANUP="no"/' $mnt/etc/snapper/configs/root
+sed -i 's/TIMELINE_CREATE="yes"/TIMELINE_CREATE="no"/; s/TIMELINE_CLEANUP="yes"/TIMELINE_CLEANUP="no"/' /etc/snapper/configs/root
 
 EOF
 
