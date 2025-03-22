@@ -110,13 +110,9 @@ encryptLuks='false'
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='100'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-readOnlyBoot='true'
-readOnlyEfi='true'
-
 simpleInstall='false'		# true = no net,cached packages,tweaks...
 
 subvols=(var/log var/tmp)			# TODO: used for btrfs and bcachefs
-btrfsBootSubvolume='true'
 subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir='/.snapshots'
 
@@ -625,12 +621,10 @@ create_partitions () {
 			
 		mkdir /mnt/@/.snapshots/1
 		btrfs subvolume create /mnt/@/.snapshots/1/snapshot
-	
-		if [ $btrfsBootSubvolume = 'true' ]; then
-			mkdir /mnt/@/boot
-			btrfs subvolume create /mnt/@/boot/grub
-		fi
-
+			
+		mkdir /mnt/@/boot
+		btrfs subvolume create /mnt/@/boot/grub
+			
 		mkdir /mnt/@/var
 		btrfs subvolume create /mnt/@/var/log
 		btrfs subvolume create /mnt/@/var/tmp
@@ -713,17 +707,13 @@ mount_disk () {
 				mount | grep /mnt
 
 				mkdir -p /mnt/.snapshots
+				mkdir -p /mnt/boot/grub
 				mkdir -p /mnt/var/log
 				mkdir -p /mnt/var/tmp
 				mkdir -p /mnt/efi
 
 				mount $disk$rootPart -o subvol=@/.snapshots /mnt/.snapshots 
-				
-				if [ $btrfsBootSubvolume = 'true' ]; then
-					mkdir -p /mnt/boot/grub
-					mount $disk$rootPart -o subvol=@/boot/grub /mnt/boot/grub	
-				fi
-				
+				mount $disk$rootPart -o subvol=@/boot/grub /mnt/boot/grub	
 				mount $disk$rootPart -o subvol=@/var/log,nodatacow /mnt/var/log
 				mount $disk$rootPart -o subvol=@/var/tmp,nodatacow /mnt/var/tmp
 
@@ -893,15 +883,14 @@ setup_fstab () {
 		sed -i 's#^Q /var/lib/machines 0700 - - -#\#&#' $mnt/usr/lib/tmpfiles.d/systemd-nspawn.conf
 		sed -i 's#^Q /var/lib/portables 0700#\#&#' $mnt/usr/lib/tmpfiles.d/portables.conf
 
-		[ $(btrfs su list $mnt | grep var/lib/portables) ] && btrfs su delete $mnt/var/lib/portables
-		[ $(btrfs su list $mnt | grep var/lib/machines) ] && btrfs su delete $mnt/var/lib/machines
-
+		btrfs su delete $mnt/var/lib/portables
+		btrfs su delete $mnt/var/lib/machines
 	fi
 
 	echo -e "\nCreating new /etc/fstab file...\n"
 
 	genfstab -U $mnt/ > $mnt/etc/fstab
-	#grep $disk /proc/mounts > $mnt/etc/fstab.bak
+	grep $disk /proc/mounts > $mnt/etc/fstab.bak
 
 	###  Tweak the resulting /etc/fstab generated  ###
 
@@ -948,41 +937,6 @@ setup_fstab () {
 	mount -a
 
 	systemctl daemon-reload
-
-	cat $mnt/etc/fstab
-
-}
-
-
-readOnlyBootEfi () {
-	
-	mount_disk
-
-	if [ $1 = 'true' ]; then
-		
-		if [ ! "$(cat $mnt/etc/fstab | grep -E  '^/boot|#/boot')" ]; then
-			echo '/boot /boot none bind,ro 0 0' >> $mnt/etc/fstab
-		else
-			sed -i "s?#/boot?/boot?" $mnt/etc/fstab
-		fi
-
-	else
-
-		sed -i "s?^/boot?#/boot?" $mnt/etc/fstab
-
-	fi
-
-	if [ $2 = 'true' ]; then
-		sed -i "s#rw,noatime,fmask=0022,dmask=0022#ro,noatime,fmask=0022,dmask=0022#" $mnt/etc/fstab
-	else
-		sed -i "s#ro,noatime,fmask=0022,dmask=0022#rw,noatime,fmask=0022,dmask=0022#" $mnt/etc/fstab
-	fi
-	
-	[ "$(mount | grep /boot)" ] && umount /boot
-	[ "$(mount | grep /efi)" ] && umount /efi
-
-	systemctl daemon-reload
-	mount -a
 
 	cat $mnt/etc/fstab
 
@@ -2554,19 +2508,15 @@ set-default () {
 
 create_snapshot () {
 
-	snapper list --columns number,description,date,read-only
+	snapper list --columns number,description,date
 	
 	echo -e "\nWhat would you like to name this snapshot?\n"
 	read snapshot
 	
 	touch "/root/snapper-$snapshot"
 	
-	if [ $1 = rw ]; then
-		snapper -c root create --read-write --description "$snapshot"
-	else
-		snapper -c root create --description "$snapshot"
-	fi
-
+	snapper -c root create --read-write --description "$snapshot"
+	
 	sync_disk
 	
 	sleep .1
@@ -3230,9 +3180,9 @@ backup_config () {
 	#tar -pcf $backup_file $CONFIG_FILES
 	time tar -pczf $backup_file $CONFIG_FILES
 	
-	#echo -e "\nVerifying file contents. Please be patient...\n"
+	echo -e "\nVerifying file contents. Please be patient...\n"
 	#tar xOf $backup_file &> /dev/null; echo $?
-	#tar -tf $backup_file &> /dev/null; echo $?
+	tar -tf $backup_file &> /dev/null; echo $?
 
 	#sudo -u $user gpg --yes -c $backup_file
 
@@ -3578,23 +3528,22 @@ install_group () {
 snapshots_menu () {
 	
 	config_choices=("1. Quit to main menu
-2. Snapper snapshot (ro)
-3. Snapper snapshot (rw)
-4. Snapper set default
-5. Snapper rollback
-6. Snapper status
-7. Snapper delete
-8. Snapper delete by date
-9. Snapper delete recovery
-10. Snapper delete all
-11. Rsync snapshot
-12. Take btrfs/bcachefs snapshot
-13. Restore btrfs/bcachefs snapshot
-14. Delete btrfs/bcachefs snapshot
-15. Btrfs delete subvolume
+2. Snapper snapshot
+3. Snapper set default
+4. Snapper rollback
+5. Snapper status
+6. Snapper delete
+7. Snapper delete by date
+8. Snapper delete recovery
+9. Snapper delete all
+10. Rsync snapshot
+11. Take btrfs/bcachefs snapshot
+12. Restore btrfs/bcachefs snapshot
+13. Delete btrfs/bcachefs snapshot
+14. Btrfs delete subvolume
 16. Bork system
-17. btrfs rollback
-18. Snapper undo")
+19. btrfs rollback
+20. Snapper undo")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3615,23 +3564,22 @@ snapshots_menu () {
 
 		case $config_choice in
 			quit|1)					echo "Quitting!"; break ;;
-			snapper|2)				create_snapshot ro ;;
-			snapper|3)				create_snapshot rw ;;
-			default|4)				set-default ;;
-			roll|5)					snapper-rollback ;;
-			status|6)				snapper_status ;;
-			snapper-del|7)			snapper_delete ;;
-			snapper-date|8) 		snapper_delete_by_date ;;
-			delete-rec|9) 			snapper_delete_recovery ;;
-			delete-all|10)			snapper_delete_all ;;
-			rsync|11)				rsync_snapshot ;;
-			snapshot|12)			take_snapshot ;;
-			restore|13)				restore_snapshot ;;
-			delete|14)				delete_snapshot ;;
-			btrfs-del|15)			btrfs_delete ;;
+			snapper|2)				create_snapshot ;;
+			default|3)				set-default ;;
+			roll|4)					snapper-rollback ;;
+			status|5)				snapper_status ;;
+			snapper-del|6)			snapper_delete ;;
+			snapper-date|7) 		snapper_delete_by_date ;;
+			delete-rec|8) 			snapper_delete_recovery ;;
+			delete-all|9)			snapper_delete_all ;;
+			rsync|10)				rsync_snapshot ;;
+			snapshot|11)			take_snapshot ;;
+			restore|12)				restore_snapshot ;;
+			delete|13)				delete_snapshot ;;
+			btrfs-del|14)			btrfs_delete ;;
 			bork|16)					bork_system ;;
-			btrfs-rollback|17)	btrfs-rollback ;;
-			undo|18)					snapper_undochange ;;
+			btrfs-rollback|19)	btrfs-rollback ;;
+			undo|20)					snapper_undochange ;;
 	      '')						;;
       	*)							echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
@@ -3824,8 +3772,7 @@ check_viable_disk
 
 disk_info
 
-# Loading as a daemon speeds things up
-check_online &
+check_online
 
 
 while :; do
@@ -3864,9 +3811,7 @@ while :; do
 33. clone/sync/wipe ->
 34. Install aur packages ->
 35. Install group packages ->
-36. Benchmark
-37. Read only boot/efi on
-38. Read only boot/efi off")
+36. Benchmark")
 
 
 echo
@@ -3907,8 +3852,9 @@ echo
 		loginuser|27)			auto_login user ;;
 		hypervisor|28)			hypervisor_setup ;;
 
-		test|29)					readOnlyBootEfi true true 	
-							
+		test|29)					
+									install_aur_packages 'snapper mksh'
+
 									;;
 		custom|30)				custom_install ;;
 		setup|31)				setup_menu ;;
@@ -3917,8 +3863,6 @@ echo
 		setup|34)      		aur_package_install ;; 
 		packages|35)			install_group ;;
 		benchmark|36)			benchmark ;;
-		readOnlyTrue|37)		readOnlyBootEfi true true ;;
-		readOnlyFalse|38)		readOnlyBootEfi false false ;;
 		'')						;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
