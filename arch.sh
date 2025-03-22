@@ -110,9 +110,13 @@ encryptLuks='false'
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='100'					# What percentage of space should the root drive take?
 fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+readOnlyBoot='true'
+readOnlyEfi='true'
+
 simpleInstall='false'		# true = no net,cached packages,tweaks...
 
 subvols=(var/log var/tmp)			# TODO: used for btrfs and bcachefs
+btrfsBootSubvolume='false'
 subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir='/.snapshots'
 
@@ -621,10 +625,12 @@ create_partitions () {
 			
 		mkdir /mnt/@/.snapshots/1
 		btrfs subvolume create /mnt/@/.snapshots/1/snapshot
-			
-		mkdir /mnt/@/boot
-		btrfs subvolume create /mnt/@/boot/grub
-			
+	
+		if [ $btrfsBootSubvolume = 'true' ]; then
+			mkdir /mnt/@/boot
+			btrfs subvolume create /mnt/@/boot/grub
+		fi
+
 		mkdir /mnt/@/var
 		btrfs subvolume create /mnt/@/var/log
 		btrfs subvolume create /mnt/@/var/tmp
@@ -707,13 +713,17 @@ mount_disk () {
 				mount | grep /mnt
 
 				mkdir -p /mnt/.snapshots
-				mkdir -p /mnt/boot/grub
 				mkdir -p /mnt/var/log
 				mkdir -p /mnt/var/tmp
 				mkdir -p /mnt/efi
 
 				mount $disk$rootPart -o subvol=@/.snapshots /mnt/.snapshots 
-				mount $disk$rootPart -o subvol=@/boot/grub /mnt/boot/grub	
+				
+				if [ $btrfsBootSubvolume = 'true' ]; then
+					mkdir -p /mnt/boot/grub
+					mount $disk$rootPart -o subvol=@/boot/grub /mnt/boot/grub	
+				fi
+				
 				mount $disk$rootPart -o subvol=@/var/log,nodatacow /mnt/var/log
 				mount $disk$rootPart -o subvol=@/var/tmp,nodatacow /mnt/var/tmp
 
@@ -883,14 +893,15 @@ setup_fstab () {
 		sed -i 's#^Q /var/lib/machines 0700 - - -#\#&#' $mnt/usr/lib/tmpfiles.d/systemd-nspawn.conf
 		sed -i 's#^Q /var/lib/portables 0700#\#&#' $mnt/usr/lib/tmpfiles.d/portables.conf
 
-		btrfs su delete $mnt/var/lib/portables
-		btrfs su delete $mnt/var/lib/machines
+		[ $(btrfs su list $mnt | grep var/lib/portables) ] && btrfs su delete $mnt/var/lib/portables
+		[ $(btrfs su list $mnt | grep var/lib/machines) ] && btrfs su delete $mnt/var/lib/machines
+
 	fi
 
 	echo -e "\nCreating new /etc/fstab file...\n"
 
 	genfstab -U $mnt/ > $mnt/etc/fstab
-	grep $disk /proc/mounts > $mnt/etc/fstab.bak
+	#grep $disk /proc/mounts > $mnt/etc/fstab.bak
 
 	###  Tweak the resulting /etc/fstab generated  ###
 
@@ -937,6 +948,35 @@ setup_fstab () {
 	mount -a
 
 	systemctl daemon-reload
+
+	cat $mnt/etc/fstab
+
+}
+
+
+readOnlyBootEfi () {
+	
+	mount_disk
+
+	if [ $1 = 'true' ]; then
+		
+		if [ ! "$(cat $mnt/etc/fstab | grep -E  '^/boot|#/boot')" ]; then
+			echo '/boot /boot none bind,ro 0 0' >> $mnt/etc/fstab
+		else
+			sed -i "s?#/boot?/boot?" $mnt/etc/fstab
+		fi
+
+	else
+
+		sed -i "s?^/boot?#/boot?" $mnt/etc/fstab
+
+	fi
+
+	if [ $2 = 'true' ]; then
+		sed -i "s#rw,noatime,fmask=0022,dmask=0022#ro,noatime,fmask=0022,dmask=0022#" $mnt/etc/fstab
+	else
+		sed -i "s#ro,noatime,fmask=0022,dmask=0022#rw,noatime,fmask=0022,dmask=0022#" $mnt/etc/fstab
+	fi
 
 	cat $mnt/etc/fstab
 
@@ -3180,9 +3220,9 @@ backup_config () {
 	#tar -pcf $backup_file $CONFIG_FILES
 	time tar -pczf $backup_file $CONFIG_FILES
 	
-	echo -e "\nVerifying file contents. Please be patient...\n"
+	#echo -e "\nVerifying file contents. Please be patient...\n"
 	#tar xOf $backup_file &> /dev/null; echo $?
-	tar -tf $backup_file &> /dev/null; echo $?
+	#tar -tf $backup_file &> /dev/null; echo $?
 
 	#sudo -u $user gpg --yes -c $backup_file
 
@@ -3772,7 +3812,8 @@ check_viable_disk
 
 disk_info
 
-check_online
+# Loading as a daemon speeds things up
+check_online &
 
 
 while :; do
@@ -3811,7 +3852,9 @@ while :; do
 33. clone/sync/wipe ->
 34. Install aur packages ->
 35. Install group packages ->
-36. Benchmark")
+36. Benchmark
+37. Read only boot/efi on
+38. Read only boot/efi off")
 
 
 echo
@@ -3852,9 +3895,8 @@ echo
 		loginuser|27)			auto_login user ;;
 		hypervisor|28)			hypervisor_setup ;;
 
-		test|29)					
-									install_aur_packages 'snapper mksh'
-
+		test|29)					readOnlyBootEfi true true 	
+							
 									;;
 		custom|30)				custom_install ;;
 		setup|31)				setup_menu ;;
@@ -3863,6 +3905,8 @@ echo
 		setup|34)      		aur_package_install ;; 
 		packages|35)			install_group ;;
 		benchmark|36)			benchmark ;;
+		readOnlyTrue|37)		readOnlyBootEfi true true ;;
+		readOnlyFalse|38)		readOnlyBootEfi false false ;;
 		'')						;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
