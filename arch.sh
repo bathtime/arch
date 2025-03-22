@@ -599,7 +599,6 @@ create_partitions () {
 	echo -e "\nMounting $mnt..."
 
 
-
 	if [ "$encryptLuks" = 'true' ]; then
 
 		if [ ! "$(mount | grep /dev/mapper/root)" ]; then
@@ -639,28 +638,6 @@ create_partitions () {
 
 		btrfs subvolume list /mnt
 
-if [ $fstype = btrfs ]; then
-
-		btrfs su list $mnt
-
-		# If not created snapper won't recognise it as a snapshot
-
-		setdate=$(date +"%Y-%m-%d %H:%M:%S")
-
-		cat > $mnt/.snapshots/1/info.xml << EOF
-<?xml version="1.0"?>
-<snapshot>
-  <type>single</type>
-  <num>1</num>
-  <date>$setdate</date>
-  <description>Initial snapshot</description>
-  <cleanup></cleanup>
-</snapshot>
-EOF
-
-	fi
-
-
 	fi
 
 	if [ "$fstype" = "bcachefs" ]; then
@@ -688,6 +665,27 @@ EOF
 	mkdir -p $mnt/root/.gnupg
 	chmod -R 700 $mnt/root/.gnupg
 	chmod -R 1777 $mnt/var/tmp
+
+	if [ $fstype = btrfs ]; then
+
+		btrfs su list $mnt
+
+		# If not created snapper won't recognise it as a snapshot
+
+		setdate=$(date +"%Y-%m-%d %H:%M:%S")
+
+		cat > $mnt/.snapshots/1/info.xml << EOF
+<?xml version="1.0"?>
+<snapshot>
+  <type>single</type>
+  <num>1</num>
+  <date>$setdate</date>
+  <description>Initial snapshot</description>
+  <cleanup></cleanup>
+</snapshot>
+EOF
+
+	fi
 
 	genfstab -U $mnt
 
@@ -3784,9 +3782,9 @@ while :; do
 3. Chroot
 4. Auto-install
 5. Partition disk
-6. Setup fstab
-7. Install base
-8. Install boot manager
+6. Install base
+7. Install boot manager
+8. Setup fstab
 9. General setup
 10. Setup user
 11. Setup network
@@ -3831,9 +3829,9 @@ echo
 		Chroot|chroot|3)		do_chroot ;;
 		auto|4)					auto_install_menu ;;
 		partition|5)			create_partitions ;;
-		fstab|6)					setup_fstab ;;
-		base|7)					install_base ;;
-		boot|8)					install_bootloader ;;
+		base|6)					install_base ;;
+		boot|7)					install_bootloader ;;
+		fstab|8)					setup_fstab ;;
 		setup|9)					general_setup ;;
 		user|10)					setup_user ;;
       network|11)				install_network ;;
