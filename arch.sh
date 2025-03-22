@@ -116,7 +116,7 @@ readOnlyEfi='true'
 simpleInstall='false'		# true = no net,cached packages,tweaks...
 
 subvols=(var/log var/tmp)			# TODO: used for btrfs and bcachefs
-btrfsBootSubvolume='false'
+btrfsBootSubvolume='true'
 subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir='/.snapshots'
 
