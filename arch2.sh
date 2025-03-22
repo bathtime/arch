@@ -626,10 +626,8 @@ create_partitions () {
 		mkdir /mnt/@/.snapshots/1
 		btrfs subvolume create /mnt/@/.snapshots/1/snapshot
 	
-		if [ $btrfsBootSubvolume = 'true' ]; then
 			mkdir /mnt/@/boot
 			btrfs subvolume create /mnt/@/boot/grub
-		fi
 
 		mkdir /mnt/@/var
 		btrfs subvolume create /mnt/@/var/log
@@ -719,10 +717,8 @@ mount_disk () {
 
 				mount $disk$rootPart -o subvol=@/.snapshots /mnt/.snapshots 
 				
-				if [ $btrfsBootSubvolume = 'true' ]; then
 					mkdir -p /mnt/boot/grub
 					mount $disk$rootPart -o subvol=@/boot/grub /mnt/boot/grub	
-				fi
 				
 				mount $disk$rootPart -o subvol=@/var/log,nodatacow /mnt/var/log
 				mount $disk$rootPart -o subvol=@/var/tmp,nodatacow /mnt/var/tmp
@@ -1065,7 +1061,7 @@ omit_dracutmodules+=" "' > $mnt/etc/dracut.conf.d/myflags.conf
 		booster|4)		pacstrap_install booster 
 							
 							# manual build
-							booster build /boot/booster-linux.img --force
+							booster build $mnt/boot/booster-linux.img --force
 
 							if [[ $mnt = '' ]]; then	
 								grub-mkconfig -o $mnt/boot/grub/grub.cfg
