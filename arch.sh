@@ -536,8 +536,8 @@ create_partitions () {
 	case $fstype in
 
 		btrfs)		pacman -S --needed --noconfirm btrfs-progs
-						#mkfs.btrfs -f -n 32k -L ROOT $disk$rootPart ;;
-						mkfs.btrfs -f -n 32k -L ARCH-B-ROOT $disk$rootPart ;;
+						mkfs.btrfs -f -n 32k -L ROOT $disk$rootPart ;;
+						#mkfs.btrfs -f -n 32k -L ARCH-B-ROOT $disk$rootPart ;;
 		ext4)			if [ "$encryptLuks" = 'true' ]; then
 
 							mkfs.ext4 /dev/mapper/root
@@ -1188,12 +1188,15 @@ install_grub () {
 
 	if [ "$fstype" = 'btrfs' ] && [ "$btrfsSUSE" = 'true' ]; then
 
-		grub-install --target=x86_64-efi --efi-directory=$mnt/efi --bootloader-id=ARCH-B --removable --modules="normal test efi_gop efi_uga search echo linux all_video gfxmenu gfxterm_background gfxterm_menu gfxterm loadenv configfile gzio part_gpt btrfs" --boot-directory=$mnt/boot
+		#grub-install --target=x86_64-efi --efi-directory=$mnt/efi --bootloader-id=ARCH-B --removable --modules="normal test efi_gop efi_uga search echo linux all_video gfxmenu gfxterm_background gfxterm_menu gfxterm loadenv configfile gzio part_gpt btrfs" --boot-directory=$mnt/boot
 		
-		#grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=ARCH-B --removable --modules="normal test efi_gop efi_uga search echo linux all_video gfxmenu gfxterm_background gfxterm_menu gfxterm loadenv configfile gzio part_gpt btrfs" --boot-directory=$mnt/boot
+		grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --recheck $disk --boot-directory=$mnt/boot
+		
 	
 	else
+
 		grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --recheck $disk --boot-directory=$mnt/boot
+
 	fi
 
 	cat > $mnt/etc/default/grub << EOF2
