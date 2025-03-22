@@ -977,6 +977,14 @@ readOnlyBootEfi () {
 	else
 		sed -i "s#ro,noatime,fmask=0022,dmask=0022#rw,noatime,fmask=0022,dmask=0022#" $mnt/etc/fstab
 	fi
+	
+	[ "$(mount | grep /boot)" ] && umount /boot
+	[ "$(mount | grep /efi)" ] && umount /efi
+
+
+	systemctl daemon-reload
+	mount -a
+
 
 	cat $mnt/etc/fstab
 
