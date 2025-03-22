@@ -1970,6 +1970,7 @@ chmod 750 /.snapshots
 
 btrfs su list /
 
+sed -i 's/TIMELINE_CREATE="yes"/TIMELINE_CREATE="no"/; s/TIMELINE_CLEANUP="yes"/TIMELINE_CLEANUP="no"/' $mnt/etc/snapper/configs/root
 
 EOF
 
@@ -3892,7 +3893,7 @@ snapshots_menu () {
 
 		if [ $fstype = btrfs ]; then
 			echo
-			snapper list --columns number,description,date
+			snapper list --columns number,description,date,read-only
 			echo
 			btrfs su list /
 		fi
