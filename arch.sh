@@ -357,7 +357,17 @@ choose_disk () {
 
 		[ "$(mount | grep ' on / type overlay' | awk '{print $5}')" ] && echo -e "\n       *** Running in overlay mode! ***\n"
 
-		[ $fstype = 'btrfs' ] && default="$(mount | grep ' / ' | sed 's#.*.subvol=#(subvol=#')"
+		if [ $fstype = 'btrfs' ]; then
+			
+			rootSub="$(mount | grep ' / ' | sed 's#.*.subvol=/##; s/)//')"
+			defaultSub="$(btrfs su get-default / | awk '{ print $9 }')"
+			default="$rootSub"
+
+			if [ ! "$rootSub" = "$defaultSub" ]; then
+				echo -e "\n       *** NOT mounted on default subvolume! ***\n"
+			fi
+		fi
+
 
 		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#&  $rootfs#g" | sed "s#$host.*#& (host) $default#g"
 
