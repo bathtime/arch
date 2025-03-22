@@ -82,7 +82,6 @@ mnt=/mnt
 mnt2=/mnt2
 mnt3=/mnt3
 
-btrfsSUSE='true'					# requires bootOwnPartition be false
 bootOwnPartition='false'		# make separate boot partition (true/false)?
 
 # Do we want a separate boot partition (which will be ext2)
@@ -117,14 +116,13 @@ subvols=(var/log var/tmp)			# TODO: used for btrfs and bcachefs
 subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir='/.snapshots'
 
-btrfsroot='/.btrfsroot'
 btrfs_mountopts="noatime,discard=async"
 bcachefs_mountopts="noatime"
 boot_mountopts="noatime"
 efi_mountopts="noatime"
 
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
-backup_type='snapper'	# eg., '','rsync','snapper','snapper-rollback','timeshift', 'btrfs-assistant'
+backup_type='snapper'		# eg., '','rsync','snapper'
 initramfs='mkinitcpio'			# mkinitcpio, dracut, booster
 extra_modules='lz4'				# adds to /etc/mkinitcpio modules
 extra_hooks='resume'					# adds to /etc/mkinitcpio hooks
@@ -172,8 +170,6 @@ backup_file=/setup.tar.gz
 
 # Files that will be saved to $backup_file as part of a backup
 CONFIG_FILES="
-
-/etc/snapper-rollback.conf
 
 /usr/lib/initcpio/install/liveroot
 /usr/lib/initcpio/hooks/liveroot
@@ -537,7 +533,6 @@ create_partitions () {
 
 		btrfs)		pacman -S --needed --noconfirm btrfs-progs
 						mkfs.btrfs -f -n 32k -L ROOT $disk$rootPart ;;
-						#mkfs.btrfs -f -n 32k -L ARCH-B-ROOT $disk$rootPart ;;
 		ext4)			if [ "$encryptLuks" = 'true' ]; then
 
 							mkfs.ext4 /dev/mapper/root
@@ -620,55 +615,51 @@ create_partitions () {
 	fi
 
 
-
 	if [ "$fstype" = "btrfs" ]; then
 
-
-		if [ "$btrfsSUSE" = 'true' ]; then
-
-			btrfs subvolume create /mnt/@
-			btrfs subvolume create /mnt/@/.snapshots
+		btrfs subvolume create /mnt/@
+		btrfs subvolume create /mnt/@/.snapshots
 			
-			mkdir /mnt/@/.snapshots/1
-			btrfs subvolume create /mnt/@/.snapshots/1/snapshot
+		mkdir /mnt/@/.snapshots/1
+		btrfs subvolume create /mnt/@/.snapshots/1/snapshot
 			
-			mkdir /mnt/@/boot
-			btrfs subvolume create /mnt/@/boot/grub
+		mkdir /mnt/@/boot
+		btrfs subvolume create /mnt/@/boot/grub
 			
-			#btrfs subvolume create /mnt/@/opt
-			#btrfs subvolume create /mnt/@/root
-			#btrfs subvolume create /mnt/@/srv
-			#btrfs subvolume create /mnt/@/tmp
+		mkdir /mnt/@/var
+		btrfs subvolume create /mnt/@/var/log
+		btrfs subvolume create /mnt/@/var/tmp
 
-			mkdir /mnt/@/var
-			btrfs subvolume create /mnt/@/var/log
-			#btrfs subvolume create /mnt/@/var/spool
-			btrfs subvolume create /mnt/@/var/tmp
+		btrfs subvolume set-default $(btrfs subvolume list /mnt | grep "@/.snapshots/1/snapshot" | grep -oP '(?<=ID )[0-9]+') /mnt
 
-			btrfs subvolume set-default $(btrfs subvolume list /mnt | grep "@/.snapshots/1/snapshot" | grep -oP '(?<=ID )[0-9]+') /mnt
+		btrfs subvolume get-default /mnt
 
-			btrfs subvolume get-default /mnt
-
-			chattr +C /mnt/@/var/log
-			#chattr +C /mnt/@/var/spool
-			chattr +C /mnt/@/var/tmp
-
-			echo
-			btrfs subvolume list /mnt
-
-		else
-
-		btrfs subvolume create $mnt$subvolPrefix
-		btrfs subvolume create $mnt$subvolPrefix'snapshots'
-		btrfs subvolume create --parents $mnt$subvolPrefix'var/log'
-		btrfs subvolume create --parents $mnt$subvolPrefix'var/tmp'
-		
-		chattr +C -R "$mnt$subvolPrefix"var/{log,tmp}
-		lsattr "$mnt$subvolPrefix"var
-		
-		fi
+		chattr +C /mnt/@/var/log
+		chattr +C /mnt/@/var/tmp
 
 		btrfs subvolume list /mnt
+
+if [ $fstype = btrfs ]; then
+
+		btrfs su list $mnt
+
+		# If not created snapper won't recognise it as a snapshot
+
+		setdate=$(date +"%Y-%m-%d %H:%M:%S")
+
+		cat > $mnt/.snapshots/1/info.xml << EOF
+<?xml version="1.0"?>
+<snapshot>
+  <type>single</type>
+  <num>1</num>
+  <date>$setdate</date>
+  <description>Initial snapshot</description>
+  <cleanup></cleanup>
+</snapshot>
+EOF
+
+	fi
+
 
 	fi
 
@@ -698,31 +689,7 @@ create_partitions () {
 	chmod -R 700 $mnt/root/.gnupg
 	chmod -R 1777 $mnt/var/tmp
 
-	if [ $fstype = btrfs ]; then
-		btrfs su list $mnt
-	fi
-
-	if [ $btrfsSUSE = 'true' ]; then
-
-		# If not created snapper won't recognise it as a snapshot
-
-		setdate=$(date +"%Y-%m-%d %H:%M:%S")
-
-		cat > $mnt/.snapshots/1/info.xml << EOF
-<?xml version="1.0"?>
-<snapshot>
-  <type>single</type>
-  <num>1</num>
-  <date>$setdate</date>
-  <description>Initial snapshot</description>
-  <cleanup></cleanup>
-</snapshot>
-EOF
-
-	fi
-
 	genfstab -U $mnt
-	
 
 }
 
@@ -738,52 +705,19 @@ mount_disk () {
 
 		if [ "$fstype" = "btrfs" ]; then
 
-			if [ "$btrfsSUSE" = 'true' ]; then
-
 				mount $disk$rootPart $mnt
 				mount | grep /mnt
 
 				mkdir -p /mnt/.snapshots
 				mkdir -p /mnt/boot/grub
-				#mkdir -p /mnt/opt
-				#mkdir -p /mnt/root
-				#mkdir -p /mnt/srv
-				#mkdir -p /mnt/tmp
 				mkdir -p /mnt/var/log
-				#mkdir -p /mnt/var/spool
 				mkdir -p /mnt/var/tmp
 				mkdir -p /mnt/efi
 
 				mount $disk$rootPart -o subvol=@/.snapshots /mnt/.snapshots 
 				mount $disk$rootPart -o subvol=@/boot/grub /mnt/boot/grub	
-				#mount $disk$rootPart -o subvol=@/opt /mnt/opt
-				#mount $disk$rootPart -o subvol=@/root /mnt/root
-				#mount $disk$rootPart -o subvol=@/srv /mnt/srv
-				#mount $disk$rootPart -o subvol=@/tmp /mnt/tmp
 				mount $disk$rootPart -o subvol=@/var/log,nodatacow /mnt/var/log
-				#mount $disk$rootPart -o subvol=@/var/spool,nodatacow /mnt/var/spool
 				mount $disk$rootPart -o subvol=@/var/tmp,nodatacow /mnt/var/tmp
-
-
-			else
-
-			echo -e "\nMounting...\n"
-	
-			# Find root ID (could have been changed if fs was restored) 
-			mount $disk$rootPart $mnt
-
-			ID=$(btrfs su list $mnt | grep -E "level 5 path @$" | awk '{print $2}')
-			echo "Mounting root subvolume as ID: $ID"
-				
-			umount $mnt
-
-			mount $disk$rootPart -o $btrfs_mountopts,subvolid=$ID $mnt
-			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=257 $mnt$snapshot_dir
-			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=258 $mnt/var/log
-			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=259 $mnt/var/tmp
-			mount $disk$rootPart --mkdir -o $btrfs_mountopts,subvolid=5 $mnt$btrfsroot
-
-		fi
 
 		elif [[ $fstype = bcachefs ]]; then
 	
@@ -994,7 +928,7 @@ setup_fstab () {
 
 	fi
 
-	if [ "$btrfsSUSE" = 'true' ]; then
+	if [ "$fstype" = 'btrfs' ]; then
 		
 		sed -i 's#/ .*0 0#/               btrfs           rw,relatime,space_cache=v2      0 0#' $mnt/etc/fstab
 		sed -i 's#rootflags=subvol=${rootsubvol} ##' $mnt/etc/grub.d/10_linux
@@ -1175,28 +1109,8 @@ install_grub () {
 	fi
 
 
-	# May cause grub-snapshots to not work correctly
-	if [[ $fstype = btrfs ]] && [[ $subvolPrefix = '/@' ]]; then
+	grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --recheck $disk --boot-directory=$mnt/boot
 
-		# btrfs-assistant will NOT work with rootflags assigned!
-		# timemachine ONLY works with rootflags assigned!
-		if [[ ! $backup_type = 'btrfs-assistant' ]] && [[ ! $btrfsSUSE = 'true' ]]; then
-			extra_ops='rootflags=subvol=@'
-		fi
-
-	fi
-
-	if [ "$fstype" = 'btrfs' ] && [ "$btrfsSUSE" = 'true' ]; then
-
-		#grub-install --target=x86_64-efi --efi-directory=$mnt/efi --bootloader-id=ARCH-B --removable --modules="normal test efi_gop efi_uga search echo linux all_video gfxmenu gfxterm_background gfxterm_menu gfxterm loadenv configfile gzio part_gpt btrfs" --boot-directory=$mnt/boot
-		
-		grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --recheck $disk --boot-directory=$mnt/boot
-	
-	else
-
-		grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --recheck $disk --boot-directory=$mnt/boot
-
-	fi
 
 	cat > $mnt/etc/default/grub << EOF2
 
@@ -1451,7 +1365,7 @@ setup_user () {
 
 	mkdir -p -m 750 $mnt/etc/sudoers.d
 	echo '%wheel ALL=(ALL:ALL) ALL' > $mnt/etc/sudoers.d/1-wheel
-	echo "$user ALL = NOPASSWD: /usr/local/bin/arch.sh,/usr/bin/btrfs-assistant-launcher,/usr/bin/timeshift-launcher" > $mnt/etc/sudoers.d/10-arch
+	echo "$user ALL = NOPASSWD: /usr/local/bin/arch.sh" > $mnt/etc/sudoers.d/10-arch
 	chmod 0440 $mnt/etc/sudoers.d/{1-wheel,10-arch}
 	
 	
@@ -1803,7 +1717,7 @@ install_backup () {
 	choice=$1
 
 	if [[ $choice = '' ]]; then
-		echo -e "What backup system would you like to install?\n\n1. rsync \n2. snapper\n3. timeshift\n4. btrfs-assistanti\n5. grub-btrfsd\n6. snapper-rollback\n7. none\n"
+		echo -e "What backup system would you like to install?\n\n1. rsync \n2. snapper\n3. grub-btrfsd\n4. none\n"
 			read -p "Choice: " -n 2 choice
 	else
 		echo "Installing $choice..."
@@ -1820,34 +1734,11 @@ install_backup () {
 										echo -e "\nNot installing snapper as it is not compatablie with $fstype. Exiting.\n"
 									fi
 									;;
-	
-		3|timeshift)			if [[ $fstype = btrfs ]]; then
-										timeshift_setup
-									else
-										echo -e "\nNot installing timeshift as it is not compatablie with $fstype. Exiting.\n"
-									fi
-									;;
-	
-		4|btrfs-assistant)	if [[ $fstype = btrfs ]]; then
-										snapper_setup
-										install_grub-btrfsd
-									else
-										echo -e "\nNot installing snapper/btrfs-assistant as it is not compatablie with $fstype. Exiting.\n"
-									fi
-									;;
 		
-		5|grub-btrfsd)			[ $fstype = btrfs ] && install_grub-btrfsd 
+		3|grub-btrfsd)			[ $fstype = btrfs ] && install_grub-btrfsd 
 									;;
 
-		6|snapper-rollback)	if [ $fstype = btrfs ]; then
-										snapper_setup
-										snapper-rollback_setup
-										install_grub-btrfsd
-									fi
-									
-									;;
-
-		7|none|'')				echo "No backup installed." ;;
+		4|none|'')				echo "No backup installed." ;;
 
 		*)							echo "Not an option. Exiting." ;;
 	esac
@@ -1863,73 +1754,8 @@ install_grub-btrfsd () {
    systemctl --root=$mnt enable cronie.service
    systemctl --root=$mnt enable grub-btrfsd.service
 
-	if [[ $backup_type = 'timeshift' ]]; then
-
-   	if [[ $mnt = '' ]]; then
-
-   		systemctl edit --stdin grub-btrfsd << EOF
-[Service]
-ExecStart=
-ExecStart=/usr/bin/grub-btrfsd --syslog -t
-EOF
-   systemctl daemon-reload
-   #systemctl --root=$mnt restart grub-btrfsd.service
-
-   	else
-
-      	mkdir -p $mnt/etc/systemd/system/grub-btrfsd.service.d/
-      	echo '[Service]
-ExecStart=
-ExecStart=/usr/bin/grub-btrfsd --syslog -t' > $mnt/etc/systemd/system/grub-btrfsd.service.d/override.conf
-
-   	fi
-	fi
-
 }
 
-
-timeshift_setup () {
-
-	[ ! $fstype = btrfs ] && return 
-   
-	mount_disk
-
-	pacstrap_install timeshift
-
-	UUID=$(blkid -s UUID -o value $disk$rootPart)
-
-	mkdir -p $mnt/etc/timeshift
-	
-	cat > $mnt/etc/timeshift/timeshift.json << EOF
-{
-  "backup_device_uuid" : "$UUID",
-  "parent_device_uuid" : "",
-  "do_first_run" : "false",
-  "btrfs_mode" : "true",
-  "include_btrfs_home_for_backup" : "false",
-  "include_btrfs_home_for_restore" : "false",
-  "stop_cron_emails" : "true",
-  "schedule_monthly" : "false",
-  "schedule_weekly" : "false",
-  "schedule_daily" : "false",
-  "schedule_hourly" : "true",
-  "schedule_boot" : "false",
-  "count_monthly" : "2",
-  "count_weekly" : "3",
-  "count_daily" : "5",
-  "count_hourly" : "6",
-  "count_boot" : "5",
-  "snapshot_size" : "0",
-  "snapshot_count" : "0",
-  "date_format" : "%Y-%m-%d %H:%M:%S",
-  "exclude" : [],
-  "exclude-apps" : []
-}
-EOF
-
-	install_grub-btrfsd
-
-}
 
 
 snapper_setup () {
@@ -1964,9 +1790,7 @@ snapper_setup () {
 		
 		pacstrap_install snapper
 
-		if [ "$btrfsSUSE" = 'true' ]; then
-
-				arch-chroot $mnt /bin/bash << EOF
+		arch-chroot $mnt /bin/bash << EOF
 umount /.snapshots
 rm -r /.snapshots
 sync
@@ -1986,26 +1810,6 @@ sed -i 's/TIMELINE_CREATE="yes"/TIMELINE_CREATE="no"/; s/TIMELINE_CLEANUP="yes"/
 
 EOF
 
-		else
-
-		#pacstrap_install snapper snap-pac
-		#pacstrap_install snapper
-		
-		install_aur_packages snapper cronie
-
-		mkdir -p $mnt/etc/systemd/system/snapper-timeline.timer.d
-		
-		# Timer set to every 5 minutes
-		echo '[Timer]
-OnCalendar=
-OnCalendar=*:0/5' > $mnt/etc/systemd/system/snapper-timeline.timer.d/override.conf
-
-		mkdir -p $mnt/etc/systemd/system/snapper-cleanup.timer.d
-		echo '[Timer]
-OnUnitActiveSec=1h' > $mnt/etc/systemd/system/snapper-cleanup.timer.d/override.conf
-
-		runonce
-	fi
 	fi
 
 }
@@ -2060,50 +1864,6 @@ EOF
 }
 
 
-snapper-rollback_setup () {
-	
-	mount_disk
-
-  	cat > $mnt/etc/snapper-rollback.conf <<EOF
-# config for btrfs root
-[root]
-
-# Name of your linux root subvolume
-subvol_main = @
-
-# Name of your snapper snapshot subvolume
-subvol_snapshots = @snapshots
-
-# Directory to which your btrfs root is mounted.
-mountpoint = $btrfsroot
-
-# Device file for btrfs root.
-# If your btrfs root isnt mounted to mountpoint directory, then automatically
-# mount this device there before rolling back. This parameter is optional, but
-# if unset, youll have to mount your btrfs root manually.
-
-#dev = /dev/sda4
-EOF
-
-	if [[ $mnt = '' ]]; then
-		echo
-		#pacman -U --noconfirm --needed /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst
-
-	else
-
-		#cp /home/user/.local/bin/backup-pkgs/snapper-rollback-*.zst $mnt/var/cache/pacman/pkg/
-		
-		#arch-chroot $mnt /bin/bash -e << EOF
-#pacman -U --noconfirm /var/cache/pacman/pkg/snapper-rollback-*.zst
-#EOF
-		
-		install_aur_packages snapper-rollback
-
-		echo "Snapper-rollback setup will finish once new system is booted."
-	fi
-
-}
-
 
 do_backup () {
 
@@ -2122,26 +1882,11 @@ do_backup () {
 									fi
 									;;
 
-		snapper|snapper-rollback)	if [[ $fstype = btrfs ]]; then
+		snapper)	if [[ $fstype = btrfs ]]; then
 										echo "Not implimented yet."
 										#arch-chroot $mnt snapper -c root create --read-write --description "$1"
 									else
-										echo "Will not do a backup with btrfs-assistant on $fstype."
-									fi
-									;;
-
-		timeshift)				if [[ $fstype = btrfs ]]; then
-										arch-chroot $mnt timeshift --create --comments "$1" --tags D
-  										arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
-									else
-										echo "Will not do a backup with timeshift on $fstype."
-									fi
-									;;
-
-		btrfs-assistant)		if [[ $fstype = btrfs ]]; then
-										arch-chroot $mnt snapper -c root create --read-write --description "$1"
-									echo
-										echo "Will not do a backup with btrfs-assistant on $fstype."
+										echo "Will not do a backup with snapper on $fstype."
 									fi
 									;;
 	esac
@@ -2384,7 +2129,7 @@ clone () {
 
 	echo -e "\n$1 $3 -> $4. Please be patient...\n"
 	
-	rsync_excludes=" --exclude=/run/timeshift/ --exclude=/etc/timeshift/timeshift.json --exclude=/etc/fstab --exclude=/etc/default/grub --exclude=/root.squashfs --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=/snapshots/ --exclude=/.btrfsroot/"
+	rsync_excludes=" --exclude=/run/timeshift/ --exclude=/etc/timeshift/timeshift.json --exclude=/etc/fstab --exclude=/etc/default/grub --exclude=/root.squashfs --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=/snapshots/"
 
 
 	rsync --dry-run -v $2 $rsync_excludes $3 $4 | less
@@ -2628,23 +2373,6 @@ delete_snapshot () {
 }
 
 
-delete_timeshift_snapshots () {
-
-	ls -la /run/timeshift/*/backup/timeshift-btrfs/snapshots/
-
-	if [ -d /run/timeshift/*/backup/timeshift-btrfs/snapshots/ ]; then
-		
-		echo -e "\nDeleting timeshift backup snapshots. Please be patient...\n"
-
-		btrfs subvolume delete $mnt/run/timeshift/*/backup/timeshift-btrfs/snapshots/*/@/	
-		rm -rf /run/timeshift/*/backup/timeshift-btrfs/snapshots/
-	
-	else
-		echo -e "\nNo backup snapshots.\n"
-	fi
-
-}
-
 
 bork_system () {
 
@@ -2694,28 +2422,6 @@ snapper_undochange () {
 }
 
 
-do_snapper-rollback () {
-
-	snapper list --columns number,description,date
-
-	echo -e "\nWhich snapshot would you like to roll back to? ('q' to quit)\n"
-
-	read choice
-	
-	[ $choice = q ] && return
-
-	snapper-rollback $choice
-
-	echo -e "\nPress 'r' to reboot or any other key to continue.\n"
-	read -n 1 -s choice
-
-	if [ $choice = r ]; then
-		sync_disk
-		reboot
-	fi
-
-}
-
 snapper-rollback () {
 
 	snapper list --columns number,description,date
@@ -2739,11 +2445,7 @@ snapper-rollback () {
 }
 
 
-rollback () {
-
-	# Follow the instructions in this video to set up btrfs properly
-	# It's not necessary to install snapper and snapper-rollback
-	# https://www.youtube.com/watch?v=maIu1d2lAiI
+btrfs-rollback () {
 
 	snapper list
 
@@ -2754,7 +2456,7 @@ rollback () {
 	[ $choice = q ] && return
 
 	# You must not be in the directory you're about to move or it's a busy error
-	cd /.btrfsroot/
+	cd /
 
 	mv @ "@rollback-$(date)"
 
@@ -2886,37 +2588,6 @@ snapper_delete_by_date () {
 }
 
 
-snapper_delete_recovery () {
-
-	# First check if there are any files to delete (else an error)
-	if [ "$(ls  $btrfsroot/ | grep @202*.*:)" ]; then
-
-		recovery=$(btrfs su list / | grep 'level 5 path @2025' | awk '{print $2}')
-
-		for ID in ${recovery[@]}; do
-      	echo -e "\nDeleting ID (recovery snapshot): $ID..."
-      	btrfs su delete -i $ID /
-   	done
-
-	else
-		echo -e "\nNo recovery snapshots to delete."
-	fi
-
-	if [ "$(ls  $btrfsroot/ | grep @rollback-*.*)" ]; then
-
-		recovery=$(btrfs su list / | grep 'level 5 path @rollback-' | awk '{print $2}')
-
-		for ID in ${recovery[@]}; do
-      	echo -e "\nDeleting ID (recovery snapshot): $ID..."
-      	btrfs su delete -i $ID /
-   	done
-
-	else
-		echo -e "\nNo recovery snapshots to delete."
-	fi
-
-}
-
 
 snapper_delete_all_snapshots () {
 
@@ -2945,22 +2616,7 @@ snapper_delete_all () {
 
 	cd /
 
-	#ID=$(btrfs su list / | grep -E "level 256 path .snapshots$" | awk '{print $2}')
-   #echo -e "Deleting: ID $ID level 256 path .snaphots..."
-
-	#btrfs su delete -i $ID /
-
-	
 	snapper_delete_all_snapshots 
-
-	#snapper_delete_recovery
-
-	echo -e "\nRunning: rm -rf $btrfsroot/@2025*...\n"
-	rm -rf $btrfsroot/@202*
-
-	echo -e "\nRunning: rm -rf $btrfsroot/@rollback-*...\n"
-	rm -rf $btrfsroot/@rollback-*
-
 
 	return
 
@@ -2988,15 +2644,8 @@ snapper_delete_all () {
 		echo -e "\nNo stray .xml files to delete."
 	fi
 
-	echo -e "\nRunning: rm -rf $btrfsroot/@2025*...\n"
-	rm -rf $btrfsroot/@202*
-
 	sleep 1
 	sync_disk
-
-	#mkdir /.snapshots
-	#mount -o subvol=@snapshots $disk$rootPart /.snapshots
-	#mount -a
 
 }
 
@@ -3882,9 +3531,9 @@ snapshots_menu () {
 	
 	config_choices=("1. Quit to main menu
 2. Snapper snapshot
-3. Snapper status
-4. Snapper undo
-5. Snapper rollback
+3. Snapper set default
+4. Snapper rollback
+5. Snapper status
 6. Snapper delete
 7. Snapper delete by date
 8. Snapper delete recovery
@@ -3894,11 +3543,9 @@ snapshots_menu () {
 12. Restore btrfs/bcachefs snapshot
 13. Delete btrfs/bcachefs snapshot
 14. Btrfs delete subvolume
-15. Delete timeshift backups
 16. Bork system
-17. snapper-rollback
-18. Set default (btrfs)
-19. snapper rollback")
+19. btrfs rollback
+20. Snapper undo")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3918,27 +3565,25 @@ snapshots_menu () {
 		read config_choice
 
 		case $config_choice in
-			quit|1)				echo "Quitting!"; break ;;
-			snapper|2)			create_snapshot ;;
-			status|3)			snapper_status ;;
-			undo|4)				snapper_undochange ;;
-			rollback|5)			do_snapper-rollback ;;
-			snapper-del|6)		snapper_delete ;;
-			snapper-date|7) 	snapper_delete_by_date ;;
-			delete-rec|8) 		snapper_delete_recovery ;;
-			delete-all|9)		snapper_delete_all ;;
-			rsync|10)			rsync_snapshot ;;
-			snapshot|11)		take_snapshot ;;
-			restore|12)			restore_snapshot ;;
-			delete|13)			delete_snapshot ;;
-			btrfs-del|14)		btrfs_delete ;;
-			timeshift|15)		delete_timeshift_snapshots ;;
-			bork|16)				bork_system ;;
-			rollback2|17)		rollback ;;
-			default|18)			set-default ;;
-			roll|19)				snapper-rollback ;;
-	      	'')				;;
-      	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
+			quit|1)					echo "Quitting!"; break ;;
+			snapper|2)				create_snapshot ;;
+			default|3)				set-default ;;
+			roll|4)					snapper-rollback ;;
+			status|5)				snapper_status ;;
+			snapper-del|6)			snapper_delete ;;
+			snapper-date|7) 		snapper_delete_by_date ;;
+			delete-rec|8) 			snapper_delete_recovery ;;
+			delete-all|9)			snapper_delete_all ;;
+			rsync|10)				rsync_snapshot ;;
+			snapshot|11)			take_snapshot ;;
+			restore|12)				restore_snapshot ;;
+			delete|13)				delete_snapshot ;;
+			btrfs-del|14)			btrfs_delete ;;
+			bork|16)					bork_system ;;
+			btrfs-rollback|19)	btrfs-rollback ;;
+			undo|20)					snapper_undochange ;;
+	      '')						;;
+      	*)							echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
 
 	done 
