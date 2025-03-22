@@ -2385,6 +2385,41 @@ bork_system () {
 }
 
 
+readOnlyBootEfi () {
+
+   mount_disk
+
+   if [ $1 = 'true' ]; then
+
+      if [ ! "$(cat $mnt/etc/fstab | grep -E  '^/boot|#/boot')" ]; then
+         echo '/boot /boot none bind,ro 0 0' >> $mnt/etc/fstab
+      else
+         sed -i "s?#/boot?/boot?" $mnt/etc/fstab
+      fi
+
+   else
+
+      sed -i "s?^/boot?#/boot?" $mnt/etc/fstab
+
+   fi
+
+   if [ $2 = 'true' ]; then
+      sed -i "s#rw,noatime,fmask=0022,dmask=0022#ro,noatime,fmask=0022,dmask=0022#" $mnt/etc/fstab
+   else
+      sed -i "s#ro,noatime,fmask=0022,dmask=0022#rw,noatime,fmask=0022,dmask=0022#" $mnt/etc/fstab
+   fi
+
+   [ "$(mount | grep /boot)" ] && umount /boot
+   [ "$(mount | grep /efi)" ] && umount /efi
+
+   systemctl daemon-reload
+   mount -a
+
+   cat $mnt/etc/fstab
+
+}
+
+
 snapper_status () {
 
 	snapper list --columns number,description,date
@@ -3811,7 +3846,9 @@ while :; do
 33. clone/sync/wipe ->
 34. Install aur packages ->
 35. Install group packages ->
-36. Benchmark")
+36. Benchmark
+37. r/o boot/efi on
+38. r/o boot/efi off")
 
 
 echo
@@ -3863,6 +3900,9 @@ echo
 		setup|34)      		aur_package_install ;; 
 		packages|35)			install_group ;;
 		benchmark|36)			benchmark ;;
+      readOnlyTrue|37)     readOnlyBootEfi true true ;;
+      readOnlyFalse|38)    readOnlyBootEfi false false ;;
+
 		'')						;;
 		*)							echo -e "\nInvalid option ($choice)!\n"; ;;
 	esac
