@@ -2634,7 +2634,7 @@ snapper_delete_all () {
 
 	snapshots=$(ls $snapshot_dir)
 	default=$(btrfs su get-default / | awk '{ print $9 }' | sed 's#@/.snapshots/##; s#/snapshot##')
-
+	current=$(mount | grep ' / ' | sed 's#.*.subvol=/@/.snapshots/##; s/)//; s#/snapshot##')
 	#echo "Default: $default"
 
 	if [ "$snapshots" ]; then
@@ -2643,9 +2643,9 @@ snapper_delete_all () {
 			
 			delete=$snapshot_dir/$snapshot
 
-			if [ ! $snapshot = $default ]; then
-      		echo -e "(NOT IMPLIMENTING] rm -rf $delete"
-      		#rm -rf $delete
+			if [ ! $snapshot = $default ] && [ ! $snapshot = $current ]; then
+      		echo -e "rm -rf $delete"
+      		rm -rf $delete
 			fi
 
    	done
