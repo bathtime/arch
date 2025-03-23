@@ -2683,7 +2683,7 @@ snapper_delete_all_snapshots () {
 	snapshots=$(ls $snapshot_dir)
 	default=$(btrfs su get-default / | awk '{ print $9 }' | sed 's#@/.snapshots/##; s#/snapshot##')
 
-	echo "Default: $default"
+	#echo "Default: $default"
 
 	if [ "$snapshots" ]; then
 
@@ -2702,6 +2702,9 @@ snapper_delete_all_snapshots () {
 		echo -e "\nNo snapshots to delete."
 	fi
 
+	echo -e "\nDirectory $snapshot_dir:\n"
+
+	ls $snapshot_dir*
 
 }
 
