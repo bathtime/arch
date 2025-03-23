@@ -2615,14 +2615,15 @@ snapper_delete_all () {
 
 	snapshots=$(btrfs su list / | grep /.snapshots/ | awk '{ print $9 }' | sed 's/@//')
 	default=$(btrfs su get-default / | awk '{ print $9 }' | sed 's/@//')
+	current=$(mount | grep ' / ' | sed 's#.*.subvol=/@##; s/)//')
 
 	if [ "$snapshots" ]; then
 
    	for snapshot in ${snapshots[@]}; do
 			
-			if [ ! $snapshot = 0 ] && [ ! $snapshot = '' ] && [ ! $snapshot = $default ]; then
+			if [ ! $snapshot = 0 ] && [ ! $snapshot = '' ] && [ ! $snapshot = $default ] && [ ! $snapshot = $current ]; then
       		echo -e "btrfs su delete $snapshot"
-				btrfs su delete "$snapshot"
+				#btrfs su delete "$snapshot"
 			fi
 
    	done
@@ -2643,8 +2644,8 @@ snapper_delete_all () {
 			delete=$snapshot_dir/$snapshot
 
 			if [ ! $snapshot = $default ]; then
-      		echo -e "rm -rf $delete"
-      		rm -rf $delete
+      		echo -e "(NOT IMPLIMENTING] rm -rf $delete"
+      		#rm -rf $delete
 			fi
 
    	done
