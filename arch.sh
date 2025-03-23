@@ -931,7 +931,8 @@ setup_fstab () {
 
 		# Or the system might boot into the incorrect subvol after default is changed
 		sed -i 's#,subvolid=.*0 0#      0 0#' $mnt/etc/fstab
-
+		
+		# modification is necessary because otherwise GRUB will always look for the kernel in /@/boot instead of /@/.snapshots/
 		sed -i 's#rootflags=subvol=${rootsubvol} ##' $mnt/etc/grub.d/10_linux
 		sed -i 's#rootflags=subvol=${rootsubvol} ##' $mnt/etc/grub.d/20_linux_xen
 
@@ -3781,7 +3782,7 @@ check_viable_disk
 
 disk_info
 
-check_online
+check_online &
 
 
 while :; do
