@@ -2650,7 +2650,7 @@ snapper_delete_all_snapshots () {
    	for snapshot in ${snapshots[@]}; do
 			
 			if [ ! $snapshot = 0 ] && [ ! $snapshot = '' ]; then
-      		echo -e "\nDeleting snapshot #$snapshot..."
+				echo "snapper -c root delete --sync $snapshot"
 				snapper -c root delete --sync $snapshot
 			fi
 
@@ -2670,8 +2670,30 @@ snapper_delete_all_snapshots () {
    	for snapshot in ${snapshots[@]}; do
 			
 			if [ ! $snapshot = 0 ] && [ ! $snapshot = '' ] && [ ! $snapshot = $default ]; then
-      		echo -e "\nDeleting snapshot $snapshot..."
+      		echo -e "btrfs su delete $snapshot"
 				btrfs su delete "$snapshot"
+			fi
+
+   	done
+	
+	else
+		echo -e "\nNo snapshots to delete."
+	fi
+
+	snapshots=$(ls $snapshot_dir)
+	default=$(btrfs su get-default / | awk '{ print $9 }' | sed 's#@/.snapshots/##; s#/snapshot##')
+
+	echo "Default: $default"
+
+	if [ "$snapshots" ]; then
+
+   	for snapshot in ${snapshots[@]}; do
+			
+			delete=$snapshot_dir/$snapshot
+
+			if [ ! $snapshot = $default ]; then
+      		echo -e "rm -rf $delete"
+      		rm -rf $delete
 			fi
 
    	done
