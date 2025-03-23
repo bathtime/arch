@@ -1357,7 +1357,6 @@ setup_user () {
 		arch-chroot $mnt visudo -c
 	fi
 
-
 	chown -R $user:$user $mnt/home/$user/.cache
 
 
@@ -1822,22 +1821,21 @@ do_backup () {
 	
 	case $backup_type in
 
-		none|'')					echo ;;
+		none|'')		echo ;;
 
-		rsync)					if [[ $fstype = btrfs ]] || [[ $fstype = bcachefs ]]; then
-										take_snapshot "$1"
-									else
-										echo "Backup not yet implimented for $fstype."
-									fi
-									;;
+		rsync)		if [[ $fstype = btrfs ]] || [[ $fstype = bcachefs ]]; then
+							take_snapshot "$1"
+						else
+							echo "Backup not yet implimented for $fstype."
+						fi
+						;;
 
-		snapper)	if [[ $fstype = btrfs ]]; then
-										echo "Not implimented yet."
-										#arch-chroot $mnt snapper -c root create --read-write --description "$1"
-									else
-										echo "Will not do a backup with snapper on $fstype."
-									fi
-									;;
+		snapper)		if [[ $fstype = btrfs ]]; then
+							arch-chroot $mnt snapper --no-dbus create -d "$1"
+						else
+							echo "Will not do a backup with snapper on $fstype."
+						fi
+						;;
 	esac
 
 }
@@ -2370,7 +2368,7 @@ readOnlyBootEfi () {
 
 snapper_status () {
 
-	snapper list --columns number,description,date
+	snapper list --columns number,date,cleanup,description,read-only
 
 	echo -e "\nEnter first snapshot to compare ('q' to quit)\n"
 
@@ -2390,7 +2388,7 @@ echo -e "\nEnter second snapshot to compare (Press <ENTER> for current. 'q' to q
 
 snapper_undochange () {
 
-	snapper list --columns number,description,date
+	snapper list --columns number,date,cleanup,description,read-only
 
 	echo -e "\nEnter first snapshot to revert to ('q' to quit)\n"
 
@@ -2405,7 +2403,7 @@ snapper_undochange () {
 
 snapper-rollback () {
 
-	snapper list --columns number,description,date
+	snapper list --columns number,date,cleanup,description,read-only
 
 	echo -e "\nWhich snapshot would you like to roll back to? ('q' to quit)\n"
 
@@ -2428,7 +2426,7 @@ snapper-rollback () {
 
 btrfs-rollback () {
 
-	snapper list
+	snapper list --columns number,date,cleanup,description,read-only
 
 	echo -e "\nWhich snapshot is your current default? ('q' to quit)\n"
 
@@ -2465,7 +2463,7 @@ btrfs-rollback () {
 
 set-default () {
 
-	snapper list
+	snapper list --columns number,date,cleanup,description,read-only
 
 	echo -e "\nWhich snapshot would you like to set the default subvolume to? ('q' to quit)\n"
 
@@ -2497,7 +2495,7 @@ set-default () {
 
 create_snapshot () {
 
-	snapper list --columns number,description,date,read-only
+	snapper list --columns number,date,cleanup,description,read-only
 	
 	echo -e "\nWhat would you like to name this snapshot?\n"
 	read snapshot
@@ -2542,7 +2540,7 @@ snapper_delete () {
 
 	while true; do
 
-		snapper list --columns number,description,date
+		snapper list --columns number,date,cleanup,description,read-only
 
 		echo -e "\nWhich snapshot would you like to delete? (q = quit)\n"
 
@@ -2964,7 +2962,6 @@ auto_install_root () {
 
 
 	general_setup
-	install_backup snapper
 
 	#setup_iwd
 	setup_networkmanager
@@ -2979,8 +2976,8 @@ auto_install_root () {
 	copy_script
 	[ "$aur_apps_root" ] && install_aur_packages "$aur_apps_root"
 
-	#install_backup $backup_type
-	#do_backup "Root-installed"
+	install_backup snapper
+	do_backup "Root-installed"
 	
 	sync_disk
 
@@ -3033,7 +3030,7 @@ auto_install_kde () {
 	
 	[ "$aur_apps_kde" ] && install_aur_packages "$aur_apps_kde"
 
-	do_backup "KDE-installed"
+	do_backup "kde-installed"
 	sync_disk
 
 }
