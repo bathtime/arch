@@ -129,7 +129,7 @@ extra_modules='lz4'				# adds to /etc/mkinitcpio modules
 extra_hooks='resume'					# adds to /etc/mkinitcpio hooks
 
 
-kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt mitigations=off loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
+kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
 
 user=user
 password='123456'
