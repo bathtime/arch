@@ -2346,30 +2346,19 @@ readOnlyBootEfi () {
 	
 	[ $2 = 'true' ] && [ "$(mount | grep /boot | grep rw)" ] && grub-mkconfig -o /boot/grub/grub.cfg
 
-   if [ $1 = 'true' ]; then
-
-      if [ ! "$(cat $mnt/etc/fstab | grep -E  '^/boot|#/boot')" ]; then
-         echo '/boot /boot none bind,ro 0 0' >> $mnt/etc/fstab
-      else
-         sed -i "s?#/boot?/boot?" $mnt/etc/fstab
-      fi
-
-   else
-
-      sed -i "s?^/boot?#/boot?" $mnt/etc/fstab
-
-   fi
-
    if [ $2 = 'true' ]; then
+
       sed -i "s#rw,noatime,fmask=0022,dmask=0022#ro,noatime,fmask=0022,dmask=0022#" $mnt/etc/fstab
 		sed -i 's#/boot/grub.*btrfs.*rw#/boot/grub      btrfs           ro#' $mnt/etc/fstab
-   else
+   
+	else
+	
       sed -i "s#ro,noatime,fmask=0022,dmask=0022#rw,noatime,fmask=0022,dmask=0022#" $mnt/etc/fstab
 		sed -i 's#/boot/grub.*btrfs.*ro#/boot/grub      btrfs           rw#' $mnt/etc/fstab
-   fi
+   
+	fi
 
    [ "$(mount | grep '/efi ')" ] && umount /efi
-   [ "$(mount | grep '/boot ')" ] && umount /boot
    [ "$(mount | grep '/boot/grub ')" ] && umount /boot/grub
 
    systemctl daemon-reload
@@ -2648,7 +2637,7 @@ snapper_delete_all () {
 
 			if [ ! $snapshot = $default ] && [ ! $snapshot = $current ]; then
       		echo -e "rm -rf $delete"
-      		#rm -rf $delete
+      		rm -rf $delete
 			fi
 
    	done
@@ -2660,8 +2649,10 @@ snapper_delete_all () {
 	echo -e "\nDirectory $snapshot_dir:\n"
 
 	ls $snapshot_dir*
+	
 	echo	
 	sleep 2
+
 }
 
 
