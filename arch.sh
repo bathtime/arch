@@ -1813,55 +1813,6 @@ EOF
 }
 
 
-runonce () {
-
-
-echo '#!/bin/bash
-		
-if [[ "$(mount | grep /.snapshots)" ]]; then
-	umount /.snapshots
-fi
-
-rm -rf /.snapshots
-
-if [[ ! -f /etc/snapper/configs/root ]]; then
-	snapper -c root create-config /
-fi
-		
-mount -a
-
-ID=$(btrfs su list / | grep -E "level 256 path .snapshots$" | sed "s/ID //;s/ gen .*$//")
-btrfs su delete -i $ID /
-
-mkdir -p /.snapshots
-mount -a
-
-touch /tmp/runonce-"ID-$ID-$(date)"
-
-systemctl disable runonce.service
-
-' > $mnt/usr/local/bin/runonce.sh
-
-chmod +x $mnt/usr/local/bin/runonce.sh
-
-
-	cat > $mnt/etc/systemd/system/runonce.service <<EOF
-[Unit]
-Description=Run at first boot only once to complete system setup
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/runonce.sh
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-	systemctl --root=$mnt enable runonce.service
-
-}
-
-
 
 do_backup () {
 
@@ -2640,10 +2591,10 @@ snapper_delete_by_date () {
 
 
 
-snapper_delete_all_snapshots () {
 
+snapper_delete_all () {
 
-	snapshots=$(snapper list | grep -v '──┼' | grep -v ' # ' | grep -v '^-' | grep -v '^+' | grep -v '*' | awk '{print $1}')
+	snapshots=$(snapper list | grep -v '┼\|  0 \|[0-9][-+\*] \|   # ' | awk '{print $1}')
 
 	if [ "$snapshots" ]; then
 
@@ -2708,43 +2659,6 @@ snapper_delete_all_snapshots () {
 
 }
 
-
-snapper_delete_all () {
-
-	cd /
-
-	snapper_delete_all_snapshots 
-
-	return
-
-	if [ "$(btrfs su list / | grep '257 path @snapshots')" ]; then
-	
-		snapshots=$(btrfs su list / | grep '257 path @snapshots/' | awk '{print $2}')
-
-   	for ID in ${snapshots[@]}; do
-      	echo -e "\nDeleting ID: $ID..."
-      	btrfs su delete -i $ID /
-   	done
-	
-	else
-		echo -e "\nNo snapshots to delete."
-	fi
-
-
-
-	if [ "$(ls /.snapshots)" ]; then
-
-		# Delete remaing info.xml files
-		echo -e "\nStray .xml files found.\nRunning: rm -rfv /.snapshots/* to delete...\n"
-		rm -rf /.snapshots/*
-	else
-		echo -e "\nNo stray .xml files to delete."
-	fi
-
-	sleep 1
-	sync_disk
-
-}
 
 
 extract_archive () {
