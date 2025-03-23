@@ -2389,6 +2389,8 @@ bork_system () {
 readOnlyBootEfi () {
 
    mount_disk
+	
+	[ $2 = 'true' ] && [ "$(mount | grep /boot | grep rw)" ] && grub-mkconfig -o /boot/grub/grub.cfg
 
    if [ $1 = 'true' ]; then
 
@@ -2418,6 +2420,8 @@ readOnlyBootEfi () {
 
    systemctl daemon-reload
    mount -a
+
+	[ $2 = 'false' ] && grub-mkconfig -o /boot/grub/grub.cfg
 
    cat $mnt/etc/fstab
 
