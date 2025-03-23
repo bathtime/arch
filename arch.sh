@@ -2485,20 +2485,26 @@ btrfs-rollback () {
 
 	snapper list
 
-	echo -e "\nWhich snapshot would you like to roll back to? ('q' to quit)\n"
+	echo -e "\nWhich snapshot is your current default? ('q' to quit)\n"
 
-	read choice
+	read default
+
+	[ $default = q ] && return
+
+	echo -e "\nTarget for roll back? ('q' to quit)\n"
+
+	read target
 	
-	[ $choice = q ] && return
+	[ $target = q ] && return
 
 	# You must not be in the directory you're about to move or it's a busy error
 	cd /
 
-	mv @ "@rollback-$(date)"
+	mv $snapshot_dir/$default/snapshot/ $snapshot_dir/$default-rollback/
 
-	btrfs su snapshot /.snapshots/$choice/snapshot/ @
+	btrfs su snapshot $snapshot_dir/$target/snapshot/ $snapshot_dir/$default/snapshot/
 
-	btrfs su set-default @
+	btrfs su set-default $snapshot_dir/$default/snapshot
 
 
    echo -e "\nPress 'r' to reboot or any other key to continue.\n"
