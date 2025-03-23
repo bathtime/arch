@@ -2348,12 +2348,12 @@ readOnlyBootEfi () {
 
    if [ $2 = 'true' ]; then
 
-      sed -i "s#rw,noatime,fmask=0022,dmask=0022#ro,noatime,fmask=0022,dmask=0022#" $mnt/etc/fstab
+		sed -i 's#/efi.*vfat.*rw,#/efi            vfat            ro,#' $mnt/etc/fstab
 		sed -i 's#/boot/grub.*btrfs.*rw#/boot/grub      btrfs           ro#' $mnt/etc/fstab
    
 	else
 	
-      sed -i "s#ro,noatime,fmask=0022,dmask=0022#rw,noatime,fmask=0022,dmask=0022#" $mnt/etc/fstab
+		sed -i 's#/efi.*vfat.*ro,#/efi            vfat            rw,#' $mnt/etc/fstab
 		sed -i 's#/boot/grub.*btrfs.*ro#/boot/grub      btrfs           rw#' $mnt/etc/fstab
    
 	fi
