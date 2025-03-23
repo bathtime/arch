@@ -906,9 +906,6 @@ setup_fstab () {
 	sed -i '/portal/d' $mnt/etc/fstab
 
 
-	# Changing compression
-	#sed -i 's/zstd:3/zstd:1/' $mnt/etc/fstab
-
 	# Bad idea to use subids when rolling back 
 	#sed -i 's/subvolid=.*,//g' $mnt/etc/fstab
 
@@ -926,13 +923,12 @@ setup_fstab () {
 			
 			echo "$subvolPrefix$subvol                $subvolPrefix$subvol          none            rw,$bcachefs_mountopts,rw,noshard_inode_numbers,bind  0 0" >> $mnt/etc/fstab 
 				
-			done
+		done
 
 	fi
 
 	if [ "$fstype" = 'btrfs' ]; then
 		
-		sed -i 's#/ .*0 0#/               btrfs           rw,relatime,space_cache=v2      0 0#' $mnt/etc/fstab
 		sed -i 's#rootflags=subvol=${rootsubvol} ##' $mnt/etc/grub.d/10_linux
 		sed -i 's#rootflags=subvol=${rootsubvol} ##' $mnt/etc/grub.d/20_linux_xen
 	fi
