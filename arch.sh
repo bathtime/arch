@@ -353,6 +353,9 @@ choose_disk () {
 
 		[ "$(mount | grep ' on / type overlay' | awk '{print $5}')" ] && echo -e "\n       *** Running in overlay mode! ***\n"
 
+		[ "$(snapper list --columns number,read-only | grep '[0-9][-\*].*yes')" ] && echo -e "\n       *** Running in read only mode! ***\n"
+
+
 		if [ $fstype = 'btrfs' ]; then
 			
 			rootSub="$(mount | grep ' / ' | sed 's#.*.subvol=/##; s/)//')"
