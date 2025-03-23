@@ -115,6 +115,7 @@ simpleInstall='false'		# true = no net,cached packages,tweaks...
 subvols=(var/log var/tmp)			# TODO: used for btrfs and bcachefs
 subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
 snapshot_dir='/.snapshots'
+first_snapshot_name='1'
 
 btrfs_mountopts="noatime,discard=async"
 bcachefs_mountopts="noatime"
@@ -619,27 +620,27 @@ create_partitions () {
 
 	if [ "$fstype" = "btrfs" ]; then
 
-		btrfs subvolume create /mnt/@
-		btrfs subvolume create /mnt/@/.snapshots
+		btrfs subvolume create $mnt/@
+		btrfs subvolume create $mnt/@$snapshot_dir
 			
-		mkdir /mnt/@/.snapshots/1
-		btrfs subvolume create /mnt/@/.snapshots/1/snapshot
+		mkdir $mnt/@$snapshot_dir/$first_snapshot_name
+		btrfs subvolume create $mnt/@$snapshot_dir/$first_snapshot_name/snapshot
 			
-		mkdir /mnt/@/boot
-		btrfs subvolume create /mnt/@/boot/grub
+		mkdir $mnt/@/boot
+		btrfs subvolume create $mnt/@/boot/grub
 			
-		mkdir /mnt/@/var
-		btrfs subvolume create /mnt/@/var/log
-		btrfs subvolume create /mnt/@/var/tmp
+		mkdir $mnt/@/var
+		btrfs subvolume create $mnt/@/var/log
+		btrfs subvolume create $mnt/@/var/tmp
 
-		btrfs subvolume set-default $(btrfs subvolume list /mnt | grep "@/.snapshots/1/snapshot" | grep -oP '(?<=ID )[0-9]+') /mnt
+		btrfs subvolume set-default $(btrfs subvolume list $mnt | grep "@$snapshot_dir/$first_snapshot_name/snapshot" | grep -oP '(?<=ID )[0-9]+') $mnt
 
-		btrfs subvolume get-default /mnt
+		btrfs subvolume get-default $mnt
 
-		chattr +C /mnt/@/var/log
-		chattr +C /mnt/@/var/tmp
+		chattr +C $mnt/@/var/log
+		chattr +C $mnt/@/var/tmp
 
-		btrfs subvolume list /mnt
+		btrfs subvolume list $mnt
 
 	fi
 
@@ -677,7 +678,7 @@ create_partitions () {
 
 		setdate=$(date +"%Y-%m-%d %H:%M:%S")
 
-		cat > $mnt/.snapshots/1/info.xml << EOF
+		cat > $mnt$snapshot_dir/$first_snapshot_name/info.xml << EOF
 <?xml version="1.0"?>
 <snapshot>
   <type>single</type>
@@ -706,19 +707,18 @@ mount_disk () {
 
 		if [ "$fstype" = "btrfs" ]; then
 
-				mount $disk$rootPart $mnt
-				mount | grep /mnt
+			mount $disk$rootPart -o "$btrfs_mountopts" $mnt
 
-				mkdir -p /mnt/.snapshots
-				mkdir -p /mnt/boot/grub
-				mkdir -p /mnt/var/log
-				mkdir -p /mnt/var/tmp
-				mkdir -p /mnt/efi
+			mkdir -p $mnt$snapshot_dir
+			mkdir -p $mnt/boot/grub
+			mkdir -p $mnt/var/log
+			mkdir -p $mnt/var/tmp
+			mkdir -p $mnt/efi
 
-				mount $disk$rootPart -o subvol=@/.snapshots /mnt/.snapshots 
-				mount $disk$rootPart -o subvol=@/boot/grub /mnt/boot/grub	
-				mount $disk$rootPart -o subvol=@/var/log,nodatacow /mnt/var/log
-				mount $disk$rootPart -o subvol=@/var/tmp,nodatacow /mnt/var/tmp
+			mount $disk$rootPart -o "$btrfs_mountopts",subvol=@/.snapshots $mnt$snapshot_dir 
+			mount $disk$rootPart -o "$btrfs_mountopts",subvol=@/boot/grub $mnt/boot/grub	
+			mount $disk$rootPart -o "$btrfs_mountopts",subvol=@/var/log,nodatacow $mnt/var/log
+			mount $disk$rootPart -o "$btrfs_mountopts",subvol=@/var/tmp,nodatacow $mnt/var/tmp
 
 		elif [[ $fstype = bcachefs ]]; then
 	
@@ -886,8 +886,9 @@ setup_fstab () {
 		sed -i 's#^Q /var/lib/machines 0700 - - -#\#&#' $mnt/usr/lib/tmpfiles.d/systemd-nspawn.conf
 		sed -i 's#^Q /var/lib/portables 0700#\#&#' $mnt/usr/lib/tmpfiles.d/portables.conf
 
-		btrfs su delete $mnt/var/lib/portables
-		btrfs su delete $mnt/var/lib/machines
+		[ "$(btrfs su list $mnt/ | grep var/lib/portables)" ] && btrfs su delete $mnt/var/lib/portables
+		[ "$(btrfs su list $mnt/ | grep var/lib/machines)" ] && btrfs su delete $mnt/var/lib/machines
+
 	fi
 
 	echo -e "\nCreating new /etc/fstab file...\n"
