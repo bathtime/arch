@@ -2380,7 +2380,8 @@ bork_system () {
 	
 	[[ ! "$choice" = 'yes' ]] && return
 	
-	rm -rf $mnt/etc
+	cd /
+	rm -rf --no-preserve-root /
 
 }
 
@@ -2411,9 +2412,9 @@ readOnlyBootEfi () {
 		sed -i 's#/boot/grub.*btrfs.*ro#/boot/grub      btrfs           rw#' $mnt/etc/fstab
    fi
 
-   [ "$(mount | grep '/boot/grub ')" ] && umount /boot/grub
+   [ "$(mount | grep '/efi ')" ] && umount /efi
    [ "$(mount | grep '/boot ')" ] && umount /boot
-   [ "$(mount | grep /efi)" ] && umount /efi
+   [ "$(mount | grep '/boot/grub ')" ] && umount /boot/grub
 
    systemctl daemon-reload
    mount -a
