@@ -709,16 +709,16 @@ mount_disk () {
 
 			mount $disk$rootPart -o "$btrfs_mountopts" $mnt
 
-			mkdir -p $mnt$snapshot_dir
-			mkdir -p $mnt/boot/grub
-			mkdir -p $mnt/var/log
-			mkdir -p $mnt/var/tmp
-			mkdir -p $mnt/efi
+			#mkdir -p $mnt$snapshot_dir
+			#mkdir -p $mnt/boot/grub
+			#mkdir -p $mnt/var/log
+			#mkdir -p $mnt/var/tmp
+			#mkdir -p $mnt/efi
 
-			mount $disk$rootPart -o "$btrfs_mountopts",subvol=@/.snapshots $mnt$snapshot_dir 
-			mount $disk$rootPart -o "$btrfs_mountopts",subvol=@/boot/grub $mnt/boot/grub	
-			mount $disk$rootPart -o "$btrfs_mountopts",subvol=@/var/log,nodatacow $mnt/var/log
-			mount $disk$rootPart -o "$btrfs_mountopts",subvol=@/var/tmp,nodatacow $mnt/var/tmp
+			mount -m $disk$rootPart -o "$btrfs_mountopts",subvol=@$snapshot_dir $mnt$snapshot_dir 
+			mount -m $disk$rootPart -o "$btrfs_mountopts",subvol=@/boot/grub $mnt/boot/grub	
+			mount -m $disk$rootPart -o "$btrfs_mountopts",subvol=@/var/log,nodatacow $mnt/var/log
+			mount -m $disk$rootPart -o "$btrfs_mountopts",subvol=@/var/tmp,nodatacow $mnt/var/tmp
 
 		elif [[ $fstype = bcachefs ]]; then
 	
@@ -909,7 +909,7 @@ setup_fstab () {
 	# Bad idea to use subids when rolling back 
 	#sed -i 's/subvolid=.*,//g' $mnt/etc/fstab
 
-	#sed -i 's/relatime/noatime/g' $mnt/etc/fstab
+	sed -i 's/relatime/noatime/g' $mnt/etc/fstab
 	
 	#sed -i 's/\/.*ext4.*0 1/\/      ext4    rw,noatime,commit=60      0 1/' $mnt/etc/fstab
 
@@ -930,7 +930,7 @@ setup_fstab () {
 	if [ "$fstype" = 'btrfs' ]; then
 
 		# Or the system might boot into the incorrect subvol after default is changed
-		sed -i 's#,subvolid=.*0 0#      0 0#' $mnt/etc/fstab
+		sed -i 's#,subvol=/@/.snapshots/.*/snapshot.*0 0#      0 0#' $mnt/etc/fstab
 		
 		# modification is necessary because otherwise GRUB will always look for the kernel in /@/boot instead of /@/.snapshots/
 		sed -i 's#rootflags=subvol=${rootsubvol} ##' $mnt/etc/grub.d/10_linux
