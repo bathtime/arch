@@ -928,9 +928,13 @@ setup_fstab () {
 	fi
 
 	if [ "$fstype" = 'btrfs' ]; then
-		
+
+		# Or the system might boot into the incorrect subvol after default is changed
+		sed -i 's#,subvolid=.*0 0#      0 0#' $mnt/etc/fstab
+
 		sed -i 's#rootflags=subvol=${rootsubvol} ##' $mnt/etc/grub.d/10_linux
 		sed -i 's#rootflags=subvol=${rootsubvol} ##' $mnt/etc/grub.d/20_linux_xen
+
 	fi
 
 	# Remount to test	
