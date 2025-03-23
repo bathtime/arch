@@ -150,7 +150,7 @@ weston_install="brightnessctl wireplumber pipewire pipewire-pulse weston firefox
 
 phosh_install="phosh phoc phosh-mobile-settings squeekboard firefox"
 
-gnome_install="gnome-shell polkit nautilus gnome-console xdg-user-dirs firefox dconf-editor gnome-browser-connector gnome-shell-extensions gnome-control-center gnome-weather"
+gnome_install="gnome-shell polkit nautilus gnome-console xdg-user-dirs dconf-editor gnome-browser-connector gnome-shell-extensions gnome-control-center gnome-weather"
 
 kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu kdiskmark"
 
@@ -2612,7 +2612,6 @@ snapper_delete_all () {
 	fi
 
 
-
 	snapshots=$(btrfs su list / | grep /.snapshots/ | awk '{ print $9 }' | sed 's/@//')
 	default=$(btrfs su get-default / | awk '{ print $9 }' | sed 's/@//')
 	current=$(mount | grep ' / ' | sed 's#.*.subvol=/@##; s/)//')
@@ -2631,6 +2630,7 @@ snapper_delete_all () {
 	else
 		echo -e "\nNo snapshots to delete."
 	fi
+
 
 	snapshots=$(ls $snapshot_dir)
 	default=$(btrfs su get-default / | awk '{ print $9 }' | sed 's#@/.snapshots/##; s#/snapshot##')
