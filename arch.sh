@@ -2594,7 +2594,7 @@ snapper_delete_by_date () {
 
 snapper_delete_all () {
 
-	snapshots=$(snapper list | grep -v '┼\|  0 \|[0-9][-+\*] \|   # ' | awk '{print $1}')
+	snapshots=$(snapper list | grep -v '┼\|  0 \|[0-9][-+\*] \| # ' | awk '{print $1}')
 
 	if [ "$snapshots" ]; then
 
@@ -2623,7 +2623,7 @@ snapper_delete_all () {
 			
 			if [ ! $snapshot = 0 ] && [ ! $snapshot = '' ] && [ ! $snapshot = $default ] && [ ! $snapshot = $current ]; then
       		echo -e "btrfs su delete $snapshot"
-				#btrfs su delete "$snapshot"
+				btrfs su delete "$snapshot"
 			fi
 
    	done
