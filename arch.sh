@@ -2648,7 +2648,7 @@ snapper_delete_all () {
 
 			if [ ! $snapshot = $default ] && [ ! $snapshot = $current ]; then
       		echo -e "rm -rf $delete"
-      		rm -rf $delete
+      		#rm -rf $delete
 			fi
 
    	done
