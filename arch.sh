@@ -2660,18 +2660,16 @@ snapper_delete_all () {
 			
 		echo -e "\nWould you like to delete these as well? (enter 'y' to delete):\n\n $all_deletes\n"
 		read choice
-		echo
 		
 		if [ "$choice" = 'y' ]; then
 				
   			for snapshot in $all_deletes; do
 		
-				#delete="$snapshot_dir/$snapshot"
 				delete="$snapshot"
 
 				if [ ! "$snapshot" = "$default" ] && [ ! "$snapshot" = "$current" ]; then
      				echo -e "rm -rf $delete"
-     				#rm -rf $delete
+     				rm -rf $delete
 				fi
 
   			done
@@ -2691,7 +2689,7 @@ snapper_delete_all () {
 	ls $snapshot_dir*
 	
 	echo	
-	sleep 2
+	sleep 4
 
 }
 
