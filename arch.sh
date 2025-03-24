@@ -108,7 +108,7 @@ efi_path=/efi
 encrypt='true'					# bcachefs only
 encryptLuks='false'
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
-fsPercent='100'				# What percentage of space should the root drive take?
+fsPercent='50'				# What percentage of space should the root drive take?
 fstype='btrfs'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 simpleInstall='false'		# true = no net,cached packages,tweaks...
 
@@ -2642,6 +2642,7 @@ snapper_delete_all () {
 	default=$(btrfs su get-default / | awk '{ print $9 }' | sed 's#@/.snapshots/##; s#/snapshot##')
 	current=$(mount | grep ' / ' | sed 's#.*.subvol=/@/.snapshots/##; s/)//; s#/snapshot##')
 	#echo "Default: $default"
+	all_deletes=''
 
 	if [ "$snapshots" ]; then
 
@@ -2651,13 +2652,25 @@ snapper_delete_all () {
 
 			if [ ! $snapshot = $default ] && [ ! $snapshot = $current ]; then
       		echo -e "rm -rf $delete"
-      		rm -rf $delete
+      		#rm -rf $delete
+				all_deletes="$all_deletes $delete"
 			fi
 
    	done
 	
 	else
 		echo -e "\nNo snapshots to delete."
+	fi
+
+	echo -e "\nWould you like to delete these as well? (enter 'y' to delete): $all_deletes"
+
+	read choice
+
+	if [ "$choice" = 'y' ]; then
+		echo -e "\nDeleting..."
+		rm -rf "$all_deletes"
+	else
+		echo -e "\nNot deleting."
 	fi
 
 	echo -e "\nDirectory $snapshot_dir:\n"
