@@ -108,12 +108,12 @@ efi_path=/efi
 encrypt='true'					# bcachefs only
 encryptLuks='false'
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
-fsPercent='100'					# What percentage of space should the root drive take?
-fstype='btrfs'				# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fsPercent='100'				# What percentage of space should the root drive take?
+fstype='btrfs'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 simpleInstall='false'		# true = no net,cached packages,tweaks...
 
-subvols=(var/log var/tmp)			# TODO: used for btrfs and bcachefs
-subvolPrefix='/@'				# eg., '/' or '/@' Used for btrfs and bcachefs only
+subvols=(var/log var/tmp)	# used for btrfs and bcachefs
+subvolPrefix='/@'				# eg., '/' or '/@' btrfs and bcachefs only
 snapshot_dir='/.snapshots'
 first_snapshot_name='1'
 
@@ -124,9 +124,9 @@ efi_mountopts="noatime"
 
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
 backup_type='snapper'		# eg., '','rsync','snapper'
-initramfs='mkinitcpio'			# mkinitcpio, dracut, booster
-extra_modules='lz4'				# adds to /etc/mkinitcpio modules
-extra_hooks='resume'					# adds to /etc/mkinitcpio hooks
+initramfs='mkinitcpio'		# mkinitcpio, dracut, booster
+extra_modules='lz4'			# adds to /etc/mkinitcpio modules
+extra_hooks='resume'			# adds to /etc/mkinitcpio hooks
 
 
 kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
@@ -161,7 +161,7 @@ timezone=Canada/Eastern
 
 offline=0
 reinstall=0
-copy_on_host='1'	# Copy packages to host? Set to '0' when installing from an arch iso in ram
+copy_on_host='1' # Copy packages to host? Set to '0' when installing from an arch iso in ram
 
 wlan="wlan0"
 wifi_ssid=""
@@ -521,7 +521,7 @@ create_partitions () {
 	# Won't work without a small delay
 	sync_disk
 	echo "Sleeping one second..."
-	sleep 1
+	sleep .1
 
 	mkfs.fat -F 32 -n EFI $disk$espPart 
 	mkswap -L SWAP $disk$swapPart
@@ -554,9 +554,9 @@ create_partitions () {
 							mkfs.ext4 -F -q -t ext4 -L ROOT $disk$rootPart
 							
 							echo "Running tune2fs to create fast commit journal area..." 
-							tune2fs -O fast_commit $disk$rootPart 						
-						fi
+							tune2fs -O fast_commit $disk$rootPart
 
+						fi
 
 						;;
 		xfs)			pacman -S --needed --noconfirm xfsprogs 
@@ -596,7 +596,7 @@ create_partitions () {
 
 	sync_disk
 	echo -e "\nPausing for 1 second...\n"
-	sleep 1
+	sleep .1
 	
 	cd /
 
@@ -1793,18 +1793,18 @@ snapper_setup () {
 		pacstrap_install snapper
 
 		arch-chroot $mnt /bin/bash << EOF
-umount /.snapshots
-rm -r /.snapshots
+umount $snapshot_dir
+rm -r $snapshot_dir
 sync
 sleep 1
 
 snapper --no-dbus -c root create-config /
 sleep 1
-btrfs subvolume delete /.snapshots
+btrfs subvolume delete $snapshot_dir
 sleep 1
-mkdir /.snapshots
+mkdir $snapshot_dir
 mount -a
-chmod 750 /.snapshots
+chmod 750 $snapshot_dir
 
 btrfs su list /
 
@@ -2053,8 +2053,12 @@ do_chroot () {
 	cp /etc/resolv.conf $mnt/etc/resolv.conf
 
 	echo -e "\e[0;42m\n \nEntering chroot. Type 'exit' to leave.\n\e[0;29m\n"
+		
+	error_bypass=1
 
 	chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
+
+	error_bypass=0
 
 	echo -e "\e[0;42m\n \nExiting chroot.\n\e[0;29m\n"
 
@@ -2081,7 +2085,7 @@ clone () {
 
 	echo -e "\n$1 $3 -> $4. Please be patient...\n"
 	
-	rsync_excludes=" --exclude=/run/timeshift/ --exclude=/etc/timeshift/timeshift.json --exclude=/etc/fstab --exclude=/etc/default/grub --exclude=/root.squashfs --exclude=/lost+found/ --exclude=/.snapshots/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=/snapshots/"
+	rsync_excludes=" --exclude=/run/timeshift/ --exclude=/etc/timeshift/timeshift.json --exclude=/etc/fstab --exclude=/etc/default/grub --exclude=/root.squashfs --exclude=/lost+found/ --exclude=$snapshot_dir/ --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=/snapshots/"
 
 
 	rsync --dry-run -v $2 $rsync_excludes $3 $4 | less
@@ -2410,7 +2414,8 @@ snapper-rollback () {
 
 	snapper list --columns number,date,cleanup,description,read-only
 
-	echo -e "\nWhich snapshot would you like to roll back to? ('q' to quit)\n"
+	echo -e "\nWhich snapshot would you like to roll back to?\n
+(Press <ENTER> to rollback current subvolume or 'q' to quit)\n"
 
 	read choice
 	
@@ -2573,7 +2578,7 @@ snapper_delete_by_date () {
 
 	mins=$(( hours * 60 ))
 
-	snapshots="$(find /.snapshots/ -maxdepth 1 -type d -mmin +$mins | sed 's#/.snapshots/##')"
+	snapshots="$(find $snapshot_dir/ -maxdepth 1 -type d -mmin +$mins | sed 's#/.snapshots/##')"
 	for snapshot in $snapshots; do
 		echo "Deleting snapshot #$snapshot..."
 		#snapper -c root delete --sync $snapshot
@@ -2604,7 +2609,7 @@ snapper_delete_all () {
 	fi
 
 
-	snapshots=$(btrfs su list / | grep /.snapshots/ | awk '{ print $9 }' | sed 's/@//')
+	snapshots=$(btrfs su list / | grep $snapshot_dir/ | awk '{ print $9 }' | sed 's/@//')
 	default=$(btrfs su get-default / | awk '{ print $9 }' | sed 's/@//')
 	current=$(mount | grep ' / ' | sed 's#.*.subvol=/@##; s/)//')
 
@@ -2883,7 +2888,6 @@ copy_pkgs () {
 	# Copy only packages from host system that are installed on chroot system
 	for package in ${packages}; do
 
-		#if [ "$(ls /var/cache/pacman/pkg/ | grep $package-*[0-9].*.pkg.tar.zst)" ]; then
 		if [ "$(ls /var/cache/pacman/pkg/ | grep $package*)" ]; then
 
 			echo -n "Copying $package... "
@@ -2894,12 +2898,8 @@ copy_pkgs () {
 
 	done
 
-	#echo -e "\n/var/cache/pacman/pkg/* contains:"
-	
 	echo -e "\nTotal packages: $(ls $mnt/var/cache/pacman/pkg/*.zst | wc -l)\n"
 
-	#echo -e "\nTotal packages: $(ls $mnt/var/cache/pacman/pkg/*.zst | wc -l)\n"
-	#echo -e "Total files: $(ls $mnt/var/cache/pacman/pkg/* | wc -l)\n"
 
 	#echo -e "\nUpdating package database. Please be patient...\n"
 
@@ -2963,7 +2963,7 @@ auto_install_root () {
 	#choose_initramfs $initramfs
 	#choose_initramfs dracut 
 	choose_initramfs mkinitcpio
-	choose_initramfs booster
+	#choose_initramfs booster
 
 
 	general_setup
@@ -3004,9 +3004,6 @@ auto_install_user () {
 
 	window_manager=none
 
-	#install_aur
-	#setup_acpid
-	
 	copy_pkgs
 	
 	[ "$aur_apps_user" ] && install_aur_packages "$aur_apps_user"
