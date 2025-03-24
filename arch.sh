@@ -2600,6 +2600,10 @@ snapper_delete_by_date () {
 
 snapper_delete_all () {
 
+
+	cd $snapshot_dir
+	list=*
+
 	snapshots=$(snapper list | grep -v '┼\|  0 \|[0-9][-+\*] \| # ' | awk '{print $1}')
 
 	if [ "$snapshots" ]; then
@@ -2645,11 +2649,10 @@ snapper_delete_all () {
 
 	echo
 
-  	for snapshot in $(ls $snapshot_dir); do
-		
-		delete="$snapshot_dir/$snapshot"
+  	for snapshot in ${list[@]}; do
 
 		if [ ! "$snapshot" = "$default" ] && [ ! "$snapshot" = "$current" ]; then
+			delete="$snapshot_dir/$snapshot"
      		echo -e "Found $delete"
 			all_deletes="$all_deletes $delete"
 		fi
@@ -2662,18 +2665,19 @@ snapper_delete_all () {
 		read choice
 		
 		if [ "$choice" = 'y' ]; then
-				
-  			for snapshot in $all_deletes; do
-		
-				delete="$snapshot"
+			
+			echo
+
+		  	for snapshot in ${list[@]}; do
 
 				if [ ! "$snapshot" = "$default" ] && [ ! "$snapshot" = "$current" ]; then
-     				echo -e "rm -rf $delete"
-     				rm -rf $delete
+					delete="$snapshot_dir/$snapshot"
+     				echo -e "rm -rf $delete..."
+					rm -rf "$delete"
 				fi
 
   			done
-		
+  			
 		else
 			echo -e "Not deleting."
 		fi
