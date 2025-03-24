@@ -2387,18 +2387,18 @@ snapper_status () {
 
 	snapper list --columns number,date,cleanup,description,read-only
 
-	echo -e "\nEnter first snapshot to compare ('q' to quit)\n"
+	echo -e "\nEnter first snapshot to compare from ('q' to quit)\n"
 
 	read choice1
 	[ "$choice1" = 'q' ] && return
 
-echo -e "\nEnter second snapshot to compare (Press <ENTER> for current. 'q' to quit)\n"
+echo -e "\nEnter second snapshot to compare to (Press <ENTER> for current. 'q' to quit)\n"
 
 	read choice2
 	[ "$choice2" = 'q' ] && return
-	[ "$chocie2" = '' ] && choice2=0
+	[ "$choice2" = '' ] && choice2=0
 
-	snapper status $choice1..$choice2 | less
+	snapper status $choice2..$choice1 | less
 
 }
 
@@ -2407,13 +2407,22 @@ snapper_undochange () {
 
 	snapper list --columns number,date,cleanup,description,read-only
 
-	echo -e "\nEnter first snapshot to revert to ('q' to quit)\n"
+	echo -e "\nEnter snapshot to revert from.\n
+Press <ENTER> for current or 'q' to quit.\n"
 
-	read choice
-	[ "$choice" = 'q' ] && return
+	read from 
+	[ "$from" = 'q' ] && return
+	[ "$from" = '' ] && from=0
 
-	snapper undochange $choice..0
-	pacman -Syyu --noconfirm
+	echo -e "\nEnter snapshot to revert to.\n
+Press <ENTER> for current or 'q' to quit.\n"
+
+	read to
+	[ "$to" = 'q' ] && return
+	[ "$to" = '' ] && to=0
+
+	snapper undochange $to..$from
+	#pacman -Syyu --noconfirm
 
 }
 
