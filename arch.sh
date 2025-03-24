@@ -3540,24 +3540,25 @@ install_group () {
 
 snapshots_menu () {
 	
-	config_choices=("1. Quit to main menu
+	config_choices=("
+1. Quit to main menu
 2. Snapper snapshot (ro)
 3. Snapper snapshot (rw)
-4. Snapper set default
-5. Snapper rollback
-6. Snapper status
-7. Snapper delete
-8. Snapper delete by date
-9. Snapper delete recovery
-10. Snapper delete all
-11. Rsync snapshot
-12. Take btrfs/bcachefs snapshot
-13. Restore btrfs/bcachefs snapshot
-14. Delete btrfs/bcachefs snapshot
-15. Btrfs delete subvolume
-16. Bork system
-17. btrfs rollback
-18. Snapper undo")
+4. Snapper status
+5. Snapper undo
+6. Snapper set default
+7. Snapper rollback
+8. Snapper delete
+9. Snapper delete by date
+10. Snapper delete recovery
+11. Snapper delete all
+12. Rsync snapshot
+13. Take btrfs/bcachefs snapshot
+14. Restore btrfs/bcachefs snapshot
+15. Delete btrfs/bcachefs snapshot
+16. Btrfs delete subvolume
+17. Bork system
+18. btrfs rollback")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3580,21 +3581,21 @@ snapshots_menu () {
 			quit|1)					echo "Quitting!"; break ;;
 			snapper|2)				create_snapshot ro ;;
 			snapper|3)				create_snapshot rw ;;
-			default|4)				set-default ;;
-			roll|5)					snapper-rollback ;;
-			status|6)				snapper_status ;;
-			snapper-del|7)			snapper_delete ;;
-			snapper-date|8) 		snapper_delete_by_date ;;
-			delete-rec|9) 			snapper_delete_recovery ;;
-			delete-all|10)			snapper_delete_all ;;
-			rsync|11)				rsync_snapshot ;;
-			snapshot|12)			take_snapshot ;;
-			restore|13)				restore_snapshot ;;
-			delete|14)				delete_snapshot ;;
-			btrfs-del|15)			btrfs_delete ;;
-			bork|16)					bork_system ;;
-			btrfs-rollback|17)	btrfs-rollback ;;
-			undo|18)					snapper_undochange ;;
+			status|4)				snapper_status ;;
+			undo|5)					snapper_undochange ;;
+			default|6)				set-default ;;
+			roll|7)					snapper-rollback ;;
+			snapper-del|8)			snapper_delete ;;
+			snapper-date|9) 		snapper_delete_by_date ;;
+			delete-rec|10) 			snapper_delete_recovery ;;
+			delete-all|11)			snapper_delete_all ;;
+			rsync|12)				rsync_snapshot ;;
+			snapshot|13)			take_snapshot ;;
+			restore|14)				restore_snapshot ;;
+			delete|15)				delete_snapshot ;;
+			btrfs-del|16)			btrfs_delete ;;
+			bork|18)					bork_system ;;
+			btrfs-rollback|18)	btrfs-rollback ;;
 	      '')						;;
       	*)							echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
