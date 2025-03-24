@@ -2683,7 +2683,6 @@ snapper_delete_all () {
 	fi
 
 
-
 	echo -e "\nDirectory $snapshot_dir:\n"
 
 	ls $snapshot_dir*
