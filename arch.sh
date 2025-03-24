@@ -2352,14 +2352,22 @@ readOnlyBootEfi () {
 
    if [ $2 = 'true' ]; then
 
-		sed -i 's#/efi.*vfat.*rw,#/efi            vfat            ro,#' $mnt/etc/fstab
-		sed -i 's#/boot/grub.*btrfs.*rw#/boot/grub      btrfs           ro#' $mnt/etc/fstab
+		#sed -i 's#/efi.*vfat.*rw,#/efi            vfat            ro,#' $mnt/etc/fstab
+		#sed -i 's#/boot/grub.*btrfs.*rw#/boot/grub      btrfs           ro#' $mnt/etc/fstab
+		
+		sed -i -E '/^#/b
+			s#([[:space:]]/boot/grub[[:space:]].*[[:space:],])rw([[:space:],])#\1ro\2#
+			s#([[:space:]]/efi[[:space:]].*[[:space:],])rw([[:space:],])#\1ro\2#' /etc/fstab
    
 	else
 	
-		sed -i 's#/efi.*vfat.*ro,#/efi            vfat            rw,#' $mnt/etc/fstab
-		sed -i 's#/boot/grub.*btrfs.*ro#/boot/grub      btrfs           rw#' $mnt/etc/fstab
-   
+		#sed -i 's#/efi.*vfat.*ro,#/efi            vfat            rw,#' $mnt/etc/fstab
+		#sed -i 's#/boot/grub.*btrfs.*ro#/boot/grub      btrfs           rw#' $mnt/etc/fstab
+   	
+		sed -i -E '/^#/b
+			s#([[:space:]]/boot/grub[[:space:]].*[[:space:],])ro([[:space:],])#\1rw\2#
+			s#([[:space:]]/efi[[:space:]].*[[:space:],])ro([[:space:],])#\1rw\2#' /etc/fstab
+  
 	fi
 
    [ "$(mount | grep '/efi ')" ] && umount /efi
@@ -2453,7 +2461,7 @@ btrfs-rollback () {
 	# You must not be in the directory you're about to move or it's a busy error
 	cd /
 
-	mv $snapshot_dir/$default/snapshot/ $snapshot_dir/$default-rollback/
+	mv $snapshot_dir/$default/ $snapshot_dir/$default-rollback/
 
 	btrfs su snapshot $snapshot_dir/$target/snapshot/ $snapshot_dir/$default/snapshot/
 
