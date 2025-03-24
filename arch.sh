@@ -2387,12 +2387,15 @@ snapper_status_undochange () {
 
 	snapper list --columns number,date,cleanup,description,read-only
 
-	echo -e "\nEnter first snapshot to compare from ('q' to quit)\n"
+	echo -e "\nEnter first snapshot to compare from.\n
+Press <ENTER> for current or 'q' to quit.\n"
 
 	read from 
 	[ "$from" = 'q' ] && return
+	[ "$from" = '' ] && from=0
 
-echo -e "\nEnter second snapshot to compare to (Press <ENTER> for current. 'q' to quit)\n"
+echo -e "\nEnter second snapshot to compare to.\n
+Press <ENTER> for current or 'q' to quit.\n"
 
 	read to
 	[ "$to" = 'q' ] && return
@@ -2401,11 +2404,16 @@ echo -e "\nEnter second snapshot to compare to (Press <ENTER> for current. 'q' t
 	snapper status $from..$to | less
 
 	echo -e "\nEnter 'y' to proceed with change or any other key to exit.\n"
+
 	read -sN1 choice
 
 	if [ "$choice" = 'y' ]; then
+
+		echo -e "\nRunning: snapper undochange $to..$from\n"
+
 		snapper undochange $to..$from
 		#pacman -Syyu --noconfirm
+
 	fi
 
 }
@@ -3537,7 +3545,7 @@ snapshots_menu () {
 1. Quit to main menu
 2. Snapper snapshot (ro)
 3. Snapper snapshot (rw)
-4. Snapper status/undo
+4. Snapper status/undochange
 6. Snapper set default
 7. Snapper rollback
 8. Snapper delete
