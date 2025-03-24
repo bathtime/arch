@@ -2214,7 +2214,7 @@ restore_snapshot () {
      	esac
   	done
 
-	[ $host = quit ] && return
+	[ $host = 'quit' ] && return
 	
 	echo -e "\nChoose a target:\n"
 
@@ -2224,7 +2224,7 @@ restore_snapshot () {
      	esac
   	done
 	
-	[ $target = quit ] && return
+	[ $target = 'quit' ] && return
 
 
 	echo -e "\nRestoring $host to $target...\n"
@@ -2424,18 +2424,18 @@ snapper-rollback () {
 	snapper list --columns number,date,cleanup,description,read-only
 
 	echo -e "\nWhich snapshot would you like to roll back to?\n
-(Press <ENTER> to rollback current subvolume or 'q' to quit)\n"
+(Press <ENTER> to rollback to latest subvolume or 'q' to quit)\n"
 
 	read choice
 	
-	[ $choice = q ] && return
-
+	[ "$choice" = 'q' ] && return
+	
 	snapper rollback $choice
 
 	echo -e "\nPress 'r' to reboot or any other key to continue.\n"
 	read -n 1 -s choice
 
-	if [ $choice = r ]; then
+	if [ $choice = 'r' ]; then
 		sync_disk
 		reboot
 	fi
@@ -2451,13 +2451,13 @@ btrfs-rollback () {
 
 	read default
 
-	[ $default = q ] && return
+	[ $default = 'q' ] && return
 
 	echo -e "\nTarget for roll back? ('q' to quit)\n"
 
 	read target
 	
-	[ $target = q ] && return
+	[ $target = 'q' ] && return
 
 	# You must not be in the directory you're about to move or it's a busy error
 	cd /
@@ -2472,7 +2472,7 @@ btrfs-rollback () {
    echo -e "\nPress 'r' to reboot or any other key to continue.\n"
    read -n 1 -s choice
 
-   if [ $choice = r ]; then
+   if [ $choice = 'r' ]; then
       sync_disk
       reboot
    fi
@@ -2488,7 +2488,7 @@ set-default () {
 
 	read choice
 	
-	[ $choice = q ] && return
+	[ $choice = 'q' ] && return
 
 	snapshot="$snapshot_dir/$choice/snapshot"
 
@@ -2500,7 +2500,7 @@ set-default () {
 	   echo -e "\nPress 'r' to reboot or any other key to continue.\n"
    	read -n 1 -s choice
 
-   	if [ $choice = r ]; then
+   	if [ $choice = 'r' ]; then
       	sync_disk
       	reboot
    	fi
@@ -2519,18 +2519,18 @@ create_snapshot () {
 	echo -e "\nWhat would you like to name this snapshot?\n"
 	read snapshot
 	
-	touch "/root/snapper-$snapshot"
+	#touch "/root/snapper-$snapshot"
 	
-	if [ $1 = rw ]; then
+	if [ $1 = 'rw' ]; then
 		snapper -c root create --read-write --description "$snapshot"
 	else
 		snapper -c root create --description "$snapshot"
 	fi
 
-	sync_disk
+	#sync_disk
 	
-	sleep .1
-	rm -rf "/root/snapper-$snapshot"
+	#sleep .1
+	#rm -rf "/root/snapper-$snapshot"
 
 }
 
