@@ -2383,46 +2383,30 @@ readOnlyBootEfi () {
 }
 
 
-snapper_status () {
+snapper_status_undochange () {
 
 	snapper list --columns number,date,cleanup,description,read-only
 
 	echo -e "\nEnter first snapshot to compare from ('q' to quit)\n"
 
-	read choice1
-	[ "$choice1" = 'q' ] && return
-
-echo -e "\nEnter second snapshot to compare to (Press <ENTER> for current. 'q' to quit)\n"
-
-	read choice2
-	[ "$choice2" = 'q' ] && return
-	[ "$choice2" = '' ] && choice2=0
-
-	snapper status $choice2..$choice1 | less
-
-}
-
-
-snapper_undochange () {
-
-	snapper list --columns number,date,cleanup,description,read-only
-
-	echo -e "\nEnter snapshot to revert from.\n
-Press <ENTER> for current or 'q' to quit.\n"
-
 	read from 
 	[ "$from" = 'q' ] && return
-	[ "$from" = '' ] && from=0
 
-	echo -e "\nEnter snapshot to revert to.\n
-Press <ENTER> for current or 'q' to quit.\n"
+echo -e "\nEnter second snapshot to compare to (Press <ENTER> for current. 'q' to quit)\n"
 
 	read to
 	[ "$to" = 'q' ] && return
 	[ "$to" = '' ] && to=0
 
-	snapper undochange $to..$from
-	#pacman -Syyu --noconfirm
+	snapper status $from..$to | less
+
+	echo -e "\nEnter 'y' to proceed with change or any other key to exit.\n"
+	read -sN1 choice
+
+	if [ "$choice" = 'y' ]; then
+		snapper undochange $to..$from
+		#pacman -Syyu --noconfirm
+	fi
 
 }
 
@@ -3553,8 +3537,7 @@ snapshots_menu () {
 1. Quit to main menu
 2. Snapper snapshot (ro)
 3. Snapper snapshot (rw)
-4. Snapper status
-5. Snapper undo
+4. Snapper status/undo
 6. Snapper set default
 7. Snapper rollback
 8. Snapper delete
@@ -3590,8 +3573,7 @@ snapshots_menu () {
 			quit|1)					echo "Quitting!"; break ;;
 			snapper|2)				create_snapshot ro ;;
 			snapper|3)				create_snapshot rw ;;
-			status|4)				snapper_status ;;
-			undo|5)					snapper_undochange ;;
+			status|4)				snapper_status_undochange ;;
 			default|6)				set-default ;;
 			roll|7)					snapper-rollback ;;
 			snapper-del|8)			snapper_delete ;;
