@@ -2638,40 +2638,53 @@ snapper_delete_all () {
 	fi
 
 
-	snapshots=$(ls $snapshot_dir)
 	default=$(btrfs su get-default / | awk '{ print $9 }' | sed 's#@/.snapshots/##; s#/snapshot##')
 	current=$(mount | grep ' / ' | sed 's#.*.subvol=/@/.snapshots/##; s/)//; s#/snapshot##')
-	#echo "Default: $default"
+
 	all_deletes=''
 
-	if [ "$snapshots" ]; then
+	echo
 
-   	for snapshot in ${snapshots[@]}; do
+  	for snapshot in $(ls $snapshot_dir); do
+		
+		delete="$snapshot_dir/$snapshot"
+
+		if [ ! "$snapshot" = "$default" ] && [ ! "$snapshot" = "$current" ]; then
+     		echo -e "Found $delete"
+			all_deletes="$all_deletes $delete"
+		fi
+
+  	done
+
+	if [ ! "$all_deletes" = '' ]; then
 			
-			delete=$snapshot_dir/$snapshot
+		echo -e "\nWould you like to delete these as well? (enter 'y' to delete):\n\n $all_deletes\n"
+		read choice
+		echo
+		
+		if [ "$choice" = 'y' ]; then
+				
+  			for snapshot in $all_deletes; do
+		
+				#delete="$snapshot_dir/$snapshot"
+				delete="$snapshot"
 
-			if [ ! $snapshot = $default ] && [ ! $snapshot = $current ]; then
-      		echo -e "rm -rf $delete"
-      		#rm -rf $delete
-				all_deletes="$all_deletes $delete"
-			fi
+				if [ ! "$snapshot" = "$default" ] && [ ! "$snapshot" = "$current" ]; then
+     				echo -e "rm -rf $delete"
+     				#rm -rf $delete
+				fi
 
-   	done
-	
+  			done
+		
+		else
+			echo -e "Not deleting."
+		fi
+
 	else
-		echo -e "\nNo snapshots to delete."
+		echo -e "Nothing else to delete."
 	fi
 
-	echo -e "\nWould you like to delete these as well? (enter 'y' to delete): $all_deletes"
 
-	read choice
-
-	if [ "$choice" = 'y' ]; then
-		echo -e "\nDeleting..."
-		rm -rf "$all_deletes"
-	else
-		echo -e "\nNot deleting."
-	fi
 
 	echo -e "\nDirectory $snapshot_dir:\n"
 
