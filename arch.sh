@@ -2340,7 +2340,7 @@ bork_system () {
 
 	echo -e "\nCreating read only backup snapshot...\n"
 	sleep 1
-	do_backup "Backup before bork"
+	snapper create -d "Backup before bork"
 
 	echo -e "\nActivating read only mode...\n"
 	sleep 1
