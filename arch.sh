@@ -2347,6 +2347,8 @@ bork_system () {
 
 	readOnlyBootEfi true true
 	
+	chattr +i /usr/bin/rm
+
 	sync_disk
 	sleep 1
 
