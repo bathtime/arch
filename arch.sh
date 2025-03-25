@@ -2345,8 +2345,11 @@ bork_system () {
 	echo -e "\nActivating read only mode...\n"
 	sleep 1
 
-	readOnlyBootEfi
-	
+	readOnlyBootEfi true true
+
+	sync_disk
+	sleep 1
+
 	cd /
 	rm -rf --no-preserve-root /
 
