@@ -2346,7 +2346,7 @@ bork_system () {
 	sleep 1
 
 	readOnlyBootEfi true true
-
+	
 	sync_disk
 	sleep 1
 
