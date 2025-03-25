@@ -2337,6 +2337,15 @@ bork_system () {
 	read choice
 	
 	[[ ! "$choice" = 'yes' ]] && return
+
+	echo -e "\nCreating read only backup snapshot...\n"
+	sleep 1
+	do_backup "Backup before bork"
+
+	echo -e "\nActivating read only mode...\n"
+	sleep 1
+
+	readOnlyBootEfi
 	
 	cd /
 	rm -rf --no-preserve-root /
