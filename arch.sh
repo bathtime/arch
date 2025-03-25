@@ -2421,7 +2421,7 @@ Press <ENTER> for current or 'q' to quit.\n"
 
 	if [ "$choice" = 'y' ]; then
 
-		echo -e "\nRunning: snapper undochange $to..$from\n"
+				echo -e "\nRunning: snapper undochange $to..$from\n"
 
 		snapper undochange $to..$from
 		#pacman -Syyu --noconfirm
@@ -2449,6 +2449,7 @@ snapper-rollback () {
 
 	if [ $choice = 'r' ]; then
 		sync_disk
+		grub-mkconfig -o /boot/grub/grub.cfg
 		reboot
 	fi
 
@@ -2514,7 +2515,8 @@ set-default () {
 
    	if [ $choice = 'r' ]; then
       	sync_disk
-      	reboot
+			grub-mkconfig -o /boot/grub/grub.cfg
+			reboot
    	fi
 	
 	else
