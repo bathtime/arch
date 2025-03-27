@@ -356,10 +356,11 @@ choose_disk () {
 
 		[ "$(mount | grep ' on / type overlay' | awk '{print $5}')" ] && echo -e "\n       *** Running in overlay mode! ***\n"
 
-		[ "$(snapper list --columns number,read-only | grep '[0-9][-\*].*yes')" ] && echo -e "\n       *** Running in read only mode! ***\n"
 
 
 		if [ $fstype = 'btrfs' ]; then
+		
+			[ "$(snapper list --columns number,read-only | grep '[0-9][-\*].*yes')" ] && echo -e "\n       *** Running in read only mode! ***\n"
 			
 			rootSub="$(mount | grep ' / ' | sed 's#.*.subvol=/##; s/)//')"
 			defaultSub="$(btrfs su get-default / | awk '{ print $9 }')"
@@ -2219,7 +2220,7 @@ restore_snapshot () {
 
 	echo -e "\nChoose a host:\n"
 
-	select host in $mnt$snapshot_dir/* @ 'subvolid=256' / /mnt quit; do
+	select host in $mnt$snapshot_dir/* $mnt$snapshot_dir/*/snapshot @ 'subvolid=256' / /mnt quit; do
       case host in
         	*) 		echo -e "\nYou chose: $host\n"; break ;;
      	esac
@@ -2229,7 +2230,7 @@ restore_snapshot () {
 	
 	echo -e "\nChoose a target:\n"
 
-	select target in $mnt$snapshot_dir/* @ 'subvolid=256' / /mnt quit; do
+	select target in $mnt$snapshot_dir/* $mnt$snapshot_dir/*/snapshot @ 'subvolid=256' / /mnt quit; do
       case target in
         	*)			echo -e "\nYou chose: $target\n"; break ;;
      	esac
