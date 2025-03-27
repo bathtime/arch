@@ -3619,7 +3619,7 @@ snapshots_menu () {
 		if [ $fstype = 'btrfs' ]; then
 			snapper list --columns number,description,date,read-only
 			echo
-			btrfs su list $mnt
+			btrfs su list $mnt/
 		fi
 
 		echo
