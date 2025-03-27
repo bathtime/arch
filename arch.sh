@@ -82,7 +82,7 @@ mnt=/mnt
 mnt2=/mnt2
 mnt3=/mnt3
 
-bootOwnPartition='false'		# make separate boot partition (true/false)?
+bootOwnPartition='true'		# make separate boot partition (true/false)?
 
 # Do we want a separate boot partition (which will be ext2)
 if [[ $bootOwnPartition = 'true' ]]; then
@@ -105,15 +105,15 @@ rootPart=$rootPartNum
 checkPartitions='true'		# Check that partitions are configured optimally?
 
 efi_path=/efi
-encrypt='true'					# bcachefs only
+encrypt='false'					# bcachefs only
 encryptLuks='false'
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'				# What percentage of space should the root drive take?
-fstype='btrfs'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='bcachefs'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 simpleInstall='false'		# true = no net,cached packages,tweaks...
 
-subvols=(var/log var/tmp)	# used for btrfs and bcachefs
-subvolPrefix='/@'				# eg., '/' or '/@' btrfs and bcachefs only
+subvols=(.snapshots var/log var/tmp)	# used for btrfs and bcachefs
+subvolPrefix='/'				# eg., '/' or '/@' btrfs and bcachefs only
 snapshot_dir='/.snapshots'
 first_snapshot_name='1'
 
@@ -123,7 +123,7 @@ boot_mountopts="noatime"
 efi_mountopts="noatime"
 
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
-backup_type='snapper'		# eg., '','rsync','snapper'
+backup_type='rsync'		# eg., '','rsync','snapper'
 initramfs='mkinitcpio'		# mkinitcpio, dracut, booster
 extra_modules='lz4'			# adds to /etc/mkinitcpio modules
 extra_hooks='resume'			# adds to /etc/mkinitcpio hooks
@@ -511,7 +511,7 @@ create_partitions () {
 
 	if [ $fstype = bcachefs ]; then
 		# Parted doesn't recognise bcachefs filesystem
-		parted -s $disk mkpart ROOT ext4 $startSwap $fsPercent%
+		parted -s $disk mkpart ROOT2 ext4 $startSwap $fsPercent%
 	else
 		parted -s $disk mkpart ROOT $fstype $startSwap $fsPercent%
 	fi
@@ -573,11 +573,11 @@ create_partitions () {
 
 							#You MUST add 'bcachefs' module and hook (after 'filesystem')
 							
-							bcachefs format -f -L ROOT --encrypted $disk$rootPart
+							bcachefs format -f -L ROOT2 --encrypted $disk$rootPart
 							bcachefs unlock -k session $disk$rootPart
 
 						else
-							bcachefs format -f -L ROOT $disk$rootPart
+							bcachefs format -f -L ROOT2 $disk$rootPart
 						fi
 						;;
 	esac
@@ -645,6 +645,8 @@ create_partitions () {
 	fi
 
 	if [ "$fstype" = "bcachefs" ]; then
+
+		# https://www.reddit.com/r/bcachefs/comments/1b3uv59/booting_into_a_subvolume_and_rollback/
 	
 		# Subvolumes not currently being added to /etc/fstab
 		for subvol in "${subvols[@]}"; do
@@ -708,12 +710,6 @@ mount_disk () {
 		if [ "$fstype" = "btrfs" ]; then
 
 			mount $disk$rootPart -o "$btrfs_mountopts" $mnt
-
-			#mkdir -p $mnt$snapshot_dir
-			#mkdir -p $mnt/boot/grub
-			#mkdir -p $mnt/var/log
-			#mkdir -p $mnt/var/tmp
-			#mkdir -p $mnt/efi
 
 			mount -m $disk$rootPart -o "$btrfs_mountopts",subvol=@$snapshot_dir $mnt$snapshot_dir 
 			mount -m $disk$rootPart -o "$btrfs_mountopts",subvol=@/boot/grub $mnt/boot/grub	
@@ -922,7 +918,7 @@ setup_fstab () {
 		for subvol in "${subvols[@]}"; do
 			
 			echo "$subvolPrefix$subvol                $subvolPrefix$subvol          none            rw,$bcachefs_mountopts,rw,noshard_inode_numbers,bind  0 0" >> $mnt/etc/fstab 
-				
+		
 		done
 
 	fi
@@ -2242,9 +2238,10 @@ restore_snapshot () {
 			
 		host=$mnt2
 			
-		btrfs su list /
+		[ $fstype = 'btrfs' ] && btrfs su list /
 			
-		mount -t btrfs --mkdir -o subvol=@ $disk$rootPart $host
+		#mount -t btrfs --mkdir -o subvol=@ $disk$rootPart $host
+		mount -t $fstype --mkdir -o subvol=@ $disk$rootPart $host
 	
 	elif [[ $host = 'subvolid=256' ]]; then
 			
@@ -2266,9 +2263,9 @@ restore_snapshot () {
 			
 		target=$mnt3
 			
-		btrfs su list /
+		[ $fstype = 'btrfs' ] && btrfs su list /
 			
-		mount -t btrfs --mkdir -o subvol=@ $disk$rootPart $target
+		mount -t $fstype --mkdir -o subvol=@ $disk$rootPart $target
 	
 	elif [[ $target = 'subvolid=256' ]]; then
 			
@@ -2346,11 +2343,11 @@ bork_system () {
 	sleep 1
 
 	readOnlyBootEfi true true
-	
-	chattr +i /usr/bin/rm
 
 	sync_disk
-	sleep 1
+
+	echo -e "\nPausing 3 seconds...\n"
+	sleep 2
 
 	cd /
 	rm -rf --no-preserve-root /
@@ -3033,7 +3030,7 @@ auto_install_root () {
 	copy_script
 	[ "$aur_apps_root" ] && install_aur_packages "$aur_apps_root"
 
-	install_backup snapper
+	install_backup $backup_type
 	do_backup "Root-installed"
 	
 	sync_disk
@@ -3606,7 +3603,7 @@ snapshots_menu () {
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
 
-		if [ $fstype = btrfs ]; then
+		if [ $fstype = 'btrfs' ]; then
 			echo
 			snapper list --columns number,description,date,read-only
 			echo
