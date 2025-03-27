@@ -131,6 +131,8 @@ extra_hooks='resume'			# adds to /etc/mkinitcpio hooks
 
 kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
 
+enable_fallback='false'
+
 user=user
 password='123456'
 autologin=true
@@ -987,6 +989,19 @@ COMPRESSION="lz4"
 
 MODULES_DECOMPRESS="no"
 EOF
+
+							if [ $enable_fallback = 'false' ]; then
+
+								sed -i "s/ 'fallback'//" $mnt/etc/mkinitcpio.d/linux.preset
+								rm -rf $mnt/boot/initramfs-linux-fallback.img
+								
+								if [[ $mnt = '' ]]; then
+                        	grub-mkconfig -o $mnt/boot/grub/grub.cfg
+                     	else
+                        	arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
+                     	fi
+
+							fi
 
 							cat $mnt/etc/mkinitcpio.conf
 
