@@ -82,7 +82,7 @@ mnt=/mnt
 mnt2=/mnt2
 mnt3=/mnt3
 
-bootOwnPartition='false'		# make separate boot partition (true/false)?
+bootOwnPartition='true'		# make separate boot partition (true/false)?
 
 # Do we want a separate boot partition (which will be ext2)
 if [[ $bootOwnPartition = 'true' ]]; then
@@ -109,7 +109,7 @@ encrypt='false'					# bcachefs only
 encryptLuks='false'
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'				# What percentage of space should the root drive take?
-fstype='btrfs'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='bcachefs'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 simpleInstall='false'		# true = no net,cached packages,tweaks...
 
 subvols=(.snapshots var/log var/tmp)	# used for btrfs and bcachefs
@@ -123,7 +123,7 @@ boot_mountopts="noatime"
 efi_mountopts="noatime"
 
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
-backup_type='snapper'		# eg., '','rsync','snapper'
+backup_type='rsync'		# eg., '','rsync','snapper'
 initramfs='mkinitcpio'		# mkinitcpio, dracut, booster
 extra_modules='lz4'			# adds to /etc/mkinitcpio modules
 extra_hooks='resume'			# adds to /etc/mkinitcpio hooks
