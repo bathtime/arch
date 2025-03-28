@@ -18,10 +18,10 @@ run_latehook() {
 
 	echo -e "\nWWWhat would you like to do?\n
 <s> boot into a snapshot
-<r> enter @root system
+<r> enter root '/' system
 <m> move snapshot
 <b> enter bash
-<> or timeout, enter / system\n"
+<> or timeout, enter /@root system\n"
 
 	read -s -t 5 -n 1 key
 
@@ -55,8 +55,7 @@ run_latehook() {
 	elif [ $key = 'r' ]; then
 	
 		umount $new_root
-		mount --bind "$mnt$snapshot_dir" "$new_root$snapshot_dir"
-		mount --bind "$mnt$root2" $new_root
+		mount --bind $mnt $new_root
 		mount --bind "$mnt$snapshot_dir" "$new_root$snapshot_dir"
 
 	elif [ $key = 'm' ]; then
@@ -71,13 +70,20 @@ run_latehook() {
 	
 		if [ -d "$snapshot" ]; then
 			
-			rm -rf $snapshot_dir$root2
-			mv $mnt$root2 $mnt$snapshot_dir$root2
-			mv "$snapshot" $mnt$root2
-
+			mv $mnt$root2 $mnt$snapshot_dir/$root2_old
+			
 			umount $new_root
+
+			bcachefs subvolume delete $mnt$root2
+			
+			bcachefs subvolume snapshot "$mnt$snapshot_dir/$snapshot" $mnt$root2
+
+			#mv "$snapshot" $mnt$root2
+
 			mount --bind $mnt$root2 $new_root
 			mount --bind "$mnt$snapshot_dir" "$new_root$snapshot_dir"
+
+			sleep 10
 
 		else
 			
@@ -103,7 +109,8 @@ run_latehook() {
 		sleep 1
 
 		umount $new_root
-		mount --bind $mnt $new_root
+		
+		mount --bind "$mnt$root2" $new_root
 		mount --bind "$mnt$snapshot_dir" "$new_root$snapshot_dir"
 
 
