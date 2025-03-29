@@ -2362,8 +2362,13 @@ bork_system () {
 
 	echo -e "\nCreating read only backup snapshot...\n"
 	sleep 1
-	snapper create -d "Backup before bork"
-
+	
+	if [ $fstype = 'btrfs' ]; then
+		snapper create -d "Backup before bork"
+	elif [ $fstype = 'bcachefs' ]; then
+		bcachefs subvolume snapshot -r / "$snapshot_dir/Backup before bork"
+	fi
+	
 	echo -e "\nActivating read only mode...\n"
 	sleep 1
 
