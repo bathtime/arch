@@ -121,9 +121,9 @@ btrfs_mountopts="noatime,discard=async"
 bcachefs_mountopts="noatime"
 boot_mountopts="noatime"
 efi_mountopts="noatime"
-bcachefsLABEL=ROOT3
+bcachefsLABEL=ROOT-usb
 
-backup_install='true'		# say 'true' to do snapshots/rysncs during install
+backup_install='false'		# say 'true' to do snapshots/rysncs during install
 backup_type='rsync'		# eg., '','rsync','snapper'
 initramfs='mkinitcpio'		# mkinitcpio, dracut, booster
 extra_modules='lz4'			# adds to /etc/mkinitcpio modules
@@ -2039,6 +2039,8 @@ install_hooks () {
 
 		3|bcachefs-rollback)	add_hooks MODULES bcachefs 
                      	add_hooks HOOKS bcachefs-rollback
+	
+					sed -i "s/^LABEL=.*/LABEL=$bcachefsLABEL/" $mnt/lib/initcpio/hooks/bcachefs-rollback
 
 							;;
 
@@ -3118,6 +3120,7 @@ auto_install_kde () {
 	[ "$aur_apps_kde" ] && install_aur_packages "$aur_apps_kde"
 
 	do_backup "kde-installed"
+
 	sync_disk
 
 }
@@ -3812,7 +3815,8 @@ packages_menu () {
 
 	curl -sL https://raw.githubusercontent.com/bathtime/bcachefs-rollback/refs/heads/main/install/bcachefs-rollback > $mnt/lib/initcpio/install/bcachefs-rollback
 	chmod +x $mnt/lib/initcpio/install/bcachefs-rollback
-   
+  
+
 									mkinitcpio -P
 									;;
    		'')					last_modified ;;
