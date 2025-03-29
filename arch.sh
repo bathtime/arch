@@ -173,8 +173,8 @@ backup_file=/setup.tar.gz
 
 # Files that will be saved to $backup_file as part of a backup
 CONFIG_FILES="
-/usr/lib/initcpio/hooks/bcachefsroot
-/usr/lib/initcpio/install/bcachefsroot
+/usr/lib/initcpio/hooks/bcachefs-rollback
+/usr/lib/initcpio/install/bcachefs-rollback
 
 /usr/lib/initcpio/install/liveroot
 /usr/lib/initcpio/hooks/liveroot
@@ -378,7 +378,7 @@ choose_disk () {
 
 		[[ $rootfs = 'btrfs' ]] || [[ $rootfs = 'bcachefs' ]] && extra='snapshots '
 
-		choices='quit '$extra'backup edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / script logout reboot suspend hibernate poweroff stats benchmark'
+		choices='quit '$extra'backup edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / script logout reboot suspend hibernate poweroff stats benchmark rollback-script'
 		
 
 		echo -e "\nWhich drive?\n"
@@ -392,6 +392,7 @@ choose_disk () {
 				\#)			bash ;;
 				backup)		backup_config ;;
 				script)		download_script ;;
+				rollback-script)	vim /lib/initcpio/hooks/bcachefs-rollback ;;
 				logout)		killall systemd ;;
 				reboot)		reboot ;;
 				suspend)		echo mem > /sys/power/state ;;
@@ -2033,8 +2034,8 @@ install_hooks () {
 							echo -e "\nAdd 'overlayroot' to kernal parameters to run\n"
 							;;
 
-		3|bcachefsroot)	add_hooks MODULES bcachefs 
-                     	add_hooks HOOKS bcachefsroot
+		3|bcachefs-rollback)	add_hooks MODULES bcachefs 
+                     	add_hooks HOOKS bcachefs-rollback
 
 							;;
 
@@ -3109,7 +3110,7 @@ auto_install_kde () {
 
 	#install_hooks liveroot
 	install_hooks overlayroot
-	install_hooks bcachefsroot
+	install_hooks bcachefs-rollback
 	
 	[ "$aur_apps_kde" ] && install_aur_packages "$aur_apps_kde"
 
@@ -3782,7 +3783,8 @@ packages_menu () {
 3. Update mirror list
 4. Copy packages
 5. Download script
-6. Copy script")
+6. Copy script
+7. Download bcache rollback script")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3800,6 +3802,8 @@ packages_menu () {
 			pkgs|4)				copy_pkgs ;;
 			script|5)			download_script ;;
 			copy_script|6)		copy_script ;;
+			rollback|7)			
+									;;
    		'')					last_modified ;;
 			*)						echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
