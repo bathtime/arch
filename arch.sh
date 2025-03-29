@@ -121,6 +121,7 @@ btrfs_mountopts="noatime,discard=async"
 bcachefs_mountopts="noatime"
 boot_mountopts="noatime"
 efi_mountopts="noatime"
+bcachefsLABEL=ROOT3
 
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
 backup_type='rsync'		# eg., '','rsync','snapper'
@@ -517,7 +518,7 @@ create_partitions () {
 
 	if [ $fstype = bcachefs ]; then
 		# Parted doesn't recognise bcachefs filesystem
-		parted -s $disk mkpart ROOT2 ext4 $startSwap $fsPercent%
+		parted -s $disk mkpart $bcachefsLABEL ext4 $startSwap $fsPercent%
 	else
 		parted -s $disk mkpart ROOT $fstype $startSwap $fsPercent%
 	fi
@@ -579,11 +580,11 @@ create_partitions () {
 
 							#You MUST add 'bcachefs' module and hook (after 'filesystem')
 							
-							bcachefs format -f -L ROOT2 --encrypted $disk$rootPart
+							bcachefs format -f -L $bcachefsLABEL --encrypted $disk$rootPart
 							bcachefs unlock -k session $disk$rootPart
 
 						else
-							bcachefs format -f -L ROOT2 $disk$rootPart
+							bcachefs format -f -L  $bcachefsLABEL $disk$rootPart
 						fi
 						;;
 	esac
