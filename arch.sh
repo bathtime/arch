@@ -2357,6 +2357,22 @@ delete_snapshot () {
 }
 
 
+delete_all_snapshots () {
+
+	mount_disk
+
+	if [ $fstype = 'bcachefs' ]; then
+
+		
+		bcachefs subvolume delete $snapshot_dir/*
+
+
+	fi
+
+
+
+}
+
 
 bork_system () {
 
@@ -3635,9 +3651,10 @@ snapshots_menu () {
 12. Take btrfs/bcachefs snapshot
 13. Restore btrfs/bcachefs snapshot
 14. Delete btrfs/bcachefs snapshot
-15. Btrfs delete subvolume
-16. Bork system
-17. btrfs rollback")
+15. Delete all bcachefs snapshots
+16. Btrfs delete subvolume
+17. Bork system
+18. btrfs rollback")
 	
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3645,6 +3662,12 @@ snapshots_menu () {
 			snapper list --columns number,description,date,read-only
 			echo
 			btrfs su list $mnt/
+		elif [ $fstype = 'bcachefs' ]; then
+
+			echo -e "\nSnapshot directory:\n"
+			ls /.snapshots/
+			echo
+
 		fi
 
 		echo
@@ -3669,9 +3692,10 @@ snapshots_menu () {
 			snapshot|12)			take_snapshot ;;
 			restore|13)				restore_snapshot ;;
 			delete|14)				delete_snapshot ;;
-			btrfs-del|15)			btrfs_delete ;;
-			bork|16)					bork_system ;;
-			btrfs-rollback|17)	btrfs-rollback ;;
+			del-all|15)				delete_all_snapshots ;;
+			btrfs-del|16)			btrfs_delete ;;
+			bork|17)					bork_system ;;
+			btrfs-rollback|18)	btrfs-rollback ;;
 	      '')						;;
       	*)							echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
