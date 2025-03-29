@@ -1410,7 +1410,7 @@ export QT_AUTO_SCREEN_SCALE_FACTOR=1
 export KWIN_IM_SHOW_ALWAYS=1
 export PATH="$HOME/.local/bin:$PATH"
 
-manager=''
+manager=""
 default_manager=kde-dbus
 
 if [[ -z $DISPLAY && $(tty) == /dev/tty1 && $XDG_SESSION_TYPE == tty ]]; then
@@ -2205,11 +2205,12 @@ take_snapshot () {
 	if [[ $fstype = bcachefs ]]; then
 		
 		if [ $mnt = '' ]; then
-			echo -e "\nMake sure to exclude bcachefs subvolumes!\n" 
-			read -p "Pausing at line 2210"
+			echo -e "\nCreating snapshot: $mnt$snapshot_dir/$snapshotname...\n" 
 			bcachefs subvolume snapshot -r $mnt/ "$mnt$snapshot_dir/$snapshotname"
 		else
-			arch-chroot $mnt bcachefs subvolume snapshot -r / "$snapshot_dir/$snapshotname"
+			# Saving as r/o is a bad idea. Too many errors at startup
+			echo -e "\nCreating snapshot: $snapshot_dir/$snapshotname...\n" 
+			arch-chroot $mnt bcachefs subvolume snapshot / "$snapshot_dir/$snapshotname"
 		fi
 
 	fi
@@ -3122,9 +3123,9 @@ auto_install_user () {
 
 	[ $autologin = true ] && auto_login $user
 
-	window_manager=none
-
 	copy_pkgs
+	
+	window_manager=none
 	
 	[ "$aur_apps_user" ] && install_aur_packages "$aur_apps_user"
 
