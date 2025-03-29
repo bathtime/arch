@@ -927,6 +927,8 @@ setup_fstab () {
 		
 		done
 
+		sed -i 's#^/.snapshots.*#\#&#' $mnt/etc/fstab
+
 	fi
 
 	if [ "$fstype" = 'btrfs' ]; then
