@@ -2392,6 +2392,7 @@ readOnlyBootEfi () {
 		#sed -i 's#/boot/grub.*btrfs.*rw#/boot/grub      btrfs           ro#' $mnt/etc/fstab
 		
 		sed -i -E '/^#/b
+			s#([[:space:]]/boot[[:space:]].*[[:space:],])rw([[:space:],])#\1ro\2#
 			s#([[:space:]]/boot/grub[[:space:]].*[[:space:],])rw([[:space:],])#\1ro\2#
 			s#([[:space:]]/efi[[:space:]].*[[:space:],])rw([[:space:],])#\1ro\2#' /etc/fstab
    
@@ -2401,6 +2402,7 @@ readOnlyBootEfi () {
 		#sed -i 's#/boot/grub.*btrfs.*ro#/boot/grub      btrfs           rw#' $mnt/etc/fstab
    	
 		sed -i -E '/^#/b
+			s#([[:space:]]/boot[[:space:]].*[[:space:],])ro([[:space:],])#\1rw\2#
 			s#([[:space:]]/boot/grub[[:space:]].*[[:space:],])ro([[:space:],])#\1rw\2#
 			s#([[:space:]]/efi[[:space:]].*[[:space:],])ro([[:space:],])#\1rw\2#' /etc/fstab
   
@@ -2408,6 +2410,7 @@ readOnlyBootEfi () {
 
    [ "$(mount | grep '/efi ')" ] && umount /efi
    [ "$(mount | grep '/boot/grub ')" ] && umount /boot/grub
+   [ "$(mount | grep '/boot ')" ] && umount /boot
 
    systemctl daemon-reload
    mount -a
