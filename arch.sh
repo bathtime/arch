@@ -2362,14 +2362,15 @@ delete_all_snapshots () {
 	mount_disk
 
 	if [ $fstype = 'bcachefs' ]; then
-
 		
-		bcachefs subvolume delete $snapshot_dir/*
-
-
+		if [ "$(ls $snapshot_dir)" ]; then
+			bcachefs subvolume delete $snapshot_dir/*
+			echo -e "\nSnapshots deleted.\n"
+		else
+			echo -e "\nNo snapshots to delete.\n"
+		fi
+	
 	fi
-
-
 
 }
 
