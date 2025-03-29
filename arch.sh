@@ -3071,7 +3071,7 @@ window_manager () {
 
 	#sed -i "s/^manager=.*$/manager=$1/" $mnt/home/$user/.bash_profile
 	
-	sed -i "s/^manager=.*/manager=\'$1\'/; s/^default_manager=.*/default_manager=\'$2\'/ " $mnt/home/$user/.bash_profile
+	sed -i "s/^manager=.*/manager=\'$1\'/; s/^default_manager=.*$/default_manager=\'$2\'/ " $mnt/home/$user/.bash_profile
 
 }
 
@@ -3105,7 +3105,7 @@ auto_install_root () {
 	[ "$aur_apps_root" ] && install_aur_packages "$aur_apps_root"
 
 	install_backup $backup_type
-	do_backup "Root-installed"
+	do_backup "root-installed"
 	
 	sync_disk
 
@@ -3131,7 +3131,7 @@ auto_install_user () {
 	
 	[ "$aur_apps_user" ] && install_aur_packages "$aur_apps_user"
 
-	do_backup "User-installed"
+	do_backup "user-installed"
 	sync_disk
 
 }
@@ -3145,10 +3145,12 @@ auto_install_kde () {
 
 	copy_pkgs
 
-	window_manager '' 'kde'
 
 	install_config
 	install_mksh
+	
+	#window_manager '' 'kde-dbus'
+	window_manager '' 'kde'
 
 	#install_hooks liveroot
 	install_hooks overlayroot
