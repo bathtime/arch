@@ -3784,7 +3784,7 @@ packages_menu () {
 4. Copy packages
 5. Download script
 6. Copy script
-7. Download bcache rollback script")
+7. DL bcache script")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3802,7 +3802,15 @@ packages_menu () {
 			pkgs|4)				copy_pkgs ;;
 			script|5)			download_script ;;
 			copy_script|6)		copy_script ;;
-			rollback|7)			
+			rollback|7)			echo -e "\nDowloading script from Github..."
+            
+   curl -sL https://raw.githubusercontent.com/bathtime/bcachefs-rollback/refs/heads/main/hooks/bcachefs-rollback > $mnt/lib/initcpio/hooks/bcachefs-rollback           
+   chmod +x $mnt/lib/initcpio/hooks/bcachefs-rollback
+
+	curl -sL https://raw.githubusercontent.com/bathtime/bcachefs-rollback/refs/heads/main/install/bcachefs-rollback > $mnt/lib/initcpio/install/bcachefs-rollback
+	chmod +x $mnt/lib/initcpio/install/bcachefs-rollback
+   
+									mkinitcpio -P
 									;;
    		'')					last_modified ;;
 			*)						echo -e "\nInvalid option ($config_choice)!\n" ;;
