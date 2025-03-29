@@ -2364,8 +2364,18 @@ delete_all_snapshots () {
 	if [ $fstype = 'bcachefs' ]; then
 		
 		if [ "$(ls $snapshot_dir)" ]; then
+
 			bcachefs subvolume delete $snapshot_dir/*
 			echo -e "\nSnapshots deleted.\n"
+
+			if [ "$(ls $snapshot_dir)" ]; then
+
+				echo -e "\nSnapshit directory not completely empty.\nPress 'y' to erase with rm -rf.\n"
+				read -sn 1 choice
+				[ $choice = 'y' ] && rm -rf $snapshot_dir/*
+
+			fi
+
 		else
 			echo -e "\nNo snapshots to delete.\n"
 		fi
