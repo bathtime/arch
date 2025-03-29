@@ -3069,7 +3069,9 @@ check_online () {
 
 window_manager () {
 
-	sed -i "s/manager=.*$/manager=$1/" $mnt/home/$user/.bash_profile
+	#sed -i "s/^manager=.*$/manager=$1/" $mnt/home/$user/.bash_profile
+	
+	sed -i "s/^manager=.*/manager=\'$1\'/; s/^default_manager=.*/default_manager=\'$2\'/ " $mnt/home/$user/.bash_profile
 
 }
 
@@ -3125,7 +3127,7 @@ auto_install_user () {
 
 	copy_pkgs
 	
-	window_manager=none
+	window_manager '' 'none'
 	
 	[ "$aur_apps_user" ] && install_aur_packages "$aur_apps_user"
 
@@ -3143,7 +3145,7 @@ auto_install_kde () {
 
 	copy_pkgs
 
-	window_manager=kde
+	window_manager '' 'kde'
 
 	install_config
 	install_mksh
