@@ -2198,7 +2198,7 @@ take_snapshot () {
 
 	if [[ $fstype = bcachefs ]]; then
 		echo -e "\nMake sure to exclude bcachefs subvolumes!\n" 
-		bcachefs subvolume snapshot $mnt/ "$mnt$snapshot_dir/$snapshotname"
+		bcachefs subvolume snapshot -r $mnt/ "$mnt$snapshot_dir/$snapshotname"
 	fi
 	if [[ $fstype = btrfs ]]; then
 		btrfs subvolume snapshot $mnt/ "$mnt$snapshot_dir/$snapshotname"
