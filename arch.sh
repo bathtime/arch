@@ -123,7 +123,7 @@ boot_mountopts="noatime"
 efi_mountopts="noatime"
 bcachefsLABEL=ROOT-usb
 
-backup_install='false'		# say 'true' to do snapshots/rysncs during install
+backup_install='true'		# say 'true' to do snapshots/rysncs during install
 backup_type='rsync'		# eg., '','rsync','snapper'
 initramfs='mkinitcpio'		# mkinitcpio, dracut, booster
 extra_modules='lz4'			# adds to /etc/mkinitcpio modules
@@ -2203,8 +2203,15 @@ take_snapshot () {
 	#[[ ! $snapshotname = '' ]] && snapshotname="$filename - $snapshotname"
 
 	if [[ $fstype = bcachefs ]]; then
-		echo -e "\nMake sure to exclude bcachefs subvolumes!\n" 
-		bcachefs subvolume snapshot -r $mnt/ "$mnt$snapshot_dir/$snapshotname"
+		
+		if [ $mnt = '' ]; then
+			echo -e "\nMake sure to exclude bcachefs subvolumes!\n" 
+			read -p "Pausing at line 2210"
+			bcachefs subvolume snapshot -r $mnt/ "$mnt$snapshot_dir/$snapshotname"
+		else
+			arch-chroot $mnt bcachefs subvolume snapshot -r / "$snapshot_dir/$snapshotname"
+		fi
+
 	fi
 	if [[ $fstype = btrfs ]]; then
 		btrfs subvolume snapshot $mnt/ "$mnt$snapshot_dir/$snapshotname"
