@@ -2204,13 +2204,13 @@ take_snapshot () {
 
 	if [[ $fstype = bcachefs ]]; then
 		
-		if [ $mnt = '' ]; then
+		if [ "$mnt" = '' ]; then
 			echo -e "\nCreating snapshot: $mnt$snapshot_dir/$snapshotname...\n" 
 			bcachefs subvolume snapshot -r $mnt/ "$mnt$snapshot_dir/$snapshotname"
 		else
 			# Saving as r/o is a bad idea. Too many errors at startup
 			echo -e "\nCreating snapshot: $snapshot_dir/$snapshotname...\n" 
-			arch-chroot $mnt bcachefs subvolume snapshot / "$snapshot_dir/$snapshotname"
+			arch-chroot $mnt bcachefs subvolume -r snapshot / "$snapshot_dir/$snapshotname"
 		fi
 
 	fi
