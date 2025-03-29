@@ -173,6 +173,8 @@ backup_file=/setup.tar.gz
 
 # Files that will be saved to $backup_file as part of a backup
 CONFIG_FILES="
+/usr/lib/initcpio/hooks/bcachefsroot
+/usr/lib/initcpio/install/bcachefsroot
 
 /usr/lib/initcpio/install/liveroot
 /usr/lib/initcpio/hooks/liveroot
@@ -2007,6 +2009,7 @@ install_hooks () {
 							# Don't remount /efi either
 							#systemctl --root=$mnt mask efi.mount
 							;;
+
 		2|overlayroot)	
 							#https://aur.archlinux.org/packages/overlayroot
 							#https://github.com/hilderingt/archlinux-overlayroot
@@ -2029,6 +2032,12 @@ install_hooks () {
 
 							echo -e "\nAdd 'overlayroot' to kernal parameters to run\n"
 							;;
+
+		3|bcachefsroot)	add_hooks MODULES bcachefs 
+                     	add_hooks HOOKS bcachefsroot
+
+							;;
+
 		*) echo -e "\nInvalid choice: $choice\n"; return ;;
 	esac
 
@@ -3092,6 +3101,7 @@ auto_install_kde () {
 
 	#install_hooks liveroot
 	install_hooks overlayroot
+	install_hooks bcachefsroot
 	
 	[ "$aur_apps_kde" ] && install_aur_packages "$aur_apps_kde"
 
