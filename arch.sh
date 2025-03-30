@@ -121,7 +121,7 @@ btrfs_mountopts="noatime,discard=async"
 bcachefs_mountopts="noatime"
 boot_mountopts="noatime"
 efi_mountopts="noatime"
-bcachefsLABEL=ROOT-usb
+bcachefsLABEL=ROOT
 
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
 backup_type='rsync'		# eg., '','rsync','snapper'
@@ -2210,7 +2210,7 @@ take_snapshot () {
 		else
 			# Saving as r/o is a bad idea. Too many errors at startup
 			echo -e "\nCreating snapshot: $snapshot_dir/$snapshotname...\n" 
-			arch-chroot $mnt bcachefs subvolume -r snapshot / "$snapshot_dir/$snapshotname"
+			arch-chroot $mnt bcachefs subvolume snapshot -r / "$snapshot_dir/$snapshotname"
 		fi
 
 	fi
