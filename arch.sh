@@ -82,7 +82,7 @@ mnt=/mnt
 mnt2=/mnt2
 mnt3=/mnt3
 
-bootOwnPartition='false'		# make separate boot partition (true/false)?
+bootOwnPartition='true'		# make separate boot partition (true/false)?
 
 # Do we want a separate boot partition (which will be ext2)
 if [[ $bootOwnPartition = 'true' ]]; then
