@@ -19,7 +19,7 @@ if [ "$fstype" = 'bcachefs' ]; then
 	read snapshot
 	bcachefs subvolume snapshot -r / "$snapshot_dir/$snapshot" && echo -e "\nSaved!"
 
-	ls $snapshot_dir --full-time | awk '{ print $6" @ "$7" - "$9}'
+	ls -l --full-time | cut -d" " -f6- | cut -d' ' -f3 --complement | sed 's/\.[0-9]*/ -/'
 
 	sleep 1
 
