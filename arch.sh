@@ -82,7 +82,7 @@ mnt=/mnt
 mnt2=/mnt2
 mnt3=/mnt3
 
-bootOwnPartition='true'		# make separate boot partition (true/false)?
+bootOwnPartition='false'		# make separate boot partition (true/false)?
 
 # Do we want a separate boot partition (which will be ext2)
 if [[ $bootOwnPartition = 'true' ]]; then
@@ -109,7 +109,7 @@ encrypt='false'					# bcachefs only
 encryptLuks='false'
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'				# What percentage of space should the root drive take?
-fstype='bcachefs'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='btrfs'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 simpleInstall='false'		# true = no net,cached packages,tweaks...
 
 subvols=(.snapshots var/log var/tmp)	# used for btrfs and bcachefs
@@ -122,10 +122,10 @@ btrfs_mountopts="noatime,discard=async"
 bcachefs_mountopts="noatime"
 boot_mountopts="noatime"
 efi_mountopts="noatime"
-bcachefsLABEL=ROOT-laptop
+bcachefsLABEL=ROOT-usb
 
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
-backup_type='rsync'		# eg., '','rsync','snapper'
+backup_type='snapper'		# eg., '','rsync','snapper'
 initramfs='mkinitcpio'		# mkinitcpio, dracut, booster
 extra_modules='lz4'			# adds to /etc/mkinitcpio modules
 extra_hooks='resume'			# adds to /etc/mkinitcpio hooks
@@ -362,7 +362,8 @@ choose_disk () {
 
 
 
-		if [ $fstype = 'btrfs' ]; then
+		#if [ $fstype = 'btrfs' ]; then
+		if [ $rootfs = 'btrfs' ]; then
 		
 			[ "$(snapper list --columns number,read-only | grep '[0-9][-\*].*yes')" ] && echo -e "\n       *** Running in read only mode! ***\n"
 			
@@ -733,8 +734,6 @@ mount_disk () {
 
 			mount -t $fstype --mkdir -o "$bcachefs_mountopts" $disk$rootPart $mnt
 		
-			#[ ! "$rootMount" = '/' ] && mount --bind /mnt/@root /mnt/
-
 			if [ "$(ls $mnt | grep '@root')" ]; then
 				
 				echo -e "\nThere is a drive on $rootMount. Type 'y' to mount it.\n"
@@ -3167,7 +3166,8 @@ auto_install_kde () {
 
 	#install_hooks liveroot
 	install_hooks overlayroot
-	install_hooks bcachefs-rollback
+
+	[ "$fstype" = 'bcachefs' ] && install_hooks bcachefs-rollback
 	
 	[ "$aur_apps_kde" ] && install_aur_packages "$aur_apps_kde"
 
