@@ -109,7 +109,7 @@ encrypt='false'					# bcachefs only
 encryptLuks='false'
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'				# What percentage of space should the root drive take?
-fstype='btrfs'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='bcachefs'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 simpleInstall='false'		# true = no net,cached packages,tweaks...
 
 subvols=(.snapshots var/log var/tmp)	# used for btrfs and bcachefs
@@ -2366,8 +2366,18 @@ delete_snapshot () {
 		if [ "$fstype" = "btrfs" ]; then
 			btrfs subvolume delete "$mnt$snapshot_dir/$snapshot"
 		elif [ "$fstype" = "bcachefs" ]; then
-			echo rm -rf --no-preserve-root "$mnt$snapshot_dir/$snapshot"
-			rm -rf --no-preserve-root "$mnt$snapshot_dir/$snapshot"
+			
+			bcachefs subvolume delete "$mnt$snapshot_dir/$snapshot"
+			
+			if [[ $(ls $snapshot_dir | grep "^$snapshot$") ]]; then
+				
+				echo -e "File $mnt$snapshot_dir/$snapshot still exists.\n
+Press 'y' to run rm -rf.\n"
+				read -sn1 key
+
+				[ $key = 'y' ] && rm -rf --no-preserve-root "$mnt$snapshot_dir/$snapshot"
+			
+			fi
 		fi
 
 	else
