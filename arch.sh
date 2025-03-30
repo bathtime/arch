@@ -116,13 +116,13 @@ subvols=(.snapshots var/log var/tmp)	# used for btrfs and bcachefs
 subvolPrefix='/'				# eg., '/' or '/@' btrfs and bcachefs only
 snapshot_dir='/.snapshots'
 first_snapshot_name='1'
-rootMount='/'				# (ex., @root) Only used for bcachefs
+rootMount='/@root'				# (ex., @root) Only used for bcachefs
 
 btrfs_mountopts="noatime,discard=async"
 bcachefs_mountopts="noatime"
 boot_mountopts="noatime"
 efi_mountopts="noatime"
-bcachefsLABEL=ROOT-usb
+bcachefsLABEL=ROOT-laptop
 
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
 backup_type='rsync'		# eg., '','rsync','snapper'
@@ -732,8 +732,19 @@ mount_disk () {
 			fi
 
 			mount -t $fstype --mkdir -o "$bcachefs_mountopts" $disk$rootPart $mnt
-			[ ! $rootMount = '/' ] && mount --bind $mnt$rootMount $mnt/
+		
+			#[ ! "$rootMount" = '/' ] && mount --bind /mnt/@root /mnt/
 
+			if [ "$(ls $mnt | grep '@root')" ]; then
+				
+				echo -e "\nThere is a drive on $rootMount. Type 'y' to mount it.\n"
+				read -sn1 key
+
+				
+				[ "$key" = 'y' ] && mount --bind $mnt$rootMount $mnt
+
+			fi
+			
 			for subvol in "${subvols[@]}"; do
 			
 				echo mount --bind -o "$bcachefs_mountopts" $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
