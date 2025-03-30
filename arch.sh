@@ -116,7 +116,7 @@ subvols=(.snapshots var/log var/tmp)	# used for btrfs and bcachefs
 subvolPrefix='/'				# eg., '/' or '/@' btrfs and bcachefs only
 snapshot_dir='/.snapshots'
 first_snapshot_name='1'
-rootMount='/'
+rootMount='/'				# (ex., @root) Only used for bcachefs
 
 btrfs_mountopts="noatime,discard=async"
 bcachefs_mountopts="noatime"
@@ -394,7 +394,7 @@ choose_disk () {
 				\#)			bash ;;
 				backup)		backup_config ;;
 				script)		download_script ;;
-				rollback-script)	vim /lib/initcpio/hooks/bcachefs-rollback ;;
+				rollback-script)	vim /lib/initcpio/hooks/bcachefs-rollback; mkinitcpio -P ;;
 				logout)		killall systemd ;;
 				reboot)		reboot ;;
 				suspend)		echo mem > /sys/power/state ;;
