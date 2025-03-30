@@ -116,6 +116,7 @@ subvols=(.snapshots var/log var/tmp)	# used for btrfs and bcachefs
 subvolPrefix='/'				# eg., '/' or '/@' btrfs and bcachefs only
 snapshot_dir='/.snapshots'
 first_snapshot_name='1'
+rootMount='/'
 
 btrfs_mountopts="noatime,discard=async"
 bcachefs_mountopts="noatime"
@@ -293,12 +294,6 @@ unmount_disk () {
 		sleep .1
 	fi
 
-	if [[ $(mount | grep -E $disk$rootPart | grep -E "on $mnt/.snapshots") ]] ; then
-		echo "Unmounting $mnt/.snapshots..."
-		umount -n -R $mnt/.snapshots
-		sleep .1
-	fi
-
 	if [[ $(mount | grep -E $disk$rootPart | grep -E "on $mnt") ]]; then
 
 		# Might need to turn error checking off here
@@ -399,7 +394,7 @@ choose_disk () {
 				\#)			bash ;;
 				backup)		backup_config ;;
 				script)		download_script ;;
-				rollback-script)	vim /lib/initcpio/hooks/bcachefs-rollback; mkinitcpio -P ;;
+				rollback-script)	vim /lib/initcpio/hooks/bcachefs-rollback ;;
 				logout)		killall systemd ;;
 				reboot)		reboot ;;
 				suspend)		echo mem > /sys/power/state ;;
@@ -664,20 +659,14 @@ create_partitions () {
 		# Subvolumes not currently being added to /etc/fstab
 		for subvol in "${subvols[@]}"; do
 
-			#echo -e "Creating subvolume: $mnt$subvolPrefix$subvol..."
+			echo -e "Creating subvolume: $mnt$subvolPrefix$subvol..."
+			
 			# Cannot create the subvolume without dirname path (..)
-			#mkdir -p "$(dirname $mnt$subvolPrefix$subvol)"
-			#bcachefs subvolume create "$mnt$subvolPrefix$subvol"
+			mkdir -p "$(dirname $mnt$subvolPrefix$subvol)"
+
+			bcachefs subvolume create "$mnt$subvolPrefix$subvol"
 		
-			echo
-
 		done
-
-			bcachefs subvolume create "$mnt/@root"
-			mkdir -p $mnt/@root/var
-			bcachefs subvolume create "$mnt/@root/var/tmp"
-			bcachefs subvolume create "$mnt/@root/var/log"
-			bcachefs subvolume create "$mnt$snapshot_dir"
 
 	fi
 
@@ -743,25 +732,14 @@ mount_disk () {
 			fi
 
 			mount -t $fstype --mkdir -o "$bcachefs_mountopts" $disk$rootPart $mnt
-			
-			mkdir -p /mnt/@root
-		
-			mount --bind /mnt/@root /mnt/
-			mkdir -p $mnt$snapshot_dir
-			mount --bind -o "$bcachefs_mountopts" $mnt$snapshot_dir $mnt$snapshot_dir
-			mkdir -p /mnt/var/log
-			mkdir -p /mnt/var/tmp
-	
+			[ ! $rootMount = '/' ] && mount --bind $mnt$rootMount $mnt/
+
 			for subvol in "${subvols[@]}"; do
 			
 				echo mount --bind -o "$bcachefs_mountopts" $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
-			#	if [[ ! "$subvol" = ".snapshots" ]]; then
-			#		mount --bind -o "$bcachefs_mountopts" $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
-			#	fi
-			done
+				mount --bind -o "$bcachefs_mountopts" $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
 			
-			mount --bind -o "$bcachefs_mountopts" $mnt/var/log $mnt/var/log
-			mount --bind -o "$bcachefs_mountopts" $mnt/var/tmp $mnt/var/tmp
+			done
 
 		else
 	
@@ -922,8 +900,6 @@ setup_fstab () {
 
 	genfstab -U $mnt/ > $mnt/etc/fstab
 	grep $disk /proc/mounts > $mnt/etc/fstab.bak
-
-	read -p "Fstab step. check it now"
 
 	###  Tweak the resulting /etc/fstab generated  ###
 
