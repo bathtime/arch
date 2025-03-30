@@ -54,7 +54,7 @@ for snapshot in * ; do
 
 done
 
-echo -e "$tobeDeleted"
+#echo -e "$tobeDeleted"
 
 
 #for i in $(echo -e ${tobeDeleted[@]} | tail -n +$(( saveLast + 2 ))); do
@@ -63,7 +63,6 @@ for i in ${tobeDeleted[@]}; do
 	echo "Deleting snapshot #$i..."
 	#rm -rf "$snapshot_dir/$i"	
 done
-ls $snapshot_dir
 
 
 if [ $read_write = 'true' ]; then
@@ -99,6 +98,8 @@ if [ "$description" = "quick-shot" ]; then
 	
 	echo
 	snapper list --columns number,date,cleanup,description,read-only
+	
+#echo; ls $snapshot_dir
 
 	echo -e "\nPress any key to continue.\n"; read -s -n1 -t 30 
 
