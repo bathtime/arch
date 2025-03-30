@@ -121,7 +121,7 @@ btrfs_mountopts="noatime,discard=async"
 bcachefs_mountopts="noatime"
 boot_mountopts="noatime"
 efi_mountopts="noatime"
-bcachefsLABEL=ROOT
+bcachefsLABEL=ROOT-laptop
 
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
 backup_type='rsync'		# eg., '','rsync','snapper'
@@ -393,7 +393,7 @@ choose_disk () {
 				\#)			bash ;;
 				backup)		backup_config ;;
 				script)		download_script ;;
-				rollback-script)	vim /lib/initcpio/hooks/bcachefs-rollback ;;
+				rollback-script)	vim /lib/initcpio/hooks/bcachefs-rollback; mkinitcpio -o ;;
 				logout)		killall systemd ;;
 				reboot)		reboot ;;
 				suspend)		echo mem > /sys/power/state ;;
