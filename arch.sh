@@ -733,27 +733,26 @@ mount_disk () {
 			fi
 
 			mount -t $fstype --mkdir -o "$bcachefs_mountopts" $disk$rootPart $mnt
-			
-			# TODO Make a separate bcachefs partition for the .snapshot subvolume
 
 			if [ "$(ls $mnt | grep '@root')" ]; then
 				
 				echo -e "\nThere is a drive on $rootMount. Type 'y' to mount it.\n"
 				read -sn1 key
 
-				
-				#[ "$key" = 'y' ] && mount --bind $mnt$rootMount $mnt
 				[ "$key" = 'y' ] && mount --bind -o "$bcachefs_mountopts" $mnt$rootMount $mnt
 
 			fi
 			
 			for subvol in "${subvols[@]}"; do
 			
-				echo mount --bind -o "$bcachefs_mountopts" $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
-				mount --bind -o "$bcachefs_mountopts" $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
-			
-			done
+				#if [ ! "$subvol" = '.snapshots' ]; then
+					
+					echo mount --bind -o "$bcachefs_mountopts" $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
+					mount --bind --mkdir -o "$bcachefs_mountopts" $mnt$subvolPrefix$subvol $mnt$subvolPrefix$subvol
+				#fi
 
+			done
+			
 		else
 	
 			if [ "$encryptLuks" = 'true' ]; then
@@ -2096,11 +2095,11 @@ do_chroot () {
 
 	echo -e "\e[0;42m\n \nEntering chroot. Type 'exit' to leave.\n\e[0;29m\n"
 		
-	error_bypass=1
+	#error_bypass=1
 
 	chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
 
-	error_bypass=0
+	#error_bypass=0
 
 	echo -e "\e[0;42m\n \nExiting chroot.\n\e[0;29m\n"
 
