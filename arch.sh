@@ -119,13 +119,13 @@ first_snapshot_name='1'
 rootMount='/@root'				# (ex., @root) Only used for bcachefs
 
 btrfs_mountopts="noatime,discard=async"
-bcachefs_mountopts="noatime"
+bcachefs_mountopts="relatime"
 boot_mountopts="noatime"
 efi_mountopts="noatime"
 bcachefsLABEL=ROOT-usb
 
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
-backup_type='snapper'		# eg., '','rsync','snapper'
+backup_type='rsync'		# eg., '','rsync','snapper'
 initramfs='mkinitcpio'		# mkinitcpio, dracut, booster
 extra_modules='lz4'			# adds to /etc/mkinitcpio modules
 extra_hooks='resume'			# adds to /etc/mkinitcpio hooks
@@ -733,14 +733,17 @@ mount_disk () {
 			fi
 
 			mount -t $fstype --mkdir -o "$bcachefs_mountopts" $disk$rootPart $mnt
-		
+			
+			# TODO Make a separate bcachefs partition for the .snapshot subvolume
+
 			if [ "$(ls $mnt | grep '@root')" ]; then
 				
 				echo -e "\nThere is a drive on $rootMount. Type 'y' to mount it.\n"
 				read -sn1 key
 
 				
-				[ "$key" = 'y' ] && mount --bind $mnt$rootMount $mnt
+				#[ "$key" = 'y' ] && mount --bind $mnt$rootMount $mnt
+				[ "$key" = 'y' ] && mount --bind -o "$bcachefs_mountopts" $mnt$rootMount $mnt
 
 			fi
 			
