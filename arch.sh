@@ -122,7 +122,6 @@ btrfs_mountopts="noatime,discard=async"
 bcachefs_mountopts="noatime"
 boot_mountopts="noatime"
 efi_mountopts="noatime"
-#bcachefsLABEL=ROOT-usb
 
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
 backup_type='rsync'		# eg., '','rsync','snapper'
@@ -523,7 +522,6 @@ create_partitions () {
 
 	if [ $fstype = bcachefs ]; then
 		# Parted doesn't recognise bcachefs filesystem
-		#parted -s $disk mkpart $bcachefsLABEL ext4 $startSwap $fsPercent%
 		parted -s $disk mkpart ROOT ext4 $startSwap $fsPercent%
 	else
 		parted -s $disk mkpart ROOT $fstype $startSwap $fsPercent%
@@ -586,12 +584,10 @@ create_partitions () {
 
 							#You MUST add 'bcachefs' module and hook (after 'filesystem')
 							
-							#bcachefs format -f -L $bcachefsLABEL --encrypted $disk$rootPart
 							bcachefs format -f -L ROOT --encrypted $disk$rootPart
 							bcachefs unlock -k session $disk$rootPart
 
 						else
-							#bcachefs format -f -L  $bcachefsLABEL $disk$rootPart
 							bcachefs format -f -L ROOT $disk$rootPart
 						fi
 						;;
@@ -2057,11 +2053,9 @@ install_hooks () {
 							echo -e "\nAdd 'overlayroot' to kernal parameters to run\n"
 							;;
 
-		3|bcachefs-rollback)	add_hooks MODULES bcachefs 
-                     	add_hooks HOOKS bcachefs-rollback
+		3|bcachefs-rollback)		add_hooks MODULES bcachefs 
+                     			add_hooks HOOKS bcachefs-rollback
 	
-					#sed -i "s/^LABEL=.*/LABEL=$bcachefsLABEL/" $mnt/lib/initcpio/hooks/bcachefs-rollback
-
 							;;
 
 		*) echo -e "\nInvalid choice: $choice\n"; return ;;
