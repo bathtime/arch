@@ -105,7 +105,7 @@ rootPart=$rootPartNum
 checkPartitions='true'		# Check that partitions are configured optimally?
 
 efi_path=/efi
-encrypt='false'					# bcachefs only
+encrypt='true'					# bcachefs only
 encryptLuks='false'
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='50'				# What percentage of space should the root drive take?
@@ -119,10 +119,10 @@ first_snapshot_name='1'
 rootMount='/@root'				# (ex., @root) Only used for bcachefs
 
 btrfs_mountopts="noatime,discard=async"
-bcachefs_mountopts="relatime"
+bcachefs_mountopts="noatime"
 boot_mountopts="noatime"
 efi_mountopts="noatime"
-bcachefsLABEL=ROOT-usb
+#bcachefsLABEL=ROOT-usb
 
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
 backup_type='rsync'		# eg., '','rsync','snapper'
@@ -175,6 +175,9 @@ backup_file=/setup.tar.gz
 
 # Files that will be saved to $backup_file as part of a backup
 CONFIG_FILES="
+
+/usr/lib/initcpio/init
+
 /usr/lib/initcpio/hooks/bcachefs-rollback
 /usr/lib/initcpio/install/bcachefs-rollback
 
@@ -520,7 +523,8 @@ create_partitions () {
 
 	if [ $fstype = bcachefs ]; then
 		# Parted doesn't recognise bcachefs filesystem
-		parted -s $disk mkpart $bcachefsLABEL ext4 $startSwap $fsPercent%
+		#parted -s $disk mkpart $bcachefsLABEL ext4 $startSwap $fsPercent%
+		parted -s $disk mkpart ROOT ext4 $startSwap $fsPercent%
 	else
 		parted -s $disk mkpart ROOT $fstype $startSwap $fsPercent%
 	fi
@@ -582,11 +586,13 @@ create_partitions () {
 
 							#You MUST add 'bcachefs' module and hook (after 'filesystem')
 							
-							bcachefs format -f -L $bcachefsLABEL --encrypted $disk$rootPart
+							#bcachefs format -f -L $bcachefsLABEL --encrypted $disk$rootPart
+							bcachefs format -f -L ROOT --encrypted $disk$rootPart
 							bcachefs unlock -k session $disk$rootPart
 
 						else
-							bcachefs format -f -L  $bcachefsLABEL $disk$rootPart
+							#bcachefs format -f -L  $bcachefsLABEL $disk$rootPart
+							bcachefs format -f -L ROOT $disk$rootPart
 						fi
 						;;
 	esac
@@ -2054,7 +2060,7 @@ install_hooks () {
 		3|bcachefs-rollback)	add_hooks MODULES bcachefs 
                      	add_hooks HOOKS bcachefs-rollback
 	
-					sed -i "s/^LABEL=.*/LABEL=$bcachefsLABEL/" $mnt/lib/initcpio/hooks/bcachefs-rollback
+					#sed -i "s/^LABEL=.*/LABEL=$bcachefsLABEL/" $mnt/lib/initcpio/hooks/bcachefs-rollback
 
 							;;
 
@@ -3177,9 +3183,8 @@ auto_install_kde () {
 	window_manager '' 'kde'
 
 	#install_hooks liveroot
-	install_hooks overlayroot
 
-	[ "$fstype" = 'bcachefs' ] && install_hooks bcachefs-rollback
+	[ "$fstype" = 'bcachefs' ] && install_hooks bcachefs-rollback || install_hooks overlayroot
 	
 	[ "$aur_apps_kde" ] && install_aur_packages "$aur_apps_kde"
 
