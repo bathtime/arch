@@ -2053,7 +2053,10 @@ install_hooks () {
 							echo -e "\nAdd 'overlayroot' to kernal parameters to run\n"
 							;;
 
-		3|bcachefs-rollback)		add_hooks MODULES bcachefs 
+		3|bcachefs-rollback)		pacstrap_install rsync squashfs-tools
+
+										add_hooks MODULES bcachefs 
+										add_hooks MODULES squashfs 
                      			add_hooks HOOKS bcachefs-rollback
 	
 							;;
