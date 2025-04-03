@@ -105,10 +105,10 @@ rootPart=$rootPartNum
 checkPartitions='true'		# Check that partitions are configured optimally?
 
 efi_path=/efi
-encrypt='true'					# bcachefs only
+encrypt='false'				# bcachefs only
 encryptLuks='false'
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
-fsPercent='50'				# What percentage of space should the root drive take?
+fsPercent='100'				# What percentage of space should the root drive take?
 fstype='bcachefs'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 simpleInstall='false'		# true = no net,cached packages,tweaks...
 
@@ -2822,6 +2822,30 @@ extract_archive () {
 }
 
 
+squashRecover () {
+
+	echo -e "\nWhat would you like to call this snapshot?\n"
+	read snapshotname
+
+	rsync --dry-run --info=progress2 -axHAXSW --exclude=$snapshot_dir/ / "$snapshot_dir/$snapshotname"
+
+	echo -e "\nType 'y' to proceed with rsync or any other key to exit..."
+	read choice
+
+	if [[ $choice = 'y' ]]; then
+
+		echo -e "\nRunning rsync...\n"
+		echo "Running: rsync --info=progress2 -axHAXSW --exclude=$snapshot_dir/ / $snapshot_dir/$snapshotname"
+
+		rsync --info=progress2 -axHAXSW --exclude=$snapshot_dir/ / "$snapshot_dir/$snapshotname"
+	else
+
+		echo "Exiting."
+	
+	fi
+
+}
+
 
 create_archive () {
 
@@ -3123,12 +3147,11 @@ auto_install_root () {
 	setup_networkmanager
 	#setup_wpa
 	
-	if [[ ! $simpleInstall = true ]]; then
-		install_tweaks
-		copy_pkgs
-	fi
-
+	install_tweaks
+	
+	copy_pkgs
 	copy_script
+	
 	[ "$aur_apps_root" ] && install_aur_packages "$aur_apps_root"
 
 	install_backup $backup_type
@@ -3176,8 +3199,7 @@ auto_install_kde () {
 	install_config
 	install_mksh
 	
-	#window_manager '' 'kde-dbus'
-	window_manager '' 'kde'
+	window_manager '' 'kde'		# 'kde' or 'kde-dbus'
 
 	#install_hooks liveroot
 
@@ -3770,7 +3792,8 @@ clone_menu () {
 12. Wipe (urandom)
 13. Wipe freespace     
 14. Shred $disk
-15. Create squashfs image")
+15. Create squashfs image
+16. Squashfs recover to @root (bcachefs)")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3807,6 +3830,7 @@ clone_menu () {
 			wipe-free|13)	wipe_freespace ;;
 			shred|14)		unmount_disk; shred -n 1 -v -z $disk ;;
 			squashfs|15)	create_archive ;;
+			squashrec|16)	squashRecover ;;
       	'')				;;
       	*)					echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
