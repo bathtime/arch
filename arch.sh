@@ -2824,10 +2824,12 @@ extract_archive () {
 
 squashRecover () {
 
+	ls $snapshot_dir
+
 	echo -e "\nWhat would you like to call this snapshot?\n"
 	read snapshotname
 
-	rsync --dry-run --info=progress2 -axHAXSW --exclude=$snapshot_dir/ / "$snapshot_dir/$snapshotname"
+	rsync --dry-run --info=progress2 -axHAXSW --exclude='/lost+found/' --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$snapshot_dir/ / "$snapshot_dir/$snapshotname" | less
 
 	echo -e "\nType 'y' to proceed with rsync or any other key to exit..."
 	read choice
@@ -2837,7 +2839,8 @@ squashRecover () {
 		echo -e "\nRunning rsync...\n"
 		echo "Running: rsync --info=progress2 -axHAXSW --exclude=$snapshot_dir/ / $snapshot_dir/$snapshotname"
 
-		rsync --info=progress2 -axHAXSW --exclude=$snapshot_dir/ / "$snapshot_dir/$snapshotname"
+		rsync --info=progress2 -axHAXSW --exclude='/lost+found/' --exclude=/dev/ --exclude=/proc/ --exclude=/sys/ --exclude=/tmp/ --exclude=/run/ --exclude=/var/tmp/ --exclude=/var/lib/dhcpcd/ --exclude=/var/log/ --exclude=/var/lib/systemd/random-seed --exclude=/root/.cache/ --exclude=/boot/ --exclude=/efi/ --exclude=/media/ --exclude=/mnt/ --exclude=/home/$user/.cache/ --exclude=/home/$user/.local/share/Trash/ --exclude=$snapshot_dir/ / "$snapshot_dir/$snapshotname"
+	
 	else
 
 		echo "Exiting."
@@ -2849,9 +2852,7 @@ squashRecover () {
 
 create_archive () {
 
-
 	check_pkg squashfs-tools
-
 
 	echo "Creating archive file..."
 
