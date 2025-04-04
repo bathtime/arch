@@ -72,7 +72,7 @@ else
 fi
 
 
-fstype='btrfs'						# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='bcachefs'						# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 
 bootOwnPartition='false'		# make separate boot partition (true/false)?
 [ $fstype = 'bcachefs' ] && bootOwnPartition=true
@@ -116,6 +116,7 @@ btrfs_mountopts="noatime,discard=async"
 bcachefs_mountopts="noatime"
 boot_mountopts="noatime"
 efi_mountopts="noatime"
+fsckBcachefs='true'
 
 backup_install='true'		# say 'true' to do snapshots/rysncs during install (only btrfs/bcachefs)
 
@@ -731,11 +732,27 @@ mount_disk () {
 			mount -m $disk$rootPart -o "$btrfs_mountopts",subvol=@/var/tmp,nodatacow $mnt/var/tmp
 
 		elif [[ $fstype = bcachefs ]]; then
-	
+
+			# mount: /dev/sda4: Input/output error
+			# [ERROR src/commands/mount.rs:395] Mount failed: Input/output error
+
+			# Not sure if this goes before or after encrypt for encrypted device
+			
+			#echo "Running fsck on disk... Please be patient."
+			if [ $fsckBcachefs = 'true' ]; then
+				
+				echo -e "\nWould you like to run fsck first? (type 'y' to run)\n"
+				read -sn1 key
+
+				[ $key = 'y' ] && bcachefs fsck -p $disk$rootPart
+
+			fi
+
 			if [[ $encrypt = true ]]; then
 				keyctl link @u @s
 				bcachefs unlock -k session $disk$rootPart
 			fi
+			
 
 			mount -t $fstype --mkdir -o "$bcachefs_mountopts" $disk$rootPart $mnt
 
