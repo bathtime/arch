@@ -74,15 +74,10 @@ else
 fi
 
 
-arch_file=$(basename "$0")
-arch_path=$(dirname "$0")
+fstype='btrfs'						# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+bootOwnPartition='false'		# make separate boot partition (true/false)?
 
-
-mnt=/mnt
-mnt2=/mnt2
-mnt3=/mnt3
-
-bootOwnPartition='true'		# make separate boot partition (true/false)?
+[ $fstype = 'bcachefs' ] && bootOwnPartition=true
 
 # Do we want a separate boot partition (which will be ext2)
 if [[ $bootOwnPartition = 'true' ]]; then
@@ -102,15 +97,16 @@ bootPart=$bootPartNum
 swapPart=$swapPartNum
 rootPart=$rootPartNum
 
-checkPartitions='true'		# Check that partitions are configured optimally?
+mnt=/mnt
+mnt2=/mnt2
+mnt3=/mnt3
 
 efi_path=/efi
 encrypt='false'				# bcachefs only
 encryptLuks='false'
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='100'				# What percentage of space should the root drive take?
-fstype='bcachefs'					# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-simpleInstall='false'		# true = no net,cached packages,tweaks...
+checkPartitions='true'		# Check that partitions are configured optimally?
 
 subvols=(.snapshots var/log var/tmp)	# used for btrfs and bcachefs
 subvolPrefix='/'				# eg., '/' or '/@' btrfs and bcachefs only
@@ -124,7 +120,13 @@ boot_mountopts="noatime"
 efi_mountopts="noatime"
 
 backup_install='true'		# say 'true' to do snapshots/rysncs during install
-backup_type='rsync'		# eg., '','rsync','snapper'
+
+if [ $fstype = 'btrfs' ]; then
+	backup_type='snapper'
+else
+	backup_type='rsync'
+fi
+
 initramfs='mkinitcpio'		# mkinitcpio, dracut, booster
 extra_modules='lz4'			# adds to /etc/mkinitcpio modules
 extra_hooks='resume'			# adds to /etc/mkinitcpio hooks
@@ -137,6 +139,9 @@ enable_fallback='false'
 user=user
 password='123456'
 autologin=true
+arch_file=$(basename "$0")
+arch_path=$(dirname "$0")
+
 aur_app=none
 aur_path=/home/$user/aur
 aur_apps_path=/root/pkgs/
