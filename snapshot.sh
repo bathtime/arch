@@ -17,12 +17,19 @@ if [ "$fstype" = 'bcachefs' ]; then
 	echo -e "\nPlease enter a name for the snapshot: \n"
 
 	read snapshot
-	bcachefs subvolume snapshot -r / "$snapshot_dir/$snapshot" && echo -e "\nSaved!"
-
-	ls -l --full-time | cut -d" " -f6- | cut -d' ' -f3 --complement | sed 's/\.[0-9]*/ -/'
+	bcachefs subvolume snapshot / "$snapshot_dir/$snapshot" && echo -e "\nSaved!"
 
 	sleep 1
 
+	echo "Syncing..."
+	sync
+	sleep 1
+
+	echo -e "\nPress 'r' to reboot.\n"
+	read -sN1 key
+
+	[ $key = 'r' ] && reboot
+	
 	exit
 
 fi
