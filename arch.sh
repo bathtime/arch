@@ -9,8 +9,6 @@ bash <(curl -sL bit.ly/a-install)
 DOCS
 
 
-# TODO: 
-
 
 ###  Set error detection  ###
 error() {
@@ -57,7 +55,7 @@ error_check () {
 		0)		set +e; echo "No error detection!" ;;
 		1)		set -Eeo pipefail ;;
 		2)		set -Eueo pipefail ;;
-		3)		echo "All commands issured will be printed."; set -Eeox pipefail ;;
+		3)		echo "All commands issued will be printed."; set -Eeox pipefail ;;
 	esac
 
 }
@@ -75,8 +73,8 @@ fi
 
 
 fstype='btrfs'						# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
-bootOwnPartition='false'		# make separate boot partition (true/false)?
 
+bootOwnPartition='false'		# make separate boot partition (true/false)?
 [ $fstype = 'bcachefs' ] && bootOwnPartition=true
 
 # Do we want a separate boot partition (which will be ext2)
@@ -103,15 +101,15 @@ mnt3=/mnt3
 
 efi_path=/efi
 encrypt='false'				# bcachefs only
-encryptLuks='false'
+encryptLuks='false'			# ext4 (Not Working!)
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
 fsPercent='100'				# What percentage of space should the root drive take?
 checkPartitions='true'		# Check that partitions are configured optimally?
 
-subvols=(.snapshots var/log var/tmp)	# used for btrfs and bcachefs
+subvols=(.snapshots var/log var/tmp)	# used for bcachefs only (TODO: btrfs)
 subvolPrefix='/'				# eg., '/' or '/@' btrfs and bcachefs only
 snapshot_dir='/.snapshots'
-first_snapshot_name='1'
+first_snapshot_name='1'			# Only for btrfs
 rootMount='/@root'				# (ex., @root) Only used for bcachefs
 
 btrfs_mountopts="noatime,discard=async"
@@ -119,7 +117,7 @@ bcachefs_mountopts="noatime"
 boot_mountopts="noatime"
 efi_mountopts="noatime"
 
-backup_install='true'		# say 'true' to do snapshots/rysncs during install
+backup_install='true'		# say 'true' to do snapshots/rysncs during install (only btrfs/bcachefs)
 
 if [ $fstype = 'btrfs' ]; then
 	backup_type='snapper'
@@ -134,7 +132,7 @@ extra_hooks='resume'			# adds to /etc/mkinitcpio hooks
 
 kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
 
-enable_fallback='false'
+enable_fallback='false' 	# Enable fallback kernel?
 
 user=user
 password='123456'
