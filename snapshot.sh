@@ -46,6 +46,11 @@ case $description in
 	1-hr-auto)		saveLast=12; [ $(date +%H) = '00' ] && exit ;;
 	1-day_auto)		saveLast=14 ;;
 	quick-shot)		saveLast=3 ;;
+	'')				saveLast=100
+						snapper list --columns number,date,cleanup,description,read-only
+						echo -e "\nWhat would you like to call this snapshot?\n"
+						read description
+						;;
 	*)					saveLast=10; cleanup='' ;;
 esac
 
