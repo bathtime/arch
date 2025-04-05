@@ -744,7 +744,7 @@ mount_disk () {
 				echo -e "\nWould you like to run fsck first? (type 'y' to run)\n"
 				read -sn1 key
 
-				[ $key = 'y' ] && bcachefs fsck -p $disk$rootPart
+				[ "$key" = 'y' ] && bcachefs fsck -p $disk$rootPart
 
 			fi
 
@@ -2744,7 +2744,7 @@ snapper_delete_all () {
 
    	for snapshot in ${snapshots[@]}; do
 			
-			if [ ! $snapshot = 0 ] && [ ! $snapshot = '' ]; then
+			if [ ! "$snapshot" = 0 ] && [ ! "$snapshot" = '' ] && [ "$(ls "$snapshot" | grep 'snapshot')" ]; then
 				echo "snapper -c root delete --sync $snapshot"
 				snapper -c root delete --sync $snapshot
 			fi
@@ -3229,7 +3229,7 @@ auto_install_kde () {
 	[ "$aur_apps_kde" ] && install_aur_packages "$aur_apps_kde"
 
 	do_backup "kde-installed"
-
+	
 	sync_disk
 
 }
