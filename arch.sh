@@ -3659,16 +3659,20 @@ benchmark () {
 
 	cd $mnt/
 	rm -rf $tempfile
+	
 
+	echo -e "\nEnter how many gigs to run:\n"
+	read gigs
+	
 	echo -e "\nRunning dd to measure write speed...\n"
-	dd if=/dev/zero of=$tempfile bs=1M count=1024 conv=fdatasync,notrunc status=progress
+	dd if=/dev/zero of=$tempfile bs=$gigs'M' count=1024 conv=fdatasync,notrunc status=progress
 
 	echo 3 > /proc/sys/vm/drop_caches
 	echo -e "\nRunning dd to measure read speed...\n"
-	dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress
+	dd if=$tempfile of=/dev/null bs=$gigs'M' count=1024 status=progress
 
 	echo -e "\nRunning dd to measure buffer-cache speed...\n"
-	dd if=$tempfile of=/dev/null bs=1M count=1024 status=progress
+	dd if=$tempfile of=/dev/null bs=$gigs'M' count=1024 status=progress
 
 	echo -e "\nRunning bash open/close test to measure buffer-cache speed..."
 	time for (( i=1; i<=1000; i++ )); do bash -c 'exit' ;done
