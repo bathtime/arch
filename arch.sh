@@ -1092,19 +1092,28 @@ omit_dracutmodules+=" "' > $mnt/etc/dracut.conf.d/myflags.conf
 
 
 
-install_REFIND () {
+install_Refind () {
 
 	check_on_root
 	mount_disk
 
-
 	pacstrap_install refind 
 	
+	if [ "$mnt" = '/' ]; then
+		refind-install --usedefault $disk$espPart --alldrivers
+	else
+		arch-chroot $mnt refind-install --usedefault $disk$espPart --alldrivers
+	fi
 
-	mkdir -p $mnt/{proc,sys,dev,run}
+	mkdir -p $mnt$efi_path/EFI/refind/drivers_x64/
 
-	arch-chroot $mnt refind-install --usedefault $disk$espPart --alldrivers
+	cp -r /usr/share/refind/drivers_x64/ $mnt$efi_path/EFI/refind/drivers_x64/
 
+	mkrlconf
+
+	sed -i 's/#enable_touch/enable_touch/' $mnt/efi/EFI/BOOT/refind.conf
+
+return
 	VOLUME_UUID=$(blkid $disk | awk -F\" '{ print $2 }')
 	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 	ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
@@ -2963,7 +2972,7 @@ install_bootloader () {
 	do
 		case $choiceBoot in
 			"grub")		install_grub; break ;;
-			"rEFInd")	install_REFIND; break ;;
+			"rEFInd")	install_Refind; break ;;
 			"EFISTUB")	install_EFISTUB; break ;;
 			"uki")		install_uki; break ;;
 			"systemD")	install_SYSTEMDBOOT; break ;;
@@ -3189,7 +3198,8 @@ auto_install_root () {
 
 	create_partitions
 	install_base
-	install_grub
+	#install_grub
+	install_Refind
 	setup_fstab
 
 	[ $autologin = true ] && auto_login root
