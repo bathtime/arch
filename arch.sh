@@ -72,7 +72,7 @@ else
 fi
 
 
-fstype='bcachefs'						# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
+fstype='btrfs'						# btrfs,ext4,bcachefs,f2fs,xfs,jfs,nilfs2
 
 bootOwnPartition='false'		# make separate boot partition (true/false)?
 [ $fstype = 'bcachefs' ] && bootOwnPartition=true
@@ -103,7 +103,7 @@ efi_path=/efi
 encrypt='false'				# bcachefs only
 encryptLuks='false'			# ext4 (Not Working!)
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
-fsPercent='100'				# What percentage of space should the root drive take?
+fsPercent='50'				# What percentage of space should the root drive take?
 checkPartitions='true'		# Check that partitions are configured optimally?
 
 subvols=(.snapshots var/log var/tmp)	# used for bcachefs only (TODO: btrfs)
@@ -135,8 +135,7 @@ kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt loglevel=3 rd.
 
 enable_fallback='false' 	# Enable fallback kernel?
 
-user=user
-password='123456'
+user=user password='123456'
 autologin=true
 arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
@@ -1141,6 +1140,43 @@ EOF
 
 }
 
+
+install_limine () {
+
+	mount_disk
+
+	pacstrap_install limine
+
+	mkdir -p $mnt$efi_path/EFI/limine
+
+	cp $mnt/usr/share/limine/BOOTX64.EFI $mnt$efi_path/EFI/limine/
+	
+	efibootmgr \
+      --create \
+      --disk $disk \
+      --part $espPartNum \
+      --label "Arch Linux Limine Bootloader" \
+      --loader '\EFI\limine\BOOTX64.EFI' \
+      --unicode \
+      --verbose
+	  	
+	ROOT_UUID=$(blkid -s UUID -o value $disk$rootPart)
+ 
+
+	cat > $mnt$efi_path/EFI/limine/limine.conf << EOF
+
+timeout: 5
+
+/Arch Linux
+    protocol: linux
+    path: boot():/vmlinuz-linux
+    cmdline: root=UUID=$ROOT_UUID rw
+    module_path: boot():/initramfs-linux.img 
+   
+EOF
+
+		
+}
 
 
 install_grub () {
@@ -2921,7 +2957,7 @@ install_bootloader () {
 
 	echo -e "\nWhich boot manager would you like to install?\n"
 
-	choiceBoot=(grub rEFInd EFISTUB uki systemD quit) 
+	choiceBoot=(grub rEFInd EFISTUB uki systemD limine quit) 
 				
 	select choiceBoot in "${choiceBoot[@]}"
 	do
@@ -2931,6 +2967,7 @@ install_bootloader () {
 			"EFISTUB")	install_EFISTUB; break ;;
 			"uki")		install_uki; break ;;
 			"systemD")	install_SYSTEMDBOOT; break ;;
+			"limine")	install_limine; break ;;
 			"quit")		break ;;
 			'')			echo -e "\nInvalid option!\n" ;;
 		esac
