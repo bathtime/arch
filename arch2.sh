@@ -647,7 +647,7 @@ create_partitions () {
 		#btrfs subvolume create $mnt/@/var/log
 		#btrfs subvolume create $mnt/@/var/tmp
 		
-		btrfs subvolume create $mnt/@
+		btrfs subvolume create $mnt/$subvolPrefix
 		
 		for subvol in "${subvols[@]}"; do
 
@@ -659,10 +659,10 @@ create_partitions () {
 		mkdir -p "$(dirname $mnt/$subvolPrefix$snapshot_dir/$first_snapshot_name/snapshot)"
 		btrfs su create $mnt/$subvolPrefix$snapshot_dir/$first_snapshot_name/snapshot
 
-		btrfs subvolume set-default $(btrfs subvolume list $mnt | grep "@$snapshot_dir/$first_snapshot_name/snapshot" | grep -oP '(?<=ID )[0-9]+') $mnt
+		btrfs subvolume set-default $(btrfs subvolume list $mnt | grep "$subvolPrefix$snapshot_dir/$first_snapshot_name/snapshot" | grep -oP '(?<=ID )[0-9]+') $mnt
 
-		chattr +C $mnt/@/var/log
-		chattr +C $mnt/@/var/tmp
+		chattr +C $mnt/$subvolPrefix/var/log
+		chattr +C $mnt/$subvolPrefix/var/tmp
 
 		echo
 		btrfs subvolume list $mnt
