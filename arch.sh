@@ -647,7 +647,7 @@ create_partitions () {
 		#btrfs subvolume create $mnt/@/var/log
 		#btrfs subvolume create $mnt/@/var/tmp
 		
-		btrfs subvolume create $mnt/@
+		btrfs subvolume create $mnt/$subvolPrefix
 		
 		for subvol in "${subvols[@]}"; do
 
@@ -659,10 +659,10 @@ create_partitions () {
 		mkdir -p "$(dirname $mnt/$subvolPrefix$snapshot_dir/$first_snapshot_name/snapshot)"
 		btrfs su create $mnt/$subvolPrefix$snapshot_dir/$first_snapshot_name/snapshot
 
-		btrfs subvolume set-default $(btrfs subvolume list $mnt | grep "@$snapshot_dir/$first_snapshot_name/snapshot" | grep -oP '(?<=ID )[0-9]+') $mnt
+		btrfs subvolume set-default $(btrfs subvolume list $mnt | grep "$subvolPrefix$snapshot_dir/$first_snapshot_name/snapshot" | grep -oP '(?<=ID )[0-9]+') $mnt
 
-				chattr +C $mnt/@/var/log
-		chattr +C $mnt/@/var/tmp
+		chattr +C $mnt/$subvolPrefix/var/log
+		chattr +C $mnt/$subvolPrefix/var/tmp
 
 		echo
 		btrfs subvolume list $mnt
@@ -739,8 +739,10 @@ mount_disk () {
 
 		if [ "$fstype" = "btrfs" ]; then
 
-			mount $disk$rootPart -o "$btrfs_mountopts" $mnt
-			echo -e "\nMounting: $(btrfs su get-default $mnt | sed 's/ID.*path //')"
+			# btrfs will automatically mount the 'set-default' subvolume
+			mount -m $disk$rootPart -o "$btrfs_mountopts" $mnt
+			echo mount -m $disk$rootPart -o "$btrfs_mountopts,subvol=$(btrfs su get-default $mnt | sed 's/ID.*path //')" $mnt
+			
 
 			#mount -m $disk$rootPart -o "$btrfs_mountopts",subvol=@$snapshot_dir $mnt$snapshot_dir 
 			#mount -m $disk$rootPart -o "$btrfs_mountopts",subvol=@/boot/grub $mnt/boot/grub	
@@ -754,6 +756,7 @@ mount_disk () {
 				mount -m $disk$rootPart -o "$btrfs_mountopts",subvol=$subvolPrefix$subvol $mnt$subvol 
 
 			done
+			
 
 
 		elif [[ $fstype = bcachefs ]]; then
@@ -826,15 +829,13 @@ mount_disk () {
 	fi
 	
 	if [[ ! $(mount | grep -E $disk$bootPart | grep -E "on $mnt/boot") ]] && [[ $bootOwnPartition = true ]]; then
-		echo mount --mkdir -o $boot_mountopts $disk$bootPart $mnt/boot
-		#mount --mkdir -o $boot_mountopts $disk$bootPart $mnt/boot
-		mount -m -o $boot_mountopts $disk$bootPart $mnt/boot
+		echo mount -m $disk$bootPart -o $boot_mountopts $mnt/boot
+		mount -m $disk$bootPart -o $boot_mountopts $mnt/boot
 	fi
 
 	if [[ ! $(mount | grep -E $disk$espPart | grep -E "on $mnt$efi_path") ]]; then
-		echo mount --mkdir -o $efi_mountopts $disk$espPart $mnt$efi_path
-		#mount --mkdir -o $efi_mountopts $disk$espPart $mnt$efi_path
-		mount -m -o $efi_mountopts $disk$espPart $mnt$efi_path
+		echo mount -m $disk$espPart -o $efi_mountopts $mnt$efi_path
+		mount -m $disk$espPart -o $efi_mountopts $mnt$efi_path
 	fi
 
 }
