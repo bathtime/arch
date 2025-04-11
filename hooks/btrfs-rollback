@@ -119,14 +119,12 @@ run_latehook() {
 	showMenu=false
 
 
-	echo -e "\nPress any key for btrfs rollback.\n"
+	echo -e "\nPress any key for btrfs rollback."
 	[ $(read -sn1 -t 2 && echo 1) ] && showMenu=true
 
 	while [ ! "$finished" = 'true' ]; do
 
 		if [ $showMenu = 'true' ]; then
-			
-			echo -e "\nDefault = $root"
 			
 			echo -e "\n\nWhat would you like to do?
 
@@ -150,7 +148,7 @@ run_latehook() {
 <t> add tmpfs flag
 <m> add custom mount opts (Not working)
 
-<ENTER> bboot @root\n\n"
+<ENTER> boot default: $root\n\n"
 
 			read -sn 1 key
 
@@ -198,7 +196,7 @@ run_latehook() {
 		elif [[ "$key" = 'z' ]]; then
 			
 			echo -e "\nEnter a source to create from.
-(eg., '/', '/@root', '/.snapshots/first')\n"
+(eg., '/', '/.snapshots/initial', '/.snapshots/1/snapshot')\n"
 
 			read squashSource
 
