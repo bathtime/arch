@@ -19,7 +19,7 @@ temp="$mnt/temp"			# Used for changing from ro to rw
 squashPath='/'
 squashFile='root.squashfs'
 efiPartNum='1'			# What partition is efi on? (leave blank to not mount)
-bootPartNum='2'		# What partition is boot on? (leave blank to not mount)
+bootPartNum=''		# What partition is boot on? (leave blank to not mount)
 
 # Useful file: /usr/lib/initcpio/init
 
@@ -56,6 +56,8 @@ boot() {
 		error "No system found at $1."
 		showMenu=true		
 	fi
+
+	read -p "Press any key..."
 
 }
 
@@ -104,8 +106,6 @@ run_latehook() {
 	# Automatically find the proper root partition which was booted
 	root_part=$(mount | grep ${new_root} | sed "s# on ${new_root}.*##")
 	disk=$(mount | grep ${new_root} | sed "s#[0-9] on ${new_root}.*##")
-	#echo "Root_part: $root_part"
-	#echo "disk: $disk"
 
 	root="$(btrfs su get-default $new_root | sed 's/ID.*path @//')"
 	echo -e "\nDefault root = $root\n"
@@ -423,7 +423,6 @@ run_latehook() {
 
 		elif [[ "$key" = '' ]]; then  # ie., <ENTER> was pressed
 			
-			echo boot "$root"
 			boot "$root"
 
 		elif [[ "$key" = 'q' ]]; then
