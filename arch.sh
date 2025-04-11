@@ -1969,6 +1969,7 @@ do_backup () {
 
 		snapper)		if [[ $fstype = btrfs ]]; then
 							arch-chroot $mnt snapper --no-dbus create -d "$1"
+							arch-chroot $mnt grub-mkconfig -o /boot/grub/grub.cfg
 						else
 							echo "Will not do a backup with snapper on $fstype."
 						fi
