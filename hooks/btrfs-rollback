@@ -101,6 +101,9 @@ error() {
 
 run_latehook() {
 
+	echo -e "\nPress any key for btrfs rollback."
+	[ $(read -sn1 -t 2 && echo 1) ] && showMenu=true || return
+
 	# Automatically find the proper root partition which was booted
 	root_part=$(mount | grep ${new_root} | sed "s# on ${new_root}.*##")
 	disk=$(mount | grep ${new_root} | sed "s#[0-9] on ${new_root}.*##")
@@ -117,10 +120,6 @@ run_latehook() {
 
 	finished=false
 	showMenu=false
-
-
-	echo -e "\nPress any key for btrfs rollback."
-	[ $(read -sn1 -t 2 && echo 1) ] && showMenu=true
 
 	while [ ! "$finished" = 'true' ]; do
 
