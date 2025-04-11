@@ -57,8 +57,6 @@ boot() {
 		showMenu=true		
 	fi
 
-	read -p "Press any key..."
-
 }
 
 create_rorw() {
@@ -108,7 +106,6 @@ run_latehook() {
 	disk=$(mount | grep ${new_root} | sed "s#[0-9] on ${new_root}.*##")
 
 	root="$(btrfs su get-default $new_root | sed 's/ID.*path @//')"
-	echo -e "\nDefault root = $root\n"
 
 	# System pre-mounted, but we want to mount the systems differently
 	umount ${new_root}
@@ -128,6 +125,8 @@ run_latehook() {
 	while [ ! "$finished" = 'true' ]; do
 
 		if [ $showMenu = 'true' ]; then
+			
+			echo -e "\nDefault = $root"
 			
 			echo -e "\n\nWhat would you like to do?
 
