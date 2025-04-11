@@ -400,7 +400,7 @@ choose_disk () {
 				\#)			bash ;;
 				backup)		backup_config ;;
 				script)		download_script ;;
-				rollback-script)	vim /lib/initcpio/hooks/bcachefs-rollback; mkinitcpio -P ;;
+				rollback-script)	vim /lib/initcpio/hooks/btrfs-rollback; mkinitcpio -P ;;
 				logout)		killall systemd ;;
 				reboot)		reboot ;;
 				suspend)		echo mem > /sys/power/state ;;
@@ -2103,7 +2103,7 @@ install_hooks () {
 	choice=$1
 
 	if [[ $choice = '' ]]; then
-		echo -e "What hooks would you like to install?\n\n1. liveroot \n2. overlayroot\n3. exit\n"
+		echo -e "What hooks would you like to install?\n\n1. liveroot \n2. overlayroot\n3. btrfs-rollback\n4. bcachefs-rollback\n5. exit\n"
 			read -p "Choice: " -n 2 choice
 	else
 		echo "Installing $choice hook..."
@@ -2152,7 +2152,15 @@ install_hooks () {
 							echo -e "\nAdd 'overlayroot' to kernal parameters to run\n"
 							;;
 
-		3|bcachefs-rollback)		pacstrap_install rsync squashfs-tools
+		3|btrfs-rollback)		pacstrap_install rsync squashfs-tools
+
+										add_hooks MODULES btrfs 
+										add_hooks MODULES squashfs 
+                     			add_hooks HOOKS btrfs-rollback
+	
+							;;
+
+		4|bcachefs-rollback)		pacstrap_install rsync squashfs-tools
 
 										add_hooks MODULES bcachefs 
 										add_hooks MODULES squashfs 
@@ -3305,6 +3313,7 @@ auto_install_kde () {
 
 	#install_hooks liveroot
 
+	[ "$fstype" = 'btrfs' ] && install_hooks btrfs-rollback || install_hooks overlayroot
 	[ "$fstype" = 'bcachefs' ] && install_hooks bcachefs-rollback || install_hooks overlayroot
 	
 	[ "$aur_apps_kde" ] && install_aur_packages "$aur_apps_kde"
@@ -4014,13 +4023,19 @@ packages_menu () {
 			copy_script|6)		copy_script ;;
 			rollback|7)			echo -e "\nDowloading script from Github..."
             
-   curl -sL https://raw.githubusercontent.com/bathtime/bcachefs-rollback/refs/heads/main/hooks/bcachefs-rollback > $mnt/lib/initcpio/hooks/bcachefs-rollback           
-   chmod +x $mnt/lib/initcpio/hooks/bcachefs-rollback
+	curl -sL https://raw.githubusercontent.com/bathtime/arch/refs/heads/main/hooks/btrfs-rollback > $mnt/lib/initcpio/hooks/btrfs-rollback           
+   chmod +x $mnt/lib/initcpio/hooks/btrfs-rollback
 
-	curl -sL https://raw.githubusercontent.com/bathtime/bcachefs-rollback/refs/heads/main/install/bcachefs-rollback > $mnt/lib/initcpio/install/bcachefs-rollback
-	chmod +x $mnt/lib/initcpio/install/bcachefs-rollback
+	curl -sL https://raw.githubusercontent.com/bathtime/arch/refs/heads/main/install/btrfs-rollback > $mnt/lib/initcpio/install/btrfs-rollback
+	chmod +x $mnt/lib/initcpio/install/btrfs-rollback
   
+	#curl -sL https://raw.githubusercontent.com/bathtime/bcachefs-rollback/refs/heads/main/hooks/bcachefs-rollback > $mnt/lib/initcpio/hooks/bcachefs-rollback           
+   #chmod +x $mnt/lib/initcpio/hooks/bcachefs-rollback
 
+	#curl -sL https://raw.githubusercontent.com/bathtime/bcachefs-rollback/refs/heads/main/install/bcachefs-rollback > $mnt/lib/initcpio/install/bcachefs-rollback
+	#chmod +x $mnt/lib/initcpio/install/bcachefs-rollback
+  
+ 
 									mkinitcpio -P
 									;;
    		'')					last_modified ;;
