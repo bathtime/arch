@@ -180,6 +180,9 @@ CONFIG_FILES="
 
 /usr/lib/initcpio/init
 
+/usr/lib/initcpio/hooks/btrfs-rollback
+/usr/lib/initcpio/install/btrfs-rollback
+
 /usr/lib/initcpio/hooks/bcachefs-rollback
 /usr/lib/initcpio/install/bcachefs-rollback
 
