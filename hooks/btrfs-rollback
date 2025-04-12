@@ -12,7 +12,7 @@ snapshot_dir_subvolume='@/.snapshots'
 snapshot_dir='/.snapshots'
 prefix='@'
 cur_root="/"		# Current root or default snapshot (ex., /.snapshots/1/snapshot)
-bak_root="/@root"
+bak_root="/@backup"
 mountOpts='noatime'
 new_root=/new_root
 user=user
@@ -135,8 +135,8 @@ run_latehook() {
 <r> restore snapshot
 <R> restore snapshot (uses mv)
 <u> restore snapshot (uses rysnc)
-<b> boot $bak_root
 <n> create $bak_root from default
+<b> boot $bak_root
 <d> delete root system
 <z> create squashfs
 <x> run squashfs
