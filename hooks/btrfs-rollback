@@ -209,10 +209,8 @@ run_latehook() {
 
 		elif [[ "$key" = 'f' ]]; then
 			
-			echo 'To save logs run: bcachefs fsck -p > $mnt/log_file.txt 2>&1'
-			echo bcachefs fsck -p ${root_part}
-			bcachefs fsck -p ${root_part}
-			
+			echo "Not implimented yet"
+
 		elif [[ "$key" = 'z' ]]; then
 			
 			ls "$mnt$snapshot_dir"
@@ -269,16 +267,25 @@ run_latehook() {
 			
 			ls ${mnt} "$mnt$snapshot_dir"
 
-			echo -e "\nType the path you'd like to restore.\n"
+			echo -e "\nType the path you'd like to restore.
+(ex., /.snapshots/1/snapshot)\n"
 
 			read restorePath
 			
 			mount -t squashfs -o loop --source "$mnt$squashPath$squashFile" --target "$new_root"
-		
-			if [ "$mnt$restorePath" = "$cur_root" ] && [ -d "$mnt$restorePath" ]; then
+			if [ ! -d "$new_root/etc" ]; then
+
+				error "No functional system found at $squashPath$squashFile."
+				umount "$new_root"
+				
+				continue
+
+			fi
+
+			if [ -d "$mnt$restorePath" ]; then
 				echo "Deleting subvolume in current path..."
-				bcachefs subvolume delete "$mnt$restorePath"
-				rm -rf "$mnt$restorePath"
+				btrfs su delete "$mnt$restorePath"
+				#rm -rf "$mnt$restorePath"
 			fi
 			
 			mkdir -p "$mnt$restorePath"
@@ -357,12 +364,12 @@ run_latehook() {
 					btrfs su delete $mnt$bak_root
 				fi
 				
-				btrfs su snapshot "$mnt/$prefix$cur_root" "$mnt$bak_root" && echo "$bak_root snapshot created."	
+				#btrfs su snapshot "$mnt/$prefix$cur_root" "$mnt$bak_root" && echo "$bak_root snapshot created."	
+				btrfs su snapshot "$mnt/$prefix$cur_root" "$mnt$bak_root"	
 				
 				if [ $efiPartNum ]; then
 					
 					mount --mkdir $disk$efiPartNum $temp/efi
-					echo "cp -ar $temp/* $mnt$bak_root/"
 					cp -ar $temp/* "$mnt$bak_root/" && echo "/efi copied!"
 					umount $temp/efi
 				
@@ -372,7 +379,6 @@ run_latehook() {
 					mount --mkdir $disk$bootPartNum $temp/$prefix$cur_root/boot
 					umount $temp/$prefix$cur_root/boot
 				else
-					echo "cp -ar $mnt/$prefix/boot/grub/* $mnt$bak_root/boot/grub/"
 					cp -ar $mnt/$prefix/boot/grub/* "$mnt$bak_root/boot/grub/" && echo "/boot/grub copied!"
 				fi
 	
@@ -383,9 +389,6 @@ run_latehook() {
 				error "No system found at $cur_root."
 	
 			fi
-
-
-
 
 		elif [[ "$key" = 'b' ]]; then
 			
