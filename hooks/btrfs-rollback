@@ -215,25 +215,33 @@ run_latehook() {
 			
 		elif [[ "$key" = 'z' ]]; then
 			
+			ls "$mnt$snapshot_dir"
+			
 			echo -e "\nEnter a source to create from.
 (eg., '/', '/.snapshots/initial', '/.snapshots/1/snapshot')\n"
 
 			read squashSource
 
-			[ $efiPartNum ] && mount --mkdir $disk$efiPartNum $mnt/efi
-			[ $bootPartNum ] && mount --mkdir $disk$bootPartNum $mnt/boot
+			if [ -d "$mnt$squashSource/etc" ]; then
+
+				[ $efiPartNum ] && mount --mkdir $disk$efiPartNum $mnt/efi
+				[ $bootPartNum ] && mount --mkdir $disk$bootPartNum $mnt/boot
 			
-			cd $mnt$squashSource
+				cd $mnt$squashSource
 
-			mksquashfs . $mnt$squashPath$squashFile -noappend -no-recovery -mem-percent 20 -comp lz4 -e root.squashfs -e "$squashFile" -e home/$user/.cache/ -e home/$user/.local/share/Trash/ -e mnt/ -e var/cache/pacman/ -e .snapshots/*
+				mksquashfs . $mnt$squashPath$squashFile -noappend -no-recovery -mem-percent 20 -comp lz4 -e root.squashfs -e "$squashFile" -e home/$user/.cache/ -e home/$user/.local/share/Trash/ -e mnt/ -e var/cache/pacman/ -e .snapshots/*
 
-			[ $efiPartNum ] && umount $mnt/efi
-			[ $bootPartNum ] && umount $mnt/boot
+				[ $efiPartNum ] && umount $mnt/efi
+				[ $bootPartNum ] && umount $mnt/boot
 
-			sleep 1
+				sleep 1
 
-   		ls -lah $mnt$squashPath$squashFile
-		
+   			ls -lah $mnt$squashPath$squashFile
+			
+			else
+				error "No usable system found at $squashSource."
+			fi
+
 		elif [[ "$key" = 'x' ]]; then
 
 			if [ $tmpfsFlag = 'true' ]; then
@@ -366,8 +374,6 @@ run_latehook() {
 				else
 					echo "cp -ar $mnt/$prefix/boot/grub/* $mnt$bak_root/boot/grub/"
 					cp -ar $mnt/$prefix/boot/grub/* "$mnt$bak_root/boot/grub/" && echo "/boot/grub copied!"
-
-					bash	
 				fi
 	
 				mount_cur_root
