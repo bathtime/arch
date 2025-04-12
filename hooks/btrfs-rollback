@@ -100,9 +100,12 @@ error() {
 }
 
 run_latehook() {
-
+	
 	echo -e "\nPress any key for btrfs rollback."
-	[ $(read -sn1 -t 2 && echo 1) ] && showMenu=true || return
+	
+	read -sn1 -t 2 || return
+	
+	#showMenu=true
 
 	# Automatically find the proper root partition which was booted
 	root_part=$(mount | grep ${new_root} | sed "s# on ${new_root}.*##")
@@ -119,13 +122,12 @@ run_latehook() {
 	mount -o "$mountOpts,subvol=$snapshot_dir_subvolume" "$root_part" "$mnt$snapshot_dir"
 
 	finished=false
-	showMenu=false
 
 	while [ ! "$finished" = 'true' ]; do
 
-		if [ $showMenu = 'true' ]; then
+		#if [ $showMenu = 'true' ]; then
 			
-			echo -e "\n\nWhat would you like to do?
+		echo -e "\n\nWhat would you like to do?
 
 <s> boot into a snapshot
 <r> restore snapshot
@@ -149,9 +151,9 @@ run_latehook() {
 
 <ENTER> boot default: $root\n\n"
 
-			read -sn 1 key
+		read -sn 1 key
 
-		fi
+		#fi
 
 
 		if [[ "$key" = 'u' ]]; then
