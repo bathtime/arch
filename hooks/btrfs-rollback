@@ -101,6 +101,25 @@ error() {
 
 }
 
+mount_cur_root() {
+
+	cd /
+	mkdir -p $mnt
+	[ "$(ls $mnt)" ] && umount -r $mnt
+	
+	mount "$root_part" $mnt
+	mount -o "$mountOpts,subvol=$snapshot_dir_subvolume" "$root_part" "$mnt$snapshot_dir"
+
+}
+
+mount_main_root() {
+
+	cd /
+	[ "$(ls $mnt)" ] && umount -r $mnt
+	mount -o "$mountOpts,subvol=/" "$root_part" "$mnt"
+
+}
+
 run_latehook() {
 	
 	echo -e "\nPress any key for btrfs rollback."
@@ -118,10 +137,8 @@ run_latehook() {
 	# System pre-mounted, but we want to mount the systems differently
 	umount ${new_root}
 
-	mkdir -p $mnt
 
-	mount "$root_part" $mnt
-	mount -o "$mountOpts,subvol=$snapshot_dir_subvolume" "$root_part" "$mnt$snapshot_dir"
+	mount_cur_root
 
 	finished=false
 
@@ -295,30 +312,7 @@ run_latehook() {
 
 			echo -e "\nMounting options '$mountOpts' were added.\n"
 	
-		elif [[ "$key" = 'n' ]]; then
-	
-			cd /
-			echo btrfs su snapshot "$mnt$cur_root" "$mnt$bak_root" && echo "$bak_root snapshot created."	
-			
-			if [ -d "$mnt$cur_root/etc" ]; then
 
-				umount -r $mnt
-				mount -o "$mountOpts,subvol=/" "$root_part" "$mnt"
-
-				if [ -d "$mnt$bak_root" ]; then
-
-					echo -e "\n$bak_root found. Deleting and replacing...\n"
-					btrfs su delete $mnt$bak_root
-				fi
-				
-				echo btrfs su snapshot "$mnt/$prefix$cur_root" "$mnt$bak_root"
-				btrfs su snapshot "$mnt/$prefix$cur_root" "$mnt$bak_root" && echo "$bak_root snapshot created."	
-			else
-
-				error "No system found at $cur_root."
-	
-			fi
-	
 		elif [[ "$key" = 'c' ]]; then
 			
 			echo -e "\nType the path you'd like to boot from.\n"
@@ -341,6 +335,38 @@ run_latehook() {
 			
 			snapshot="$snapshot/snapshot"
 			boot "$snapshot_dir/$snapshot"
+
+		elif [[ "$key" = 'n' ]]; then
+	
+			cd /
+			
+			if [ -d "$mnt$cur_root/etc" ]; then
+				
+				mount_main_root
+				
+				[ $efiPartNum ] && mount --mkdir $disk$efiPartNum $mnt/$prefix$cur_root/efi
+				[ $bootPartNum ] && mount --mkdir $disk$bootPartNum $mnt/$prefix$cur_root/boot
+				
+				if [ -d "$mnt$bak_root" ]; then
+					echo -e "\n$bak_root found. Deleting and replacing...\n"
+					btrfs su delete $mnt$bak_root
+				fi
+				
+				btrfs su snapshot "$mnt/$prefix$cur_root" "$mnt$bak_root" && echo "$bak_root snapshot created."	
+				
+				[ $efiPartNum ] && umount $mnt/$prefix$cur_root/efi
+				[ $bootPartNum ] && umount $mnt/$prefix$cur_root/boot
+	
+				mount_cur_root
+
+			else
+
+				error "No system found at $cur_root."
+	
+			fi
+
+
+
 
 		elif [[ "$key" = 'b' ]]; then
 			
