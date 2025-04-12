@@ -344,9 +344,6 @@ run_latehook() {
 				
 				mount_main_root
 				
-				[ $efiPartNum ] && mount --mkdir $disk$efiPartNum $mnt/$prefix$cur_root/efi
-				[ $bootPartNum ] && mount --mkdir $disk$bootPartNum $mnt/$prefix$cur_root/boot
-				
 				if [ -d "$mnt$bak_root" ]; then
 					echo -e "\n$bak_root found. Deleting and replacing...\n"
 					btrfs su delete $mnt$bak_root
@@ -354,8 +351,24 @@ run_latehook() {
 				
 				btrfs su snapshot "$mnt/$prefix$cur_root" "$mnt$bak_root" && echo "$bak_root snapshot created."	
 				
-				[ $efiPartNum ] && umount $mnt/$prefix$cur_root/efi
-				[ $bootPartNum ] && umount $mnt/$prefix$cur_root/boot
+				if [ $efiPartNum ]; then
+					
+					mount --mkdir $disk$efiPartNum $temp/efi
+					echo "cp -ar $temp/* $mnt$bak_root/"
+					cp -ar $temp/* "$mnt$bak_root/" && echo "/efi copied!"
+					umount $temp/efi
+				
+				fi
+
+				if [ $bootPartNum ]; then
+					mount --mkdir $disk$bootPartNum $temp/$prefix$cur_root/boot
+					umount $temp/$prefix$cur_root/boot
+				else
+					echo "cp -ar $mnt/$prefix/boot/grub/* $mnt$bak_root/boot/grub/"
+					cp -ar $mnt/$prefix/boot/grub/* "$mnt$bak_root/boot/grub/" && echo "/boot/grub copied!"
+
+					bash	
+				fi
 	
 				mount_cur_root
 
