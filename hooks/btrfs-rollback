@@ -10,7 +10,9 @@
 
 snapshot_dir_subvolume='@/.snapshots'
 snapshot_dir='/.snapshots'
-root="/"
+prefix='@'
+cur_root="/"		# Current root or default snapshot (ex., /.snapshots/1/snapshot)
+bak_root="/@root"
 mountOpts='noatime'
 new_root=/new_root
 user=user
@@ -111,7 +113,7 @@ run_latehook() {
 	root_part=$(mount | grep ${new_root} | sed "s# on ${new_root}.*##")
 	disk=$(mount | grep ${new_root} | sed "s#[0-9] on ${new_root}.*##")
 
-	root="$(btrfs su get-default $new_root | sed 's/ID.*path @//')"
+	cur_root="$(btrfs su get-default $new_root | sed 's/ID.*path @//')"
 
 	# System pre-mounted, but we want to mount the systems differently
 	umount ${new_root}
@@ -133,8 +135,8 @@ run_latehook() {
 <r> restore snapshot
 <R> restore snapshot (uses mv)
 <u> restore snapshot (uses rysnc)
-<b> boot root system
-<n> create @root snapshot from /
+<b> boot $bak_root
+<n> create $bak_root from default
 <d> delete root system
 <z> create squashfs
 <x> run squashfs
@@ -149,7 +151,7 @@ run_latehook() {
 <t> add tmpfs flag
 <m> add custom mount opts (Not working)
 
-<ENTER> boot default: $root\n\n"
+<ENTER> boot default: $cur_root\n\n"
 
 		read -sn 1 key
 
@@ -248,7 +250,7 @@ run_latehook() {
 			
 			mount -t squashfs -o loop --source "$mnt$squashPath$squashFile" --target "$new_root"
 		
-			if [ "$mnt$restorePath" = "$root" ] && [ -d "$mnt$restorePath" ]; then
+			if [ "$mnt$restorePath" = "$cur_root" ] && [ -d "$mnt$restorePath" ]; then
 				echo "Deleting subvolume in current path..."
 				bcachefs subvolume delete "$mnt$restorePath"
 				rm -rf "$mnt$restorePath"
@@ -295,20 +297,25 @@ run_latehook() {
 	
 		elif [[ "$key" = 'n' ]]; then
 	
-			if [ -d "$mnt/etc" ]; then
+			cd /
+			echo btrfs su snapshot "$mnt$cur_root" "$mnt$bak_root" && echo "$bak_root snapshot created."	
+			
+			if [ -d "$mnt$cur_root/etc" ]; then
 
-				if [ ! -d "$mnt$root" ]; then
+				umount -r $mnt
+				mount -o "$mountOpts,subvol=/" "$root_part" "$mnt"
 
-					bcachefs subvolume snapshot "$mnt" "$mnt$root" && echo "$root snapshot created."	
-				else
-				
-					error "There is already a $root created."
+				if [ -d "$mnt$bak_root" ]; then
 
+					echo -e "\n$bak_root found. Deleting and replacing...\n"
+					btrfs su delete $mnt$bak_root
 				fi
-		
+				
+				echo btrfs su snapshot "$mnt/$prefix$cur_root" "$mnt$bak_root"
+				btrfs su snapshot "$mnt/$prefix$cur_root" "$mnt$bak_root" && echo "$bak_root snapshot created."	
 			else
 
-				error "No system found at /."
+				error "No system found at $cur_root."
 	
 			fi
 	
@@ -336,12 +343,18 @@ run_latehook() {
 			boot "$snapshot_dir/$snapshot"
 
 		elif [[ "$key" = 'b' ]]; then
+			
+			cd /
+			
+			umount -r /mnt
+			
+			mount -o "$mountOpts,subvol=/" "$root_part" "$mnt/"
 
-			boot /
+			boot "$bak_root"
 
 		elif [[ "$key" = 'R' ]]; then
 
-			echo -e "\nType the name of the snapshot you would like to recover to $root.\n"
+			echo -e "\nType the name of the snapshot you would like to recover to $cur_root.\n"
 		
 			ls "$mnt$snapshot_dir"
 
@@ -351,15 +364,15 @@ run_latehook() {
 	
 			if [ -d "$mnt$snapshot_dir/$snapshot" ]; then
 			
-				if [ -d "$mnt$root" ]; then
-					bcachefs subvolume delete $mnt$root
+				if [ -d "$mnt$cur_root" ]; then
+					bcachefs subvolume delete $mnt$cur_root
 					sleep 1
 					sync
 					sleep 1
 				fi
 
-				mv "$mnt$snapshot_dir/$snapshot/" $mnt$root/
-				echo -e "\n'$snapshot' recovered to $root.\n"
+				mv "$mnt$snapshot_dir/$snapshot/" $mnt$cur_root/
+				echo -e "\n'$snapshot' recovered to $cur_root.\n"
 					
 			else
 			
@@ -369,7 +382,7 @@ run_latehook() {
 
 		elif [[ "$key" = 'r' ]]; then
 
-			echo -e "\nType the name of the snapshot you would like to recover to $root.\n"
+			echo -e "\nType the name of the snapshot you would like to recover to $cur_root.\n"
 		
 			ls "$mnt$snapshot_dir"
 
@@ -383,14 +396,14 @@ run_latehook() {
 					bcachefs subvolume delete "$mnt$snapshot_dir$root-old"
 				fi
 
-				if [ -d "$mnt$root" ]; then
-					bcachefs subvolume snapshot "$mnt$root" "$mnt$snapshot_dir$root-old"
-					bcachefs subvolume delete $mnt$root
+				if [ -d "$mnt$cur_root" ]; then
+					bcachefs subvolume snapshot "$mnt$cur_root" "$mnt$snapshot_dir$root-old"
+					bcachefs subvolume delete $mnt$cur_root
 				fi
 
-				echo bcaches subvolume snapshot "$mnt$snapshot_dir/$snapshot" $mnt$root
-				bcachefs subvolume snapshot "$mnt$snapshot_dir/$snapshot" $mnt$root
-				echo -e "\n'$snapshot' recovered to $root.\n"
+				echo bcaches subvolume snapshot "$mnt$snapshot_dir/$snapshot" $mnt$cur_root
+				bcachefs subvolume snapshot "$mnt$snapshot_dir/$snapshot" $mnt$cur_root
+				echo -e "\n'$snapshot' recovered to $cur_root.\n"
 					
 			else
 			
@@ -407,21 +420,21 @@ run_latehook() {
 	
 			# Make sure there is a system at @root before proceeding
 			# You must keep .snapshots and @root in / or the system won't start
-			if [ -d $mnt$root/etc ]; then
+			if [ -d $mnt$cur_root/etc ]; then
 
-				echo "Deleting / (excepting .snapshots and $root)..."
+				echo "Deleting / (excepting .snapshots and $cur_root)..."
 			
 				rm -rf /mnt/bin /mnt/boot /mnt/dev /mnt/efi /mnt/etc /mnt/home /mnt/lib /mnt/lib64 /mnt/'lost+found' /mnt/opt /mnt/proc /mnt/root /mnt/run /mnt/sbin /mnt/srv /mnt/sys /mnt/tmp /mnt/usr /mnt/var
 			
 			else
 			
-				error "No system located at $root. Will not delete main system."
+				error "No system located at $cur_root. Will not delete main system."
 		
 			fi
 
 		elif [[ "$key" = '' ]]; then  # ie., <ENTER> was pressed
 			
-			boot "$root"
+			boot "$cur_root"
 
 		elif [[ "$key" = 'q' ]]; then
 
