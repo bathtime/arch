@@ -159,7 +159,7 @@ phosh_install="phosh phoc phosh-mobile-settings squeekboard firefox"
 
 gnome_install="gnome-shell polkit nautilus gnome-console xdg-user-dirs dconf-editor gnome-browser-connector gnome-shell-extensions gnome-control-center gnome-weather"
 
-kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu kdiskmark"
+kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu kdiskmark brave-bin"
 
 ucode=intel-ucode
 hostname=Arch
@@ -3265,7 +3265,7 @@ auto_install_root () {
 	copy_pkgs
 	copy_script
 	
-	[ "$aur_apps_root" ] && install_aur_packages "$aur_apps_root"
+	#[ "$aur_apps_root" ] && install_aur_packages "$aur_apps_root"
 
 	install_backup $backup_type
 	do_backup "root-installed"
@@ -3292,7 +3292,8 @@ auto_install_user () {
 	
 	window_manager '' 'none'
 	
-	[ "$aur_apps_user" ] && install_aur_packages "$aur_apps_user"
+	#[ "$aur_apps_user" ] && install_aur_packages "$aur_apps_user"
+	chaotic_aur
 
 	do_backup "user-installed"
 	sync_disk
@@ -3315,11 +3316,17 @@ auto_install_kde () {
 	window_manager '' 'kde'		# 'kde' or 'kde-dbus'
 
 	#install_hooks liveroot
+	#install_hooks overlayroot
 
-	[ "$fstype" = 'btrfs' ] && install_hooks btrfs-rollback || install_hooks overlayroot
-	[ "$fstype" = 'bcachefs' ] && install_hooks bcachefs-rollback || install_hooks overlayroot
-	
-	[ "$aur_apps_kde" ] && install_aur_packages "$aur_apps_kde"
+	if [ "$fstype" = 'btrfs' ]; then
+		install_hooks btrfs-rollback
+	elif [ "$fstype" = 'bcachefs' ]; then
+		install_hooks bcachefs-rollback
+	else
+		install_hooks overlayroot
+	fi
+
+	#[ "$aur_apps_kde" ] && install_aur_packages "$aur_apps_kde"
 
 	do_backup "kde-installed"
 	
@@ -3462,6 +3469,38 @@ clean_system () {
 
 }
 
+
+chaotic_aur () {
+
+	mount_disk
+
+	if [ "$mnt" = '' ]; then
+		
+		pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com
+		pacman-key --lsign-key 3056513887B78AEB
+		
+		pacman -U --noconfirm 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst'
+		pacman -U --noconfirm 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
+	
+	else
+
+		arch-chroot $mnt pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com
+		arch-chroot $mnt pacman-key --lsign-key 3056513887B78AEB
+		
+		arch-chroot $mnt pacman -U --noconfirm 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst'
+		arch-chroot $mnt pacman -U --noconfirm 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
+	
+	fi
+
+	if [ ! "$(cat $mnt/etc/pacman.conf | grep 'chaotic-aur')" ]; then
+
+		echo '
+[chaotic-aur]
+Include = /etc/pacman.d/chaotic-mirrorlist' >> $mnt/etc/pacman.conf
+	
+	fi
+	
+}
 
 
 backup_config () {
@@ -4006,7 +4045,8 @@ packages_menu () {
 4. Copy packages
 5. Download script
 6. Copy script
-7. DL bcache script")
+7. DL bcache script
+8. Add chaotic aur")
 
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -4041,6 +4081,7 @@ packages_menu () {
  
 									mkinitcpio -P
 									;;
+			8|chaotic)			chaotic_aur ;;
    		'')					last_modified ;;
 			*)						echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
