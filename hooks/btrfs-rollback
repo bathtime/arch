@@ -12,8 +12,9 @@ snapshot_dir_subvolume='@/.snapshots'
 snapshot_dir='/.snapshots'
 prefix='@'
 cur_root="/"		# Current root or default snapshot (ex., /.snapshots/1/snapshot)
-bak_root="/@backup"
+bak_root="/@/backup"
 mountOpts='noatime'
+bootefibackup="/bak"
 new_root=/new_root
 user=user
 mnt=/mnt
@@ -161,6 +162,8 @@ run_latehook() {
 <c> boot custom dir
 <e> enter bash
 <f> fsck
+<g> mount /
+<h> mount default
 <q> quit
 
 <w> add ro -> rw flag
@@ -175,7 +178,15 @@ run_latehook() {
 		#fi
 
 
-		if [[ "$key" = 'u' ]]; then
+		if [[ "$key" = 'g' ]]; then
+			
+			mount_main_root
+		
+		elif [[ "$key" = 'h' ]]; then
+	
+			mount_cur_root
+		
+		elif [[ "$key" = 'u' ]]; then
 		
 			echo -e "\nEnter a source.
 (eg., '/', '/@root', '/.snapshots/first')\n"
@@ -368,9 +379,12 @@ run_latehook() {
 				btrfs su snapshot "$mnt/$prefix$cur_root" "$mnt$bak_root"	
 				
 				if [ $efiPartNum ]; then
-					
+				
+					rm -rf "$mnt$bootefibackup/efi"
+					#mkdir -p "$mnt$bootefibackup/efi"
 					mount --mkdir $disk$efiPartNum $temp/efi
-					cp -ar $temp/* "$mnt$bak_root/" && echo "/efi copied!"
+					#cp -ar $temp/* "$mnt$bak_root/" && echo "/efi copied!"
+					cp -ar $temp/* "$mnt$bootefibackup/" && echo "/efi copied!"
 					umount $temp/efi
 				
 				fi
@@ -379,9 +393,14 @@ run_latehook() {
 					mount --mkdir $disk$bootPartNum $temp/$prefix$cur_root/boot
 					umount $temp/$prefix$cur_root/boot
 				else
-					cp -ar $mnt/$prefix/boot/grub/* "$mnt$bak_root/boot/grub/" && echo "/boot/grub copied!"
+					#cp -ar $mnt/$prefix/boot/grub/* "$mnt$bak_root/boot/grub/" && echo "/boot/grub copied!"
+					
+					rm -rf "$mnt$bootefibackup/boot"
+					cp -ar $mnt/$prefix/boot "$mnt/$bootefibackup/" && echo "/boot/grub copied!"
 				fi
-	
+				
+				rm -rf $temp
+
 				mount_cur_root
 
 			else
