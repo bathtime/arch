@@ -9,8 +9,8 @@
 
 
 snapshot_dir_subvolume='@/.snapshots'
-snapshot_dir='/.snapshots'
 prefix='@'
+snapshot_dir='/@/.snapshots'
 cur_root="/"		# Current root or default snapshot (ex., /.snapshots/1/snapshot)
 bak_root="/@/backup"
 mountOpts='noatime'
@@ -102,17 +102,6 @@ error() {
 
 }
 
-mount_cur_root() {
-
-	cd /
-	mkdir -p $mnt
-	[ "$(ls $mnt)" ] && umount -r $mnt
-	
-	mount "$root_part" $mnt
-	mount -o "$mountOpts,subvol=$snapshot_dir_subvolume" "$root_part" "$mnt$snapshot_dir"
-
-}
-
 mount_main_root() {
 
 	cd /
@@ -133,13 +122,13 @@ run_latehook() {
 	root_part=$(mount | grep ${new_root} | sed "s# on ${new_root}.*##")
 	disk=$(mount | grep ${new_root} | sed "s#[0-9] on ${new_root}.*##")
 
-	cur_root="$(btrfs su get-default $new_root | sed 's/ID.*path @//')"
-
+	cur_root="/$(btrfs su get-default $new_root | sed 's/ID.*path //')"
+	
 	# System pre-mounted, but we want to mount the systems differently
 	umount ${new_root}
 
-
-	mount_cur_root
+	mkdir -p $mnt
+	mount_main_root
 
 	finished=false
 
@@ -163,7 +152,6 @@ run_latehook() {
 <e> enter bash
 <f> fsck
 <g> mount /
-<h> mount default
 <q> quit
 
 <w> add ro -> rw flag
@@ -181,10 +169,6 @@ run_latehook() {
 		if [[ "$key" = 'g' ]]; then
 			
 			mount_main_root
-		
-		elif [[ "$key" = 'h' ]]; then
-	
-			mount_cur_root
 		
 		elif [[ "$key" = 'u' ]]; then
 		
@@ -227,7 +211,7 @@ run_latehook() {
 			ls "$mnt$snapshot_dir"
 			
 			echo -e "\nEnter a source to create from.
-(eg., '/', '/.snapshots/initial', '/.snapshots/1/snapshot')\n"
+(eg., /, $cur_root, $bak_root)\n"
 
 			read squashSource
 
@@ -368,22 +352,17 @@ run_latehook() {
 			
 			if [ -d "$mnt$cur_root/etc" ]; then
 				
-				mount_main_root
-				
 				if [ -d "$mnt$bak_root" ]; then
 					echo -e "\n$bak_root found. Deleting and replacing...\n"
 					btrfs su delete $mnt$bak_root
 				fi
 				
-				#btrfs su snapshot "$mnt/$prefix$cur_root" "$mnt$bak_root" && echo "$bak_root snapshot created."	
-				btrfs su snapshot "$mnt/$prefix$cur_root" "$mnt$bak_root"	
+				btrfs su snapshot "$mnt/$cur_root" "$mnt$bak_root"	
 				
 				if [ $efiPartNum ]; then
 				
 					rm -rf "$mnt$bootefibackup/efi"
-					#mkdir -p "$mnt$bootefibackup/efi"
 					mount --mkdir $disk$efiPartNum $temp/efi
-					#cp -ar $temp/* "$mnt$bak_root/" && echo "/efi copied!"
 					cp -ar $temp/* "$mnt$bootefibackup/" && echo "/efi copied!"
 					umount $temp/efi
 				
@@ -393,15 +372,11 @@ run_latehook() {
 					mount --mkdir $disk$bootPartNum $temp/$prefix$cur_root/boot
 					umount $temp/$prefix$cur_root/boot
 				else
-					#cp -ar $mnt/$prefix/boot/grub/* "$mnt$bak_root/boot/grub/" && echo "/boot/grub copied!"
-					
 					rm -rf "$mnt$bootefibackup/boot"
 					cp -ar $mnt/$prefix/boot "$mnt/$bootefibackup/" && echo "/boot/grub copied!"
 				fi
 				
 				rm -rf $temp
-
-				mount_cur_root
 
 			else
 
@@ -411,12 +386,6 @@ run_latehook() {
 
 		elif [[ "$key" = 'b' ]]; then
 			
-			cd /
-			
-			umount -r /mnt
-			
-			mount -o "$mountOpts,subvol=/" "$root_part" "$mnt/"
-
 			boot "$bak_root"
 
 		elif [[ "$key" = 'R' ]]; then
@@ -449,32 +418,35 @@ run_latehook() {
 
 		elif [[ "$key" = 'r' ]]; then
 
-			echo -e "\nType the name of the snapshot you would like to recover to $cur_root.\n"
+			echo -e "\nType the source snapshot.
+(ex., /, $bak_root, $cur_root)\n"
 		
 			ls "$mnt$snapshot_dir"
 
 			echo
 
-			read snapshot
+			read snapshot-source
+
+			echo -e "\nType the target snapshot.
+(ex., /, $bak_root, $cur_root)\n"
+		
+			ls "$mnt$snapshot_dir"
+
+			echo
+
+			read snapshot-target
 	
-			if [ -d "$mnt$snapshot_dir/$snapshot" ]; then
+			if [ -d "$mnt$snapshot-source/etc" ]; then
 			
-				if [ -d "$mnt$snapshot_dir$root-old" ]; then
-					bcachefs subvolume delete "$mnt$snapshot_dir$root-old"
+				if [ -d "$mnt$snapshot-target" ]; then
+					btrfs subvolume delete $mnt$snapshot-target
 				fi
 
-				if [ -d "$mnt$cur_root" ]; then
-					bcachefs subvolume snapshot "$mnt$cur_root" "$mnt$snapshot_dir$root-old"
-					bcachefs subvolume delete $mnt$cur_root
-				fi
-
-				echo bcaches subvolume snapshot "$mnt$snapshot_dir/$snapshot" $mnt$cur_root
-				bcachefs subvolume snapshot "$mnt$snapshot_dir/$snapshot" $mnt$cur_root
-				echo -e "\n'$snapshot' recovered to $cur_root.\n"
+				btrfs subvolume snapshot "$mnt$snapshot-source" "$mnt$snapshot-target" && echo "Snapshot recovered!"
 					
 			else
 			
-				error "The snapshot '$snapshot' does not exist."
+				error "Functional system not found on '$snapshot-source'."
 
 			fi
 
@@ -491,7 +463,7 @@ run_latehook() {
 
 				echo "Deleting / (excepting .snapshots and $cur_root)..."
 			
-				rm -rf /mnt/bin /mnt/boot /mnt/dev /mnt/efi /mnt/etc /mnt/home /mnt/lib /mnt/lib64 /mnt/'lost+found' /mnt/opt /mnt/proc /mnt/root /mnt/run /mnt/sbin /mnt/srv /mnt/sys /mnt/tmp /mnt/usr /mnt/var
+				rm -rf $mnt/bin $mnt/boot $mnt/dev $mnt/efi $mnt/etc $mnt/home $mnt/lib $mnt/lib64 $mnt/'lost+found' $mnt/opt $mnt/proc $mnt/root $mnt/run $mnt/sbin $mnt/srv $mnt/sys $mnt/tmp $mnt/usr $mnt/var
 			
 			else
 			
