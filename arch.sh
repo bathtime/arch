@@ -741,10 +741,28 @@ mount_disk () {
 	if [[ ! $(mount | grep -E $disk$rootPart | grep -E "on $mnt") ]]; then
 
 		if [ "$fstype" = "btrfs" ]; then
+		
+			if [ $(read -t 2 -sn1 -p "Press any key to change root mount." && echo 1) ]; then
 
-			# btrfs will automatically mount the 'set-default' subvolume
-			mount -m $disk$rootPart -o "$btrfs_mountopts" $mnt
-			echo mount -m $disk$rootPart -o "$btrfs_mountopts,subvol=$(btrfs su get-default $mnt | sed 's/ID.*path //')" $mnt
+				mount -m $disk$rootPart -o "$btrfs_mountopts" $mnt
+				echo;echo
+				btrfs su list $mnt
+				umount -R $mnt
+				echo -e "\nPlease enter a path to mount:\n"
+				read mntSubvol
+
+			fi
+
+			
+			if [ "$mntSubvol" ]; then
+				mount -m $disk$rootPart -o "$btrfs_mountopts,subvol=$mntSubvol" $mnt
+			else
+				# btrfs will automatically mount the 'set-default' subvolume
+				mount -m $disk$rootPart -o "$btrfs_mountopts" $mnt
+			fi
+			
+			echo -e "\nDefault subvolume = $(btrfs su get-default $mnt | sed 's/ID.*path //')\n"
+			echo mount -m $disk$rootPart -o "$btrfs_mountopts,subvol=$(mount | grep "$disk$rootPart on $mnt " | sed 's#/dev/.*subvol=##; s/)//; s#^/##')" $mnt
 			
 
 			#mount -m $disk$rootPart -o "$btrfs_mountopts",subvol=@$snapshot_dir $mnt$snapshot_dir 
