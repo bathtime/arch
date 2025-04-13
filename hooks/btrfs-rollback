@@ -325,7 +325,8 @@ run_latehook() {
 
 		elif [[ "$key" = 'c' ]]; then
 			
-			echo -e "\nType the path you'd like to boot from.\n"
+			echo -e "\nType the path you'd like to boot from.\n
+(ex., /, $bak_root, $cur_root)\n"
 
 			read bootPath
 		
@@ -425,7 +426,7 @@ run_latehook() {
 
 			echo
 
-			read snapshot-source
+			read src
 
 			echo -e "\nType the target snapshot.
 (ex., /, $bak_root, $cur_root)\n"
@@ -434,15 +435,15 @@ run_latehook() {
 
 			echo
 
-			read snapshot-target
+			read tar
 	
-			if [ -d "$mnt$snapshot-source/etc" ]; then
+			if [ -d "$mnt$src/etc" ]; then
 			
-				if [ -d "$mnt$snapshot-target" ]; then
-					btrfs subvolume delete $mnt$snapshot-target
+				if [ -d "$mnt$tar" ]; then
+					btrfs subvolume delete $mnt$tar
 				fi
 
-				btrfs subvolume snapshot "$mnt$snapshot-source" "$mnt$snapshot-target" && echo "Snapshot recovered!"
+				btrfs subvolume snapshot "$mnt$src" "$mnt$tar" && echo "Snapshot recovered!"
 					
 			else
 			
