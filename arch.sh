@@ -128,7 +128,8 @@ fi
 
 initramfs='mkinitcpio'		# mkinitcpio, dracut, booster
 extra_modules='lz4'			# adds to /etc/mkinitcpio modules
-extra_hooks='resume'			# adds to /etc/mkinitcpio hooks
+extra_hooks=''					# adds to /etc/mkinitcpio hooks
+
 
 
 kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt loglevel=3 rd.udev.log_level=3 zswap.enabled=1 zswap.compressor=zstd zswap.max_pool_percent=20 scsi_mod.use_blk_mq=1"
@@ -1062,10 +1063,6 @@ choose_initramfs () {
 		cat /etc/mkinitcpio.conf | awk -F'[=()]' -v srch="filesystems" -v repl="liveroot" -v var="HOOKS=" '$0 ~ var { sub(srch,repl" "srch,$0) }; { print $0 }'
 
 
-							if [ $encrypt = true ] && [ $fstype = bcachefs ]; then
-								add_hooks MODULES bcachefs 
-                     	add_hooks HOOKS bcachefs
-							fi
 
 							cat > $mnt/etc/mkinitcpio.conf <<EOF
 MODULES=($extra_modules)
@@ -1082,6 +1079,15 @@ COMPRESSION="lz4"
 MODULES_DECOMPRESS="no"
 EOF
 
+							if [ $encrypt = true ] && [ $fstype = bcachefs ]; then
+								add_hooks MODULES bcachefs 
+                     	add_hooks HOOKS bcachefs
+							fi
+							
+							if [ ! "$(flash_drive)" ]; then
+								add_hooks HOOKS resume
+							fi
+	
 							if [ $enable_fallback = 'false' ]; then
 
 								sed -i "s/ 'fallback'//" $mnt/etc/mkinitcpio.d/linux.preset
@@ -1242,10 +1248,9 @@ EOF
 }
 
 
-on_flash () {
+flash_drive () {
 
 	fdisk -l "$disk" | grep 'Disk model: Flash Drive'
-
 }
 
 
@@ -1268,16 +1273,16 @@ install_grub () {
 	fi
 
 	# Check if we're on a flash drive
-	if [ ! "$(flash_drive)" ]; then
+	if [ "$(flash_drive)" ]; then
+		
+		grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --recheck $disk --boot-directory=$mnt/boot
+	
+	else	
 		
 		SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 		extra_ops="$extra_ops resume=UUID=$SWAP_UUID"
 		
 		grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --recheck $disk --boot-directory=$mnt/boot
-	
-	else
-
-		grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --recheck $disk --boot-directory=$mnt/boot
 	
 	fi
 
@@ -2091,6 +2096,7 @@ EOF
 add_hooks () {
 
 	mount_disk
+	echo -e "Adding $1 - $2..."
 
 	if [ "$(grep ^$1= $mnt/etc/mkinitcpio.conf | grep -v $2)" ] && [ "$1" = "HOOKS" ]; then
 		
@@ -3285,6 +3291,7 @@ auto_install_root () {
 	#choose_initramfs dracut 
 	#choose_initramfs mkinitcpio
 	#choose_initramfs booster
+	
 
 	general_setup
 
