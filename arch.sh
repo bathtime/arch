@@ -1242,16 +1242,19 @@ EOF
 }
 
 
+on_flash () {
+
+	fdisk -l "$disk" | grep 'Disk model: Flash Drive'
+
+}
+
+
 install_grub () {
 
 	mount_disk
 
-
 	pacstrap_install grub os-prober efibootmgr inotify-tools lz4
 
-
-	SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
-   echo "$SWAP_UUID"
 
 	[[ $fstype = bcachefs ]] && extra_ops='rootfstype=bcachefs'
 
@@ -1264,8 +1267,19 @@ install_grub () {
 
 	fi
 
+	# Check if we're on a flash drive
+	if [ ! "$(flash_drive)" ]; then
+		
+		SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
+		extra_ops="$extra_ops resume=UUID=$SWAP_UUID"
+		
+		grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --recheck $disk --boot-directory=$mnt/boot
+	
+	else
 
-	grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --recheck $disk --boot-directory=$mnt/boot
+		grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --recheck $disk --boot-directory=$mnt/boot
+	
+	fi
 
 
 	cat > $mnt/etc/default/grub << EOF2
@@ -1275,7 +1289,7 @@ GRUB_DEFAULT=saved
 GRUB_SAVEDEFAULT=true
 GRUB_DISABLE_SUBMENU=true
 GRUB_TERMINAL_OUTPUT="console"
-GRUB_CMDLINE_LINUX="$kernel_ops $extra_ops resume=UUID=$SWAP_UUID"
+GRUB_CMDLINE_LINUX="$kernel_ops $extra_ops"
 GRUB_DISABLE_RECOVERY="true"
 #GRUB_HIDDEN_TIMEOUT=1
 GRUB_RECORDFAIL_TIMEOUT=1
