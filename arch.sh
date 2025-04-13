@@ -1250,7 +1250,8 @@ EOF
 
 flash_drive () {
 
-	fdisk -l "$disk" | grep 'Disk model: Flash Drive'
+	[ "$(echo $disk | grep /dev/sd)" ] && echo true
+
 }
 
 
