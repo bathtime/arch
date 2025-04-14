@@ -2242,11 +2242,7 @@ do_chroot () {
 
 	echo -e "\e[0;42m\n \nEntering chroot. Type 'exit' to leave.\n\e[0;29m\n"
 		
-	#error_bypass=1
-
 	chroot $mnt /bin/bash -ic 'exec env PS1="(chroot) # " bash --norc'
-
-	#error_bypass=0
 
 	echo -e "\e[0;42m\n \nExiting chroot.\n\e[0;29m\n"
 
@@ -3346,7 +3342,7 @@ auto_install_kde () {
 
 
 	install_config
-	install_mksh
+	#install_mksh
 	
 	window_manager '' 'kde'		# 'kde' or 'kde-dbus'
 
