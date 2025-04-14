@@ -364,17 +364,20 @@ run_latehook() {
 				
 					rm -rf "$mnt$bootefibackup/efi"
 					mount --mkdir $disk$efiPartNum $temp/efi
-					cp -ar $temp/* "$mnt$bootefibackup/" && echo "/efi copied!"
+					#cp -ar $temp/* "$mnt$bootefibackup/" && echo "/efi copied!"
+					cp -ar $temp/* "$mnt$bak_root/" && echo "/efi copied!"
 					umount $temp/efi
 				
 				fi
 
 				if [ $bootPartNum ]; then
-					mount --mkdir $disk$bootPartNum $temp/$prefix$cur_root/boot
-					umount $temp/$prefix$cur_root/boot
+					mount --mkdir $disk$bootPartNum "$temp/$prefix$cur_root/boot"
+					cp -ar "$temp/$prefix$cur_root/boot" "$mnt$bak_root/"
+					umount "$temp/$prefix$cur_root/boot"
 				else
 					rm -rf "$mnt$bootefibackup/boot"
-					cp -ar $mnt/$prefix/boot "$mnt/$bootefibackup/" && echo "/boot/grub copied!"
+					#cp -ar "$mnt/$prefix/boot" "$mnt$bootefibackup/" && echo "/boot/grub copied!"
+					cp -ar "$mnt/$prefix/boot" "$mnt$bak_root/" && echo "/boot/grub copied!"
 				fi
 				
 				rm -rf $temp
