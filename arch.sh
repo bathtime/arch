@@ -1274,19 +1274,14 @@ install_grub () {
 	fi
 
 	# Check if we're on a flash drive
-	if [ "$(flash_drive)" ]; then
-		
-		grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --recheck $disk --boot-directory=$mnt/boot
-	
-	else	
+	if [ ! "$(flash_drive)" ]; then
 		
 		SWAP_UUID=$(blkid -s UUID -o value $disk$swapPart)
 		extra_ops="$extra_ops resume=UUID=$SWAP_UUID"
-		
-		grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --recheck $disk --boot-directory=$mnt/boot
 	
 	fi
 
+	grub-install --target=x86_64-efi --efi-directory=$mnt$efi_path --bootloader-id=GRUB --removable --recheck $disk --boot-directory=$mnt/boot
 
 	cat > $mnt/etc/default/grub << EOF2
 
