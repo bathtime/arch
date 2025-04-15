@@ -106,10 +106,10 @@ startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216)
 fsPercent='50'				# What percentage of space should the root drive take?
 checkPartitions='true'		# Check that partitions are configured optimally?
 
+subvolPrefix='@'				# eg., '/' or '/@' btrfs and bcachefs only
 first_snapshot_name='1'			# Only for btrfs
 snapshot_dir='/.snapshots'
 subvols=($snapshot_dir /boot/grub /var/log /var/tmp)
-subvolPrefix='@'				# eg., '/' or '/@' btrfs and bcachefs only
 rootMount='/@root'				# (ex., @root) Only used for bcachefs
 
 btrfs_mountopts="noatime,discard=async"
