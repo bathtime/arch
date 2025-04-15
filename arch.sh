@@ -103,11 +103,11 @@ efi_path=/efi
 encrypt='false'				# bcachefs only
 encryptLuks='false'			# ext4 (Not Working!)
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
-fsPercent='50'				# What percentage of space should the root drive take?
+fsPercent='50'					# What percentage of space should the root drive take?
 checkPartitions='true'		# Check that partitions are configured optimally?
 
 subvolPrefix='@'				# eg., '/' or '/@' btrfs and bcachefs only
-first_snapshot_name='1'			# Only for btrfs
+first_snapshot_name='1'		# Only for btrfs
 snapshot_dir='/.snapshots'
 subvols=($snapshot_dir /boot/grub /var/log /var/tmp)
 rootMount='/@root'				# (ex., @root) Only used for bcachefs
@@ -136,7 +136,8 @@ kernel_ops="nmi_watchdog=0 nowatchdog modprobe.blacklist=iTCO_wdt loglevel=3 rd.
 
 enable_fallback='false' 	# Enable fallback kernel?
 
-user=user password='123456'
+user=user
+password='123456'
 autologin=true
 arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
