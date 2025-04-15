@@ -2952,6 +2952,23 @@ snapper_delete_all () {
 }
 
 
+btrfs-maintenance() {
+
+	echo -e "\nRunning scrub...\n"
+	btrfs scrub start /
+	while ! btrfs scrub status / | grep finished; do
+		sleep .5
+	done
+
+	echo -e "\nRunning balance...\n"
+	btrfs balance start --full-balance / && echo "Finished without error." || echo "Finished with errors."
+
+	echo -e "\nRunning defrag...\n"
+	btrfs filesystem defragment -r / && echo "Finished without error." || echo "Finish
+ed with errors."
+
+}
+
 
 extract_archive () {
 
@@ -3915,7 +3932,8 @@ snapshots_menu () {
 15. Delete all bcachefs snapshots
 16. Btrfs delete subvolume
 17. Bork system
-18. btrfs rollback")
+18. btrfs rollback
+19. btrfs scrub/balance/defrag")
 	
 	config_choice=0
 	while [ ! "$config_choice" = "1" ]; do
@@ -3957,6 +3975,7 @@ snapshots_menu () {
 			btrfs-del|16)			btrfs_delete ;;
 			bork|17)					bork_system ;;
 			btrfs-rollback|18)	btrfs-rollback ;;
+			btrfs-maitenance|19)	btrfs-maintenance ;;
 	      '')						;;
       	*)							echo -e "\nInvalid option ($config_choice)!\n" ;;
 		esac
