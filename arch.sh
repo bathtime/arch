@@ -370,24 +370,22 @@ choose_disk () {
 
 		[ "$(mount | grep ' on / type overlay' | awk '{print $5}')" ] && echo -e "\n       *** Running in overlay mode! ***\n"
 
-
-
-		#if [ $fstype = 'btrfs' ]; then
+		rootMount="$(findmnt -o FSROOT -n / | sed 's#^/##')"
+		
 		if [ $rootfs = 'btrfs' ]; then
 		
 			[ "$(snapper list --columns number,read-only | grep '[0-9][-\*].*yes')" ] && echo -e "\n       *** Running in read only mode! ***\n"
 			
-			rootSub="$(mount | grep ' / ' | sed 's#.*.subvol=/##; s/)//')"
+			#rootSub="$(mount | grep ' / ' | sed 's#.*.subvol=/##; s/)//')"
 			defaultSub="$(btrfs su get-default / | awk '{ print $9 }')"
-			default="$rootSub"
 
-			if [ ! "$rootSub" = "$defaultSub" ]; then
-				echo -e "\n       *** NOT mounted on default subvolume! ***\n\n"
+			if [ ! "$rootMount" = "$defaultSub" ]; then
+				echo -e "\n       *** NOT mounted on default subvolume ($rootMount)! ***\n\n"
 			fi
 		fi
 
 
-		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#&  $rootfs#g" | sed "s#$host.*#& (host) $default#g"
+		lsblk --output=PATH,SIZE,MODEL,TRAN -d | grep -P "/dev/sd|nvme|vd" | sed "s#$host.*#&  $rootfs#g" | sed "s#$host.*#& (host) $rootMount#"
 
 		[[ $rootfs = 'btrfs' ]] || [[ $rootfs = 'bcachefs' ]] && extra='snapshots '
 
@@ -638,6 +636,8 @@ create_partitions () {
 
 
 	if [ "$fstype" = "btrfs" ]; then
+
+		# https://www.ordinatechnic.com/distribution-specific-guides/Arch/an-arch-linux-installation-on-a-btrfs-filesystem-with-snapper-for-system-snapshots-and-rollbacks
 
 		#btrfs subvolume create $mnt/@
 		#btrfs subvolume create $mnt/@$snapshot_dir
@@ -3858,11 +3858,11 @@ benchmark () {
 	echo -e "\nRunning bash open/close test to measure buffer-cache speed..."
 	time for (( i=1; i<=1000; i++ )); do bash -c 'exit' ;done
 
-	rm $tempfile
 	
 
 	echo -e "\nPress any key to continue."
 	read -s -N 1
+	rm $tempfile
 	echo
 
 	;;
