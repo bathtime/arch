@@ -380,7 +380,7 @@ choose_disk () {
 			defaultSub="$(btrfs su get-default / | awk '{ print $9 }')"
 
 			if [ ! "$rootMount" = "$defaultSub" ]; then
-				echo -e "\n       *** NOT mounted on default subvolume ($rootMount)! ***\n\n"
+				echo -e "\n       *** NOT mounted on default subvolume ($defaultSub)! ***\n\n"
 			fi
 		fi
 
