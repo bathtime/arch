@@ -103,7 +103,7 @@ efi_path=/efi
 encrypt='false'				# bcachefs only
 encryptLuks='false'			# ext4 (Not Working!)
 startSwap='8192Mib'			# 2048,4096,8192,(8192 + 1024 = 9216) 
-fsPercent='50'					# What percentage of space should the root drive take?
+fsPercent='100'					# What percentage of space should the root drive take?
 checkPartitions='true'		# Check that partitions are configured optimally?
 
 subvolPrefix='@'				# eg., '/' or '/@' btrfs and bcachefs only
@@ -161,7 +161,7 @@ phosh_install="phosh phoc phosh-mobile-settings squeekboard firefox"
 
 gnome_install="gnome-shell polkit nautilus gnome-console xdg-user-dirs dconf-editor gnome-browser-connector gnome-shell-extensions gnome-control-center gnome-weather"
 
-kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu kdiskmark brave-bin"
+kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu kdiskmark brave-bin networkmanager-openvpn openvpn"
 
 ucode=intel-ucode
 hostname=Arch
@@ -209,6 +209,7 @@ CONFIG_FILES="
 /etc/localtime
 /etc/NetworkManager/conf.d/
 /etc/NetworkManager/system-connections
+/var/lib/NetworkManager/timestamps
 /etc/pacman.conf
 /etc/pacman-offline.conf
 /etc/pacman.d/mirrorlist
@@ -233,6 +234,7 @@ CONFIG_FILES="
 /home/$user/Documents
 /home/$user/.bash_profile
 /home/$user/.bashrc
+/home/$user/.cert/
 /home/$user/.config/
 /home/$user/.hushlogin
 /home/$user/.local/
