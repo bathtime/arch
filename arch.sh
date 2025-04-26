@@ -3565,9 +3565,9 @@ backup_config () {
 	#tar -pcf $backup_file $CONFIG_FILES
 	time tar -pczf $backup_file $CONFIG_FILES
 	
-	echo -e "\nVerifying file contents. Please be patient...\n"
+	#echo -e "\nVerifying file contents. Please be patient...\n"
 	#tar xOf $backup_file &> /dev/null; echo $?
-	tar -tf $backup_file &> /dev/null; echo $?
+	#tar -tf $backup_file &> /dev/null; echo $?
 
 	#sudo -u $user gpg --yes -c $backup_file
 
