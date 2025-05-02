@@ -239,6 +239,7 @@ CONFIG_FILES="
 /home/$user/.hushlogin
 /home/$user/.local/
 /home/$user/.mkshrc
+/home/$user/.mozilla
 /home/$user/.profile
 /home/$user/.vimrc"
 
@@ -391,7 +392,7 @@ choose_disk () {
 
 		[[ $rootfs = 'btrfs' ]] || [[ $rootfs = 'bcachefs' ]] && extra='snapshots '
 
-		choices='quit '$extra'backup edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / script logout reboot suspend hibernate poweroff stats benchmark rollback-script'
+		choices='quit '$extra'backup edit $ # '$(lsblk -dpnoNAME|grep -P "/dev/sd|nvme|vd")' / update script logout reboot suspend hibernate poweroff stats benchmark rollback-script'
 		
 
 		echo -e "\nWhich drive?\n"
@@ -405,6 +406,7 @@ choose_disk () {
 				\#)			bash ;;
 				backup)		backup_config ;;
 				script)		download_script ;;
+				update)		pacman -Syu ;;
 				rollback-script)	vim /lib/initcpio/hooks/btrfs-rollback; mkinitcpio -P ;;
 				logout)		killall systemd ;;
 				reboot)		reboot ;;
@@ -2847,7 +2849,7 @@ snapper_delete_by_date () {
 	snapshots="$(find $snapshot_dir/ -maxdepth 1 -type d -mmin +$mins | sed 's#/.snapshots/##')"
 	for snapshot in $snapshots; do
 		echo "Deleting snapshot #$snapshot..."
-		#snapper -c root delete --sync $snapshot
+		snapper -c root delete --sync $snapshot
 	done
 
 }
