@@ -36,12 +36,13 @@ fi
 
 
 case $description in
-	1-min-auto)		saveLast=3; [ $(date +%M | sed 's/^[0-9]//') = '0' ] || [ $(date +%M | sed 's/^[0-9]//') = '5' ] && exit ;;
+	1-min-auto)		exit ;;	
+	#1-min-auto)		saveLast=3; [ $(date +%M | sed 's/^[0-9]//') = '0' ] || [ $(date +%M | sed 's/^[0-9]//') = '5' ] && exit ;;
 	5-min-auto)		saveLast=2; [ $(date +%M | sed 's/^[0-9]//') = '0' ] && exit ;;
 	10-min-auto)	saveLast=2; [ $(date +%M) = '00' ] || [ $(date +%M) = '30' ] && exit ;;
 	30-min-auto)	saveLast=2; [ $(date +%M) = '00' ] && exit ;;
 	1-hr-auto)		saveLast=12; [ $(date +%H) = '00' ] && exit ;;
-	1-day_auto)		saveLast=14 ;;
+	1-day-auto)		saveLast=12 ;;
 	quick-shot)		saveLast=3 ;;
 	'')				cleanup=''
 						saveLast=100
