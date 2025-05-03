@@ -1026,11 +1026,11 @@ setup_fstab () {
 	if [ "$fstype" = 'btrfs' ]; then
 
 		# Or the system might boot into the incorrect subvol after default is changed
-		sed -i 's#,subvol=/@/.snapshots/.*/snapshot.*0 0#      0 0#' $mnt/etc/fstab
-		
+		#sed -i 's#,subvol=/@/.snapshots/.*/snapshot.*0 0#      0 0#' $mnt/etc/fstab
+	echo	
 		# modification is necessary because otherwise GRUB will always look for the kernel in /@/boot instead of /@/.snapshots/
-		sed -i 's#rootflags=subvol=${rootsubvol} ##' $mnt/etc/grub.d/10_linux
-		sed -i 's#rootflags=subvol=${rootsubvol} ##' $mnt/etc/grub.d/20_linux_xen
+		#sed -i 's#rootflags=subvol=${rootsubvol} ##' $mnt/etc/grub.d/10_linux
+		#sed -i 's#rootflags=subvol=${rootsubvol} ##' $mnt/etc/grub.d/20_linux_xen
 
 	fi
 
