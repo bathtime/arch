@@ -161,7 +161,9 @@ phosh_install="phosh phoc phosh-mobile-settings squeekboard firefox"
 
 gnome_install="gnome-shell polkit nautilus gnome-console xdg-user-dirs dconf-editor gnome-browser-connector gnome-shell-extensions gnome-control-center gnome-weather"
 
-kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu kdiskmark brave-bin networkmanager-openvpn openvpn"
+#kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu kdiskmark brave-bin networkmanager-openvpn openvpn reaper vital-synth"
+
+kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu kdiskmark networkmanager-openvpn openvpn firefox"
 
 ucode=intel-ucode
 hostname=Arch
@@ -241,7 +243,8 @@ CONFIG_FILES="
 /home/$user/.mkshrc
 /home/$user/.mozilla
 /home/$user/.profile
-/home/$user/.vimrc"
+/home/$user/.vimrc
+/home/$user/.vital"
 
 
 
@@ -369,9 +372,11 @@ choose_disk () {
 
 		echo -e "\nDrives found (current mount: /):\n"
 		
-		rootfs=$(mount | grep ' / ' | sed 's/(.*//; s/\/dev.* type //; s/ //')
+		#rootfs=$(mount | grep ' / ' | sed 's/(.*//; s/\/dev.* type //; s/ //')
+		rootfs=$(mount | grep ' / ' | sed 's/(.*//; s/^.*type //; s/ //')
 
-		[ "$(mount | grep ' on / type overlay' | awk '{print $5}')" ] && echo -e "\n       *** Running in overlay mode! ***\n"
+		#[ "$(mount | grep ' on / type overlay' | awk '{print $5}')" ] && echo -e "\n       *** Running in overlay mode! ***\n"
+		[ "$rootfs" = "overlay" ] && echo -e "\n       *** Running in overlay mode! ***\n"
 
 		rootMount="$(findmnt -o FSROOT -n / | sed 's#^/##')"
 		
@@ -3315,7 +3320,7 @@ auto_install_root () {
 	
 	install_tweaks
 	
-	copy_pkgs
+	#copy_pkgs
 	copy_script
 	
 	#[ "$aur_apps_root" ] && install_aur_packages "$aur_apps_root"
@@ -3345,8 +3350,8 @@ auto_install_user () {
 	
 	window_manager '' 'none'
 	
-	#[ "$aur_apps_user" ] && install_aur_packages "$aur_apps_user"
-	chaotic_aur
+	[ "$aur_apps_user" ] && install_aur_packages "$aur_apps_user"
+	#chaotic_aur
 
 	do_backup "user-installed"
 	sync_disk
@@ -3379,7 +3384,7 @@ auto_install_kde () {
 		install_hooks overlayroot
 	fi
 
-	#[ "$aur_apps_kde" ] && install_aur_packages "$aur_apps_kde"
+	[ "$aur_apps_kde" ] && install_aur_packages "$aur_apps_kde"
 
 	do_backup "kde-installed"
 	
