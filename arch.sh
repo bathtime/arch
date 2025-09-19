@@ -164,7 +164,7 @@ gnome_install="gnome-shell polkit nautilus gnome-console xdg-user-dirs dconf-edi
 
 #kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu kdiskmark brave-bin networkmanager-openvpn openvpn reaper vital-synth"
 
-kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu kdiskmark networkmanager-openvpn openvpn firefox brave-bin"
+kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu kdiskmark networkmanager-openvpn openvpn firefox brave-bin code gwenview code"
 
 ucode=intel-ucode
 hostname=Arch
@@ -235,17 +235,27 @@ CONFIG_FILES="
 /var/spool/cron/root
 
 /home/$user/Documents
+/home/$user/Media
+/home/$user/Music
+/home/$user/projects
+/home/$user/p
 /home/$user/.bash_profile
 /home/$user/.bashrc
+/home/$user/.cargo
 /home/$user/.cert/
 /home/$user/.config/
+/home/$user/.enduin
+/home/$user/.floorp
+/home/$user/.gitconfig
 /home/$user/.hushlogin
 /home/$user/.local/
 /home/$user/.mkshrc
 /home/$user/.mozilla
 /home/$user/.profile
+/home/$user/.rustup
 /home/$user/.vimrc
-/home/$user/.vital"
+/home/$user/.vital
+/home/$user/.vscode-oss"
 
 
 
