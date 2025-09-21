@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 : << DOCS
 
 To run on the fly:
@@ -34,8 +33,8 @@ error() {
 		fi
 
 		case $choice in
-				e)		vim $arch_path/$arch_file; exit ;;
-				n)		vim +$2 $arch_path/$arch_file; exit ;;
+				e)		$editor $arch_path/$arch_file; exit ;;
+				n)		$editor +$2 $arch_path/$arch_file; exit ;;
 				c)		set +e; break ;;
 				x)		exit ;;
 				*) 	finished=0 ;;
@@ -119,6 +118,8 @@ efi_mountopts="noatime"
 fsckBcachefs='true'
 
 backup_install='true'		# say 'true' to do snapshots/rysncs during install (only btrfs/bcachefs)
+install_backup='false'  # make a compressed backup file?
+copy_user_dir='true'    # should we copy /home/$user ?
 
 if [ $fstype = 'btrfs' ]; then
 	backup_type='snapper'
@@ -141,6 +142,7 @@ password='123456'
 autologin=true
 arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
+editor="helix"
 
 aur_app=none
 aur_path=/home/$user/aur
@@ -164,7 +166,7 @@ gnome_install="gnome-shell polkit nautilus gnome-console xdg-user-dirs dconf-edi
 
 #kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu kdiskmark brave-bin networkmanager-openvpn openvpn reaper vital-synth"
 
-kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu kdiskmark networkmanager-openvpn openvpn firefox brave-bin code gwenview code"
+kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu kdiskmark networkmanager-openvpn openvpn firefox brave-bin code gwenview code helix"
 
 ucode=intel-ucode
 hostname=Arch
@@ -182,6 +184,61 @@ backup_file=/setup.tar.gz
 
 # Files that will be saved to $backup_file as part of a backup
 CONFIG_FILES="
+
+/usr/lib/initcpio/init
+
+/usr/lib/initcpio/hooks/btrfs-rollback
+/usr/lib/initcpio/install/btrfs-rollback
+
+/usr/lib/initcpio/hooks/bcachefs-rollback
+/usr/lib/initcpio/install/bcachefs-rollback
+
+/usr/lib/initcpio/install/liveroot
+/usr/lib/initcpio/hooks/liveroot
+
+/etc/overlayroot.conf
+/usr/bin/mount.overlayroot
+/usr/lib/initcpio/hooks/overlayroot
+/usr/lib/initcpio/install/overlayroot
+
+/etc/mkinitcpio.d/linux.preset
+
+/etc/booster.yaml
+/etc/default/grub-btrfs/config
+/etc/dracut.conf.d/
+/etc/hostname
+/etc/hosts
+/etc/iwd/main.conf
+/etc/locale.conf
+/etc/locale.gen
+/etc/localtime
+/etc/NetworkManager/conf.d/
+/etc/NetworkManager/system-connections
+/var/lib/NetworkManager/timestamps
+/etc/pacman.conf
+/etc/pacman-offline.conf
+/etc/pacman.d/mirrorlist
+/etc/security/limits.conf
+/etc/sudoers.d/
+/etc/sysctl.d/50-coredump.conf
+/etc/sysctl.d/99-cache-pressure.conf
+/etc/sysctl.d/99-net-keepalive.conf
+/etc/sysctl.d/99-net-timeout.conf
+/etc/sysctl.d/99-swappiness.conf
+/etc/systemd/coredump.conf.d/custom.conf
+/etc/systemd/system/getty@tty1.service.d/autologin.conf
+/etc/wpa_supplicant
+/etc/updatedb.conf
+/root/.mkshrc
+/root/.vimrc
+/root/pkgs/
+/var/lib/dhcpcd
+/var/lib/iwd
+/var/spool/cron/root
+
+/home/$user/"
+
+CONFIG_FILES2="
 
 /usr/lib/initcpio/init
 
@@ -417,13 +474,13 @@ choose_disk () {
 		do
 			case $disk in
 				quit)			sync_disk; exit ;;
-				edit)			vim $arch_path/$arch_file; exit ;;
+				edit)			$editor $arch_path/$arch_file; exit ;;
 				$)				sudo -u $user bash ;;
 				\#)			bash ;;
 				backup)		backup_config ;;
 				script)		download_script ;;
 				update)		pacman -Syu ;;
-				rollback-script)	vim /lib/initcpio/hooks/btrfs-rollback; mkinitcpio -P ;;
+				rollback-script)	$editor /lib/initcpio/hooks/btrfs-rollback; mkinitcpio -P ;;
 				logout)		killall systemd ;;
 				reboot)		reboot ;;
 				suspend)		echo mem > /sys/power/state ;;
@@ -1485,6 +1542,7 @@ general_setup () {
 alias ls="ls --color=auto"
 alias grep="grep --color=auto"
 alias vi="vim"
+alias hx="helix"
 alias arch="sudo /usr/local/bin/arch.sh"
 setfont -d
 PS1="# "' > $mnt/root/.bashrc
@@ -1625,6 +1683,7 @@ fi
 alias ls="ls --color=auto"
 alias grep="grep --color=auto"
 alias vi="vim"
+alias hx="helix"
 alias arch="sudo /usr/local/bin/arch.sh"
 PS1="$ "' > $mnt/home/$user/.bashrc
 
@@ -3580,12 +3639,15 @@ Include = /etc/pacman.d/chaotic-mirrorlist' >> $mnt/etc/pacman.conf
 
 backup_config () {
 
+
 	echo -e "\nCreating backup file. Please be patient...\n"
 	
 	#sudo -u $user tar -pcf $backup_file $CONFIG_FILES
 	#tar -pcf $backup_file $CONFIG_FILES
 
 	rm -rf /home/$user/.local/share/Trash/*
+	rm -rf /home/$user/.cache/*
+
 	#tar -pcf $backup_file $CONFIG_FILES
 	time tar -pczf $backup_file $CONFIG_FILES
 	
@@ -3633,11 +3695,29 @@ install_config () {
 
 
 	#cp /home/$user/$backup_file{,.gpg} $mnt/home/$user/
-	cp $backup_file $mnt$backup_file
 
-	echo "Extracting setup files..."
-	arch-chroot $mnt tar -xvf $backup_file --directory /
-	arch-chroot $mnt chown -R $user:$user /home/$user/
+	if [ $install_backup = true ]; then
+
+		echo "Copying $backup_file to $mnt$backup_file..."
+		cp $backup_file $mnt$backup_file
+
+		if [ ! $copy_user_dir = true ]; then
+			echo "Extracting setup files..."
+			arch-chroot $mnt tar -xvf $backup_file --directory /
+			arch-chroot $mnt chown -R $user:$user /home/$user/
+		fi
+	fi
+
+	if [ $copy_user_dir = true ]; then
+		echo "Copying config files to $mnt..."
+		cp -rv --parents $CONFIG_FILES $mnt
+
+		echo "Changing /home/$user permissions..."
+		chmod -R $user:$user /home/$user/
+				
+		#echo "Copying /home/$user/* to $mnt/home/user..."
+		#cp -rv /home/$user/{,.}* $mnt/home/$user/
+	fi
 
 	#count=ls -1 $mnt$aur_apps_path*.zst 2>/dev/null | wc -l
 	count=0
@@ -3672,7 +3752,7 @@ last_modified () {
 edit_arch () {
 
 	if [ "$(ls $arch_path | grep $arch_file)" ]; then
-		vim $arch_path/$arch_file && exit
+		$editor $arch_path/$arch_file && exit
 	fi
 
 }
@@ -4222,7 +4302,7 @@ check_online &
 while :; do
 
 	choices=("1. Back to main menu 
-2. Edit $arch_file
+2. Edit $arch_file in $editor
 3. Chroot
 4. Auto-install
 5. Partition disk
@@ -4271,7 +4351,7 @@ echo
 
 	case $choice in
 		Quit|quit|q|exit|1)	choose_disk ;;
-		arch|2)					edit_arch ;;
+		arch|2)					edit_arch;;
 		Chroot|chroot|3)		do_chroot ;;
 		auto|4)					auto_install_menu ;;
 		partition|5)			create_partitions ;;
