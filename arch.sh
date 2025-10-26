@@ -118,8 +118,8 @@ efi_mountopts="noatime"
 fsckBcachefs='true'
 
 backup_install='true'		# say 'true' to do snapshots/rysncs during install (only btrfs/bcachefs)
-install_backup='false'  # make a compressed backup file?
-copy_user_dir='true'    # should we copy /home/$user ?
+install_backup='true'  # make a compressed backup file?
+copy_user_dir='false'    # should we copy /home/$user ?
 
 if [ $fstype = 'btrfs' ]; then
 	backup_type='snapper'
@@ -142,7 +142,7 @@ password='123456'
 autologin=true
 arch_file=$(basename "$0")
 arch_path=$(dirname "$0")
-editor="helix"
+editor="vim"
 
 aur_app=none
 aur_path=/home/$user/aur
@@ -164,9 +164,11 @@ phosh_install="phosh phoc phosh-mobile-settings squeekboard firefox"
 
 gnome_install="gnome-shell polkit nautilus gnome-console xdg-user-dirs dconf-editor gnome-browser-connector gnome-shell-extensions gnome-control-center gnome-weather"
 
+kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu kdiskmark brave-bin networkmanager-openvpn openvpn firefox"
+
 #kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu kdiskmark brave-bin networkmanager-openvpn openvpn reaper vital-synth"
 
-kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu kdiskmark networkmanager-openvpn openvpn firefox brave-bin code gwenview code helix"
+#kde_install="plasma-desktop plasma-pa maliit-keyboard plasma-nm kscreen iio-sensor-proxy dolphin konsole ffmpegthumbs bleachbit ncdu kdiskmark networkmanager-openvpn openvpn firefox brave-bin code gwenview code helix sudo pacman -S nodejs npm"
 
 ucode=intel-ucode
 hostname=Arch
@@ -183,7 +185,7 @@ wifi_pass=""
 backup_file=/setup.tar.gz
 
 # Files that will be saved to $backup_file as part of a backup
-CONFIG_FILES="
+CONFIG_FILES2="
 
 /usr/lib/initcpio/init
 
@@ -238,7 +240,7 @@ CONFIG_FILES="
 
 /home/$user/"
 
-CONFIG_FILES2="
+CONFIG_FILES3="
 
 /usr/lib/initcpio/init
 
@@ -296,6 +298,7 @@ CONFIG_FILES2="
 /home/$user/Music
 /home/$user/projects
 /home/$user/p
+
 /home/$user/.bash_profile
 /home/$user/.bashrc
 /home/$user/.cargo
@@ -311,8 +314,80 @@ CONFIG_FILES2="
 /home/$user/.profile
 /home/$user/.rustup
 /home/$user/.vimrc
+/home/$user/.vim/
 /home/$user/.vital
-/home/$user/.vscode-oss"
+/home/$user/.vscode-oss
+"
+
+CONFIG_FILES="
+
+/usr/lib/initcpio/init
+
+/usr/lib/initcpio/hooks/btrfs-rollback
+/usr/lib/initcpio/install/btrfs-rollback
+
+/usr/lib/initcpio/hooks/bcachefs-rollback
+/usr/lib/initcpio/install/bcachefs-rollback
+
+/usr/lib/initcpio/install/liveroot
+/usr/lib/initcpio/hooks/liveroot
+
+/etc/overlayroot.conf
+/usr/bin/mount.overlayroot
+/usr/lib/initcpio/hooks/overlayroot
+/usr/lib/initcpio/install/overlayroot
+
+/etc/mkinitcpio.d/linux.preset
+
+/etc/booster.yaml
+/etc/default/grub-btrfs/config
+/etc/dracut.conf.d/
+/etc/hostname
+/etc/hosts
+/etc/iwd/main.conf
+/etc/locale.conf
+/etc/locale.gen
+/etc/localtime
+/etc/NetworkManager/conf.d/
+/etc/NetworkManager/system-connections
+/var/lib/NetworkManager/timestamps
+/etc/pacman.conf
+/etc/pacman-offline.conf
+/etc/pacman.d/mirrorlist
+/etc/security/limits.conf
+/etc/sudoers.d/
+/etc/sysctl.d/50-coredump.conf
+/etc/sysctl.d/99-cache-pressure.conf
+/etc/sysctl.d/99-net-keepalive.conf
+/etc/sysctl.d/99-net-timeout.conf
+/etc/sysctl.d/99-swappiness.conf
+/etc/systemd/coredump.conf.d/custom.conf
+/etc/systemd/system/getty@tty1.service.d/autologin.conf
+/etc/wpa_supplicant
+/etc/updatedb.conf
+/root/.mkshrc
+/root/.vimrc
+/root/pkgs/
+/var/lib/dhcpcd
+/var/lib/iwd
+/var/spool/cron/root
+
+/home/$user/.bash_profile
+/home/$user/.bashrc
+/home/$user/.cargo
+/home/$user/.cert/
+/home/$user/.config/
+/home/$user/.enduin
+/home/$user/.floorp
+/home/$user/.gitconfig
+/home/$user/.hushlogin
+/home/$user/.local/
+/home/$user/.mkshrc
+/home/$user/.mozilla
+/home/$user/.profile
+/home/$user/.rustup
+/home/$user/.vimrc
+/home/$user/.vim/"
 
 
 
